@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:karatflow;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: false
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: true
+  flyway:
+    enabled: false
+    baseline-on-migrate: true
+    url: jdbc:h2:mem:karatflow;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    user: sa
+    password: 
+
+server:
+  port: 8888
