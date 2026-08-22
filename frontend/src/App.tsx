@@ -105,7 +105,7 @@ function App() {
     const verifyHandshake = () => {
         fetch('http://localhost:8888/api/handshake/verify', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            headers: getAuthHeaders(),
             body: JSON.stringify({ pinCode: handshakePin })
         })
         .then(async (res) => {
@@ -151,7 +151,7 @@ function App() {
     const handleDispatchSubcontract = () => {
         fetch(`http://localhost:8888/api/orders/${selectedOrderId}/subcontracts/dispatch`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            headers: getAuthHeaders(),
             body: JSON.stringify(scForm)
         })
         .then(res => res.json())
