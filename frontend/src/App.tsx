@@ -34,7 +34,7 @@ function App() {
         designId: 1, // Defaulting to 1 for dummy
         engravingText: '',
         engravingLocation: '',
-        surfaceFinish: '?�광',
+        surfaceFinish: '유광',
         finalConsumerPrice: 0
     });
 
@@ -74,12 +74,12 @@ function App() {
     };
 
     const requestHandshake = () => {
-        fetch('http://localhost:8888/api/handshake/request', { method: 'POST', headers: getAuthHeaders() })
+        fetch('http://localhost:8888/api/handshake/request', { method: 'POST' })
             .then(res => res.json())
             .then(data => {
                 setGeneratedPin(data.pinCode);
                 setHandshakes([...handshakes, data]);
-                toast.current?.show({ severity: 'success', summary: '발급 ?�료', detail: '?�트?�사 ?�동 PIN??발급?�었?�니??', life: 5000 });
+                toast.current?.show({ severity: 'success', summary: '발급 완료', detail: '파트너사 연동 PIN이 발급되었습니다.', life: 5000 });
             });
     };
 
@@ -93,8 +93,8 @@ function App() {
         .then(() => {
             fetchOrders();
             setCreateOrderModalVisible(false);
-            setCreateOrderForm({ orderType: 'B2C', customerName: '', customerPhone: '', designId: 1, engravingText: '', engravingLocation: '', surfaceFinish: '?�광', finalConsumerPrice: 0 });
-            toast.current?.show({ severity: 'success', summary: '주문 ?�성 ?�료', detail: '?�로??주문???�스?�에 ?�록?�었?�니??', life: 3000 });
+            setCreateOrderForm({ orderType: 'B2C', customerName: '', customerPhone: '', designId: 1, engravingText: '', engravingLocation: '', surfaceFinish: '유광', finalConsumerPrice: 0 });
+            toast.current?.show({ severity: 'success', summary: '주문 생성 완료', detail: '새로운 주문이 시스템에 등록되었습니다.', life: 3000 });
         });
     };
 
@@ -108,28 +108,28 @@ function App() {
             if (!res.ok) throw new Error();
             const data = await res.json();
             setHandshakes(handshakes.map(h => h.id === data.id ? data : h));
-            toast.current?.show({ severity: 'success', summary: '?�증 ?�료', detail: '?�트?�사 ?�동???�인?�었?�니??', life: 5000 });
+            toast.current?.show({ severity: 'success', summary: '인증 완료', detail: '파트너사 연동이 승인되었습니다.', life: 5000 });
             setHandshakePin('');
         })
         .catch(() => {
-            toast.current?.show({ severity: 'error', summary: '?�증 ?�패', detail: '?�효?��? ?�거??만료??PIN?�니??', life: 3000 });
+            toast.current?.show({ severity: 'error', summary: '인증 실패', detail: '유효하지 않거나 만료된 PIN입니다.', life: 3000 });
         });
     };
 
     const verifyBusiness = () => {
         if (!businessNumber) return;
-        fetch('http://localhost:8888/api/business/verify', { headers: getAuthHeaders(),
+        fetch('http://localhost:8888/api/business/verify', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify({ businessNumber })
         })
         .then(res => res.json())
         .then(data => {
             setBusinessResult(data);
             if (data.statusCode === '01') {
-                toast.current?.show({ severity: 'success', summary: '조회 ?�공', detail: '?�상 ?�업 중인 ?�업?�입?�다.', life: 3000 });
+                toast.current?.show({ severity: 'success', summary: '조회 성공', detail: '정상 영업 중인 사업자입니다.', life: 3000 });
             } else {
-                toast.current?.show({ severity: 'warn', summary: '주의', detail: '계속?�업?��? ?�닙?�다 (' + data.statusName + ')', life: 5000 });
+                toast.current?.show({ severity: 'warn', summary: '주의', detail: '계속사업자가 아닙니다 (' + data.statusName + ')', life: 5000 });
             }
         });
     };
@@ -154,7 +154,7 @@ function App() {
         .then(newTask => {
             setSubcontracts([...subcontracts, newTask]);
             setScForm({ taskName: '', subcontractorName: '', dispatchedWeightG: 0, agreedLaborFee: 0 });
-            toast.current?.show({ severity: 'success', summary: '?�주 ?�록', detail: '?�주 반출??기록?�었?�니??', life: 3000 });
+            toast.current?.show({ severity: 'success', summary: '외주 등록', detail: '외주 반출이 기록되었습니다.', life: 3000 });
         });
     };
 
@@ -168,7 +168,7 @@ function App() {
         .then(res => res.json())
         .then(updatedTask => {
             setSubcontracts(subcontracts.map(s => s.id === taskId ? updatedTask : s));
-            toast.current?.show({ severity: 'info', summary: '반입 ?�료', detail: `감모?? ${updatedTask.lossWeightG}g`, life: 5000 });
+            toast.current?.show({ severity: 'info', summary: '반입 완료', detail: `감모량: ${updatedTask.lossWeightG}g`, life: 5000 });
         });
     };
 
@@ -187,7 +187,7 @@ function App() {
         fetch(`http://localhost:8888/api/orders/${selectedOrderId}/cancel`, { method: 'POST' })
             .then(res => res.json())
             .then(data => {
-                toast.current?.show({ severity: 'success', summary: '주문 취소 ?�료', detail: `?�수�? ??{data.cancellationFee}`, life: 5000 });
+                toast.current?.show({ severity: 'success', summary: '주문 취소 완료', detail: `수수료: ₩${data.cancellationFee}`, life: 5000 });
                 setCancelModalVisible(false);
                 fetchOrders();
             });
@@ -198,14 +198,14 @@ function App() {
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'error') {
-                    toast.current?.show({ severity: 'error', summary: '?�류', detail: data.message, life: 3000 });
+                    toast.current?.show({ severity: 'error', summary: '오류', detail: data.message, life: 3000 });
                 } else {
-                    toast.current?.show({ severity: 'info', summary: '공정 ?�동', detail: `주문 #${orderId} 공정??[${data.newStage}] ?�계�??�동?�습?�다.`, life: 3000 });
+                    toast.current?.show({ severity: 'info', summary: '공정 이동', detail: `주문 #${orderId} 공정이 [${data.newStage}] 단계로 이동했습니다.`, life: 3000 });
                     fetchOrders();
                 }
             })
             .catch(err => {
-                toast.current?.show({ severity: 'error', summary: '?�류', detail: '공정 ?�계 ?�동 �??�류가 발생?�습?�다.', life: 3000 });
+                toast.current?.show({ severity: 'error', summary: '오류', detail: '공정 단계 이동 중 오류가 발생했습니다.', life: 3000 });
             });
     };
 
@@ -277,8 +277,8 @@ function App() {
         if (rowData.status === 'CANCELLED') {
             return (
                 <div className="flex flex-column gap-1">
-                    <span className="p-badge p-badge-secondary">취소??/span>
-                    {rowData.cancellationFee > 0 && <small className="text-red-500 font-bold">?�약�? ??rowData.cancellationFee.toLocaleString()}</small>}
+                    <span className="p-badge p-badge-secondary">취소됨</span>
+                    {rowData.cancellationFee > 0 && <small className="text-red-500 font-bold">위약금: ₩{rowData.cancellationFee.toLocaleString()}</small>}
                 </div>
             );
         }
@@ -328,15 +328,15 @@ function App() {
     };
 
     const actionBodyTemplate = (rowData: any) => {
-        if (rowData.status === 'CANCELLED') return <span className="text-400">?�션 ?�음</span>;
+        if (rowData.status === 'CANCELLED') return <span className="text-400">액션 없음</span>;
         
         return (
             <div className="flex gap-2">
-                <Button icon="pi pi-forward" tooltip="공정 ?�동" onClick={() => advanceStage(rowData.id)} disabled={rowData.status === 'COMPLETED'} className="p-button-rounded p-button-success p-button-text" />
-                <Button icon="pi pi-truck" tooltip="?�주 감모 추적" onClick={() => openSubcontractModal(rowData.id)} className="p-button-rounded p-button-secondary p-button-text" />
-                <Button icon="pi pi-print" tooltip="?�벨 ?�쇄" onClick={() => handlePrint(rowData, 'label')} className="p-button-rounded p-button-success p-button-text" />
-                <Button icon="pi pi-file-pdf" tooltip="명세???�쇄" onClick={() => handlePrint(rowData, 'invoice')} className="p-button-rounded p-button-info p-button-text" />
-                <Button icon="pi pi-pencil" tooltip="변�??�청" onClick={() => { setSelectedOrderId(rowData.id); setChangeModalVisible(true); }} className="p-button-rounded p-button-warning p-button-text" />
+                <Button icon="pi pi-forward" tooltip="공정 이동" onClick={() => advanceStage(rowData.id)} disabled={rowData.status === 'COMPLETED'} className="p-button-rounded p-button-success p-button-text" />
+                <Button icon="pi pi-truck" tooltip="외주 감모 추적" onClick={() => openSubcontractModal(rowData.id)} className="p-button-rounded p-button-secondary p-button-text" />
+                <Button icon="pi pi-print" tooltip="라벨 인쇄" onClick={() => handlePrint(rowData, 'label')} className="p-button-rounded p-button-success p-button-text" />
+                <Button icon="pi pi-file-pdf" tooltip="명세서 인쇄" onClick={() => handlePrint(rowData, 'invoice')} className="p-button-rounded p-button-info p-button-text" />
+                <Button icon="pi pi-pencil" tooltip="변경 요청" onClick={() => { setSelectedOrderId(rowData.id); setChangeModalVisible(true); }} className="p-button-rounded p-button-warning p-button-text" />
                 <Button icon="pi pi-trash" tooltip="주문 취소" onClick={() => openCancelModal(rowData.id)} className="p-button-rounded p-button-danger p-button-text" />
             </div>
         );
@@ -349,7 +349,7 @@ function App() {
                 <div className="flex justify-content-between align-items-center mb-4">
                     <h2>{t('title')}</h2>
                     <div className="flex gap-2">
-                        <Button label="??주문 ?�성" icon="pi pi-plus" className="p-button-primary" onClick={() => setCreateOrderModalVisible(true)} />
+                        <Button label="새 주문 생성" icon="pi pi-plus" className="p-button-primary" onClick={() => setCreateOrderModalVisible(true)} />
                         <Button label={t('lang')} icon="pi pi-globe" className="p-button-secondary p-button-outlined" onClick={toggleLanguage} />
                         <Button label={t('invite_partner')} icon="pi pi-users" className="p-button-info" onClick={openHandshakeModal} />
                         <Button label={t('simulate_hold')} icon="pi pi-bell" className="p-button-warning" onClick={showHoldAlert} />
@@ -365,7 +365,7 @@ function App() {
                                 <Column field="orderNo" header="주문 번호" />
                                 <Column field="id" header="ID" />
                                 <Column field="design" header="Design Code" />
-                                <Column field="customerName" header="고객�? />
+                                <Column field="customerName" header="고객명" />
                                 <Column field="date" header={t('date')}></Column>
                                 <Column header={t('surface_finish')} body={surfaceFinishBodyTemplate}></Column>
                                 <Column header={t('engraving')} body={engravingBodyTemplate}></Column>
@@ -385,40 +385,40 @@ function App() {
                 </div>
 
                 {/* @ts-ignore */}
-                <Dialog header="??주문 ?�성" visible={createOrderModalVisible} style={{ width: '50vw' }} onHide={() => setCreateOrderModalVisible(false)}>
+                <Dialog header="새 주문 생성" visible={createOrderModalVisible} style={{ width: '50vw' }} onHide={() => setCreateOrderModalVisible(false)}>
                     <div className="flex flex-column gap-3 p-fluid">
                         <div className="p-inputgroup">
                             <span className="p-inputgroup-addon">구분</span>
-                            <InputText value={createOrderForm.orderType} onChange={(e) => setCreateOrderForm({...createOrderForm, orderType: e.target.value})} placeholder="B2C, B2B ?? />
+                            <InputText value={createOrderForm.orderType} onChange={(e) => setCreateOrderForm({...createOrderForm, orderType: e.target.value})} placeholder="B2C, B2B 등" />
                         </div>
                         <div className="p-inputgroup">
-                            <span className="p-inputgroup-addon">고객�?/span>
-                            <InputText value={createOrderForm.customerName} onChange={(e) => setCreateOrderForm({...createOrderForm, customerName: e.target.value})} placeholder="고객 ?�름" />
+                            <span className="p-inputgroup-addon">고객명</span>
+                            <InputText value={createOrderForm.customerName} onChange={(e) => setCreateOrderForm({...createOrderForm, customerName: e.target.value})} placeholder="고객 이름" />
                         </div>
                         <div className="p-inputgroup">
-                            <span className="p-inputgroup-addon">?�락�?/span>
+                            <span className="p-inputgroup-addon">연락처</span>
                             <InputText value={createOrderForm.customerPhone} onChange={(e) => setCreateOrderForm({...createOrderForm, customerPhone: e.target.value})} placeholder="010-0000-0000" />
                         </div>
                         <div className="p-inputgroup">
                             <span className="p-inputgroup-addon">각인 문구</span>
-                            <InputText value={createOrderForm.engravingText} onChange={(e) => setCreateOrderForm({...createOrderForm, engravingText: e.target.value})} placeholder="각인???�스??(?�션)" />
+                            <InputText value={createOrderForm.engravingText} onChange={(e) => setCreateOrderForm({...createOrderForm, engravingText: e.target.value})} placeholder="각인할 텍스트 (옵션)" />
                         </div>
                         <div className="p-inputgroup">
-                            <span className="p-inputgroup-addon">각인 ?�치</span>
-                            <InputText value={createOrderForm.engravingLocation} onChange={(e) => setCreateOrderForm({...createOrderForm, engravingLocation: e.target.value})} placeholder="반�? ?�쪽 ??(?�션)" />
+                            <span className="p-inputgroup-addon">각인 위치</span>
+                            <InputText value={createOrderForm.engravingLocation} onChange={(e) => setCreateOrderForm({...createOrderForm, engravingLocation: e.target.value})} placeholder="반지 안쪽 등 (옵션)" />
                         </div>
                         <div className="p-inputgroup">
-                            <span className="p-inputgroup-addon">?�면 처리</span>
-                            <InputText value={createOrderForm.surfaceFinish} onChange={(e) => setCreateOrderForm({...createOrderForm, surfaceFinish: e.target.value})} placeholder="?�광/무광" />
+                            <span className="p-inputgroup-addon">표면 처리</span>
+                            <InputText value={createOrderForm.surfaceFinish} onChange={(e) => setCreateOrderForm({...createOrderForm, surfaceFinish: e.target.value})} placeholder="유광/무광" />
                         </div>
                         <div className="p-inputgroup">
-                            <span className="p-inputgroup-addon">?�비?��?(??</span>
+                            <span className="p-inputgroup-addon">소비자가(₩)</span>
                             <InputNumber value={createOrderForm.finalConsumerPrice} onValueChange={(e) => setCreateOrderForm({...createOrderForm, finalConsumerPrice: e.value || 0})} mode="currency" currency="KRW" locale="ko-KR" />
                         </div>
                     </div>
                     <div className="flex justify-content-end mt-4">
                         <Button label="취소" icon="pi pi-times" onClick={() => setCreateOrderModalVisible(false)} className="p-button-text p-button-secondary mr-2" />
-                        <Button label="주문 ?�록" icon="pi pi-check" onClick={submitCreateOrder} className="p-button-primary" autoFocus />
+                        <Button label="주문 등록" icon="pi pi-check" onClick={submitCreateOrder} className="p-button-primary" autoFocus />
                     </div>
                 </Dialog>
 
@@ -432,23 +432,23 @@ function App() {
                 </Dialog>
 
                 {/* @ts-ignore */}
-                <Dialog header="주문 취소 �??�약�??�인" visible={cancelModalVisible} style={{ width: '40vw' }} onHide={() => setCancelModalVisible(false)}>
+                <Dialog header="주문 취소 및 위약금 확인" visible={cancelModalVisible} style={{ width: '40vw' }} onHide={() => setCancelModalVisible(false)}>
                     <div className="flex flex-column align-items-center justify-content-center text-center p-4">
                         <i className="pi pi-exclamation-triangle text-red-500" style={{ fontSize: '3rem' }}></i>
-                        <h2 className="mt-3">주문???�말 취소?�시겠습?�까?</h2>
+                        <h2 className="mt-3">주문을 정말 취소하시겠습니까?</h2>
                         <p className="m-0 mb-4 text-600">
-                            ?�재 공정 진행 ?�태???�라 ?�약금이 부과됩?�다.<br/>
-                            ??�?취소??주문?� 복구?????�습?�다.
+                            현재 공정 진행 상태에 따라 위약금이 부과됩니다.<br/>
+                            한 번 취소된 주문은 복구할 수 없습니다.
                         </p>
                         
                         <div className="surface-100 p-4 border-round w-full">
-                            <h3 className="m-0 mb-2">?�상 ?�약�?(취소 ?�수�?</h3>
-                            <h2 className="m-0 text-red-500">??cancelEstimate?.toLocaleString()}</h2>
+                            <h3 className="m-0 mb-2">예상 위약금 (취소 수수료)</h3>
+                            <h2 className="m-0 text-red-500">₩{cancelEstimate?.toLocaleString()}</h2>
                         </div>
                     </div>
                     <div className="flex justify-content-end mt-4">
-                        <Button label="?�아가�? icon="pi pi-times" onClick={() => setCancelModalVisible(false)} className="p-button-text p-button-secondary" />
-                        <Button label="주문 취소 ?�정" icon="pi pi-trash" onClick={submitCancelOrder} className="p-button-danger" autoFocus />
+                        <Button label="돌아가기" icon="pi pi-times" onClick={() => setCancelModalVisible(false)} className="p-button-text p-button-secondary" />
+                        <Button label="주문 취소 확정" icon="pi pi-trash" onClick={submitCancelOrder} className="p-button-danger" autoFocus />
                     </div>
                 </Dialog>
 
@@ -459,36 +459,36 @@ function App() {
                     <div className="grid">
                         <div className="col-12 md:col-6">
                             <div className="surface-100 p-4 border-round h-full flex flex-column align-items-center justify-content-center">
-                                <h3 className="m-0 mb-2">?�트?�사 ?�동 ?�청 (?�번호 발급)</h3>
-                                <p className="text-sm text-600 mb-4 text-center">?�조?�체?�게 ?�달??1?�용 6?�리 ?�번호�?발급받습?�다.</p>
+                                <h3 className="m-0 mb-2">파트너사 연동 요청 (핀번호 발급)</h3>
+                                <p className="text-sm text-600 mb-4 text-center">제조업체에게 전달할 1회용 6자리 핀번호를 발급받습니다.</p>
                                 {generatedPin ? (
                                     <div className="text-center">
                                         <h1 className="text-primary m-0" style={{ fontSize: '3rem', letterSpacing: '0.5rem' }}>{generatedPin}</h1>
-                                        <small className="text-500">???�번호�??�조?�체?�게 ?�려주세??</small>
+                                        <small className="text-500">이 핀번호를 제조업체에게 알려주세요.</small>
                                     </div>
                                 ) : (
-                                    <Button label="?�번호 발급받기" icon="pi pi-key" onClick={requestHandshake} />
+                                    <Button label="핀번호 발급받기" icon="pi pi-key" onClick={requestHandshake} />
                                 )}
                             </div>
                         </div>
                         <div className="col-12 md:col-6">
                             <div className="surface-100 p-4 border-round h-full flex flex-column align-items-center justify-content-center">
-                                <h3 className="m-0 mb-2">?�트?�사 ?�증 (?�번호 ?�력)</h3>
-                                <p className="text-sm text-600 mb-4 text-center">?�매?�체로�????�달받�? 6?�리 ?�번호�??�력?�여 ?�동???�인?�니??</p>
+                                <h3 className="m-0 mb-2">파트너사 인증 (핀번호 입력)</h3>
+                                <p className="text-sm text-600 mb-4 text-center">소매업체로부터 전달받은 6자리 핀번호를 입력하여 연동을 승인합니다.</p>
                                 <div className="p-inputgroup">
-                                    <InputText placeholder="6?�리 PIN ?�력" value={handshakePin} onChange={(e) => setHandshakePin(e.target.value)} maxLength={6} className="text-center text-xl font-bold" />
-                                    <Button label="?�증" icon="pi pi-check" severity="success" onClick={verifyHandshake} />
+                                    <InputText placeholder="6자리 PIN 입력" value={handshakePin} onChange={(e) => setHandshakePin(e.target.value)} maxLength={6} className="text-center text-xl font-bold" />
+                                    <Button label="인증" icon="pi pi-check" severity="success" onClick={verifyHandshake} />
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <h3 className="mt-5 mb-3">?�업??진위 검�?/h3>
+                    <h3 className="mt-5 mb-3">사업자 진위 검증</h3>
                     <div className="surface-100 p-4 border-round mb-4">
-                        <p className="text-sm text-600 mb-3">?�트?�사???�업?�등록번??10?�리)�??�력?�여 �?���????�업 ?�태�?조회?�니??</p>
+                        <p className="text-sm text-600 mb-3">파트너사의 사업자등록번호(10자리)를 입력하여 국세청 휴/폐업 상태를 조회합니다.</p>
                         <div className="p-inputgroup mb-3" style={{ maxWidth: '400px' }}>
-                            <InputText placeholder="?�업?�번??(?�자�?" value={businessNumber} onChange={(e) => setBusinessNumber(e.target.value)} />
-                            <Button label="검증하�? icon="pi pi-search" onClick={verifyBusiness} />
+                            <InputText placeholder="사업자번호 (숫자만)" value={businessNumber} onChange={(e) => setBusinessNumber(e.target.value)} />
+                            <Button label="검증하기" icon="pi pi-search" onClick={verifyBusiness} />
                         </div>
                         {businessResult && (
                             <div className={`p-3 border-round ${businessResult.statusCode === '01' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -498,17 +498,17 @@ function App() {
                         )}
                     </div>
 
-                    <h3 className="mt-5 mb-3">???�트?�십 목록</h3>
+                    <h3 className="mt-5 mb-3">내 파트너십 목록</h3>
                     <div className="surface-border border-top-1 pt-3">
                         {handshakes.length === 0 ? (
-                            <p className="text-500 text-center py-4">?�동???�트?�사가 ?�습?�다.</p>
+                            <p className="text-500 text-center py-4">연동된 파트너사가 없습니다.</p>
                         ) : (
                             <div className="flex flex-column gap-2">
                                 {handshakes.map(h => (
                                     <div key={h.id} className="flex justify-content-between align-items-center surface-50 p-3 border-round">
                                         <div>
                                             <div className="font-bold">{h.targetCompanyName} <i className="pi pi-arrows-h mx-2 text-400"></i> {h.requesterCompanyName}</div>
-                                            <small className="text-500">?�청?? {new Date(h.createdAt).toLocaleString()}</small>
+                                            <small className="text-500">요청일: {new Date(h.createdAt).toLocaleString()}</small>
                                         </div>
                                         <div>
                                             <span className={`p-badge ${h.status === 'APPROVED' ? 'p-badge-success' : 'p-badge-warning'}`}>{h.status}</span>
@@ -521,54 +521,54 @@ function App() {
                 </Dialog>
 
                 {/* @ts-ignore */}
-                <Dialog header="?�주 공정 관�?�?�?감모 추적" visible={subcontractModalVisible} style={{ width: '60vw' }} onHide={() => setSubcontractModalVisible(false)}>
+                <Dialog header="외주 공정 관리 및 금 감모 추적" visible={subcontractModalVisible} style={{ width: '60vw' }} onHide={() => setSubcontractModalVisible(false)}>
                     <div className="flex flex-column gap-4">
                         <div className="surface-100 p-3 border-round">
-                            <h3>?�규 ?�주 반출 기록</h3>
+                            <h3>신규 외주 반출 기록</h3>
                             <div className="grid">
                                 <div className="col-3">
-                                    <label>?�업�?(?? ?�금)</label>
+                                    <label>작업명 (예: 도금)</label>
                                     <InputText className="w-full mt-1" value={scForm.taskName} onChange={(e) => setScForm({...scForm, taskName: e.target.value})} />
                                 </div>
                                 <div className="col-3">
-                                    <label>?�주?�체�?/label>
+                                    <label>외주업체명</label>
                                     <InputText className="w-full mt-1" value={scForm.subcontractorName} onChange={(e) => setScForm({...scForm, subcontractorName: e.target.value})} />
                                 </div>
                                 <div className="col-3">
-                                    <label>반출 ?�측 중량 (g)</label>
+                                    <label>반출 실측 중량 (g)</label>
                                     <InputNumber className="w-full mt-1" value={scForm.dispatchedWeightG} onValueChange={(e) => setScForm({...scForm, dispatchedWeightG: e.value || 0})} mode="decimal" minFractionDigits={2} />
                                 </div>
                                 <div className="col-3">
-                                    <label>?�의 ?�주공임 (??</label>
+                                    <label>합의 외주공임 (원)</label>
                                     <InputNumber className="w-full mt-1" value={scForm.agreedLaborFee} onValueChange={(e) => setScForm({...scForm, agreedLaborFee: e.value || 0})} />
                                 </div>
                             </div>
-                            <Button label="반출 ?�록 (Dispatch)" icon="pi pi-upload" onClick={handleDispatchSubcontract} className="mt-3 p-button-success" />
+                            <Button label="반출 등록 (Dispatch)" icon="pi pi-upload" onClick={handleDispatchSubcontract} className="mt-3 p-button-success" />
                         </div>
 
                         <div>
-                            <h3>?�주 ?�역</h3>
+                            <h3>외주 내역</h3>
                             {/* @ts-ignore */}
                             <DataTable value={subcontracts} responsiveLayout="scroll">
-                                <Column field="taskName" header="?�업�?></Column>
-                                <Column field="subcontractorName" header="?�주?�체"></Column>
-                                <Column field="status" header="?�태" body={(r) => <span className={`p-badge ${r.status === 'RECEIVED' ? 'p-badge-info' : 'p-badge-warning'}`}>{r.status}</span>}></Column>
+                                <Column field="taskName" header="작업명"></Column>
+                                <Column field="subcontractorName" header="외주업체"></Column>
+                                <Column field="status" header="상태" body={(r) => <span className={`p-badge ${r.status === 'RECEIVED' ? 'p-badge-info' : 'p-badge-warning'}`}>{r.status}</span>}></Column>
                                 <Column field="dispatchedWeightG" header="반출(g)"></Column>
                                 <Column header="반입(g)" body={(r) => {
                                     if (r.status === 'RECEIVED') return <span>{r.receivedWeightG}</span>;
                                     return (
                                         <div className="flex gap-2 align-items-center">
                                             <InputNumber value={receiveForm[r.id]} onValueChange={(e) => setReceiveForm({...receiveForm, [r.id]: e.value || 0})} className="w-5rem" mode="decimal" minFractionDigits={2} />
-                                            <Button icon="pi pi-download" onClick={() => handleReceiveSubcontract(r.id)} className="p-button-sm" tooltip="반입 ?�인" />
+                                            <Button icon="pi pi-download" onClick={() => handleReceiveSubcontract(r.id)} className="p-button-sm" tooltip="반입 확인" />
                                         </div>
                                     );
                                 }}></Column>
-                                <Column header="감모??g)" body={(r) => {
+                                <Column header="감모량(g)" body={(r) => {
                                     if (r.lossWeightG === null || r.lossWeightG === undefined) return '-';
                                     const percent = ((r.lossWeightG / r.dispatchedWeightG) * 100).toFixed(1);
                                     return <span className={r.lossWeightG > 0 ? "text-red-500 font-bold" : ""}>{r.lossWeightG.toFixed(2)} ({percent}%)</span>;
                                 }}></Column>
-                                <Column field="agreedLaborFee" header="공임�???" body={(r) => <span>??r.agreedLaborFee?.toLocaleString()}</span>}></Column>
+                                <Column field="agreedLaborFee" header="공임비(원)" body={(r) => <span>₩{r.agreedLaborFee?.toLocaleString()}</span>}></Column>
                             </DataTable>
                         </div>
                     </div>
@@ -591,54 +591,54 @@ function App() {
 
             {printOrder && printMode === 'invoice' && (
                 <div className="print-mode-invoice">
-                    <h1>{printOrder.orderType === 'B2B' ? '거래명세??(?�매??' : '?�질보증??(고객??'}</h1>
+                    <h1>{printOrder.orderType === 'B2B' ? '거래명세표 (도매용)' : '품질보증서 (고객용)'}</h1>
                     
                     <p><strong>주문번호:</strong> {printOrder.orderNo || `KF-${printOrder.id}`}</p>
-                    <p><strong>고객/?�체�?</strong> {printOrder.customerName || '지?�되지 ?�음'}</p>
-                    <p><strong>?�락�?</strong> {printOrder.customerPhone || '지?�되지 ?�음'}</p>
-                    <p><strong>주문?�자:</strong> {printOrder.date}</p>
+                    <p><strong>고객/업체명:</strong> {printOrder.customerName || '지정되지 않음'}</p>
+                    <p><strong>연락처:</strong> {printOrder.customerPhone || '지정되지 않음'}</p>
+                    <p><strong>주문일자:</strong> {printOrder.date}</p>
 
                     <table>
                         <thead>
                             <tr>
-                                <th>?�품코드 (?�자??</th>
-                                <th>?�면 마감</th>
-                                <th>각인 ?�용</th>
-                                {printOrder.orderType === 'B2C' && <th>?�비?��?�?/th>}
+                                <th>제품코드 (디자인)</th>
+                                <th>표면 마감</th>
+                                <th>각인 내용</th>
+                                {printOrder.orderType === 'B2C' && <th>소비자가격</th>}
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td>{printOrder.design}</td>
                                 <td>{printOrder.surfaceFinish || '기본'}</td>
-                                <td>{printOrder.engravingText || '?�음'}</td>
-                                {printOrder.orderType === 'B2C' && <td>{printOrder.finalConsumerPrice ? printOrder.finalConsumerPrice.toLocaleString() + '?? : '별도 문의'}</td>}
+                                <td>{printOrder.engravingText || '없음'}</td>
+                                {printOrder.orderType === 'B2C' && <td>{printOrder.finalConsumerPrice ? printOrder.finalConsumerPrice.toLocaleString() + '원' : '별도 문의'}</td>}
                             </tr>
                         </tbody>
                     </table>
 
                     {printOrder.invoice && printOrder.orderType === 'B2B' && (
                         <div style={{ marginTop: '20mm', border: '1px solid #000', padding: '10px' }}>
-                            <h3>?�산 ?�세 (B2B ?�용)</h3>
-                            <p><strong>?�용 �??�세:</strong> ??printOrder.invoice.goldPricePer375g?.toLocaleString()} (기�??? {printOrder.invoice.priceDate})</p>
-                            <p><strong>출고 ?�측 중량:</strong> {printOrder.invoice.completedWeightG}g / <strong>?�톤 중량:</strong> {printOrder.invoice.stoneWeightG}g</p>
-                            <p><strong>?�산 기�? 중량 (?�리??{printOrder.invoice.lossRatePercent}%):</strong> {printOrder.invoice.settlementBaseWeightG?.toFixed(3)}g</p>
-                            <p><strong>�?�?��??</strong> ??printOrder.invoice.calculatedGoldPrice?.toLocaleString(undefined, {maximumFractionDigits:0})}</p>
-                            <p><strong>?�청 공임:</strong> ??printOrder.invoice.baseLaborFee?.toLocaleString()}</p>
-                            <p><strong>?�톤�?</strong> ??printOrder.invoice.stoneFee?.toLocaleString()}</p>
-                            <h2 style={{ marginTop: '10px', color: '#b91c1c' }}>최종 �?��?? ??printOrder.invoice.finalBillingAmount?.toLocaleString(undefined, {maximumFractionDigits:0})}</h2>
+                            <h3>정산 상세 (B2B 전용)</h3>
+                            <p><strong>적용 금 시세:</strong> ₩{printOrder.invoice.goldPricePer375g?.toLocaleString()} (기준일: {printOrder.invoice.priceDate})</p>
+                            <p><strong>출고 실측 중량:</strong> {printOrder.invoice.completedWeightG}g / <strong>스톤 중량:</strong> {printOrder.invoice.stoneWeightG}g</p>
+                            <p><strong>정산 기준 중량 (해리율 {printOrder.invoice.lossRatePercent}%):</strong> {printOrder.invoice.settlementBaseWeightG?.toFixed(3)}g</p>
+                            <p><strong>금 청구액:</strong> ₩{printOrder.invoice.calculatedGoldPrice?.toLocaleString(undefined, {maximumFractionDigits:0})}</p>
+                            <p><strong>원청 공임:</strong> ₩{printOrder.invoice.baseLaborFee?.toLocaleString()}</p>
+                            <p><strong>스톤비:</strong> ₩{printOrder.invoice.stoneFee?.toLocaleString()}</p>
+                            <h2 style={{ marginTop: '10px', color: '#b91c1c' }}>최종 청구액: ₩{printOrder.invoice.finalBillingAmount?.toLocaleString(undefined, {maximumFractionDigits:0})}</h2>
                         </div>
                     )}
                     
                     {printOrder.orderType === 'B2B' && (
                         <div style={{ marginTop: '30mm' }}>
-                            <p>??금액???�수?? (공급???�명: _______________ )</p>
+                            <p>위 금액을 영수함. (공급자 서명: _______________ )</p>
                         </div>
                     )}
                     
                     {printOrder.orderType === 'B2C' && (
                         <div style={{ marginTop: '30mm', textAlign: 'center' }}>
-                            <p>�??�품?� ?�격???�질관리�? 거쳐 ?�작?�었?�을 보증?�니??</p>
+                            <p>본 제품은 엄격한 품질관리를 거쳐 제작되었음을 보증합니다.</p>
                             <p><strong>KaratFlow Jewelry</strong></p>
                         </div>
                     )}

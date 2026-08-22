@@ -20,6 +20,6 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
         String token = jwtTokenProvider.generateToken(authentication);
         // Redirect to frontend with token
-        getRedirectStrategy().sendRedirect(request, response, "http://localhost:5173/oauth2/redirect?token=" + token);
+        getRedirectStrategy().sendRedirect(request, response, "http://localhost:5555/oauth2/redirect?token=" + token);
     }
 }
