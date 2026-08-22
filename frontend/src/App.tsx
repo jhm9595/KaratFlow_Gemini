@@ -701,17 +701,17 @@ function App() {
                                     <label>작업명 (예: 도금)</label>
                                     <InputText className="w-full mt-1" value={scForm.taskName} onChange={(e) => setScForm({...scForm, taskName: e.target.value})} />
                                 </div>
-                                <div className="col-3">
+                                <div className="col-12 md:col-6 lg:col-3 flex flex-column gap-2">
                                     <label>외주업체명</label>
-                                    <InputText className="w-full mt-1" value={scForm.subcontractorName} onChange={(e) => setScForm({...scForm, subcontractorName: e.target.value})} />
+                                    <InputText className="w-full" value={scForm.subcontractorName} onChange={(e) => setScForm({...scForm, subcontractorName: e.target.value})} />
                                 </div>
-                                <div className="col-3">
+                                <div className="col-12 md:col-6 lg:col-3 flex flex-column gap-2">
                                     <label>반출 실측 중량 (g)</label>
-                                    <InputNumber className="w-full mt-1" value={scForm.dispatchedWeightG} onValueChange={(e) => setScForm({...scForm, dispatchedWeightG: e.value || 0})} mode="decimal" minFractionDigits={2} />
+                                    <InputNumber className="w-full" value={scForm.dispatchedWeightG} onValueChange={(e) => setScForm({...scForm, dispatchedWeightG: e.value || 0})} mode="decimal" minFractionDigits={2} />
                                 </div>
-                                <div className="col-3">
+                                <div className="col-12 md:col-6 lg:col-3 flex flex-column gap-2">
                                     <label>합의 외주공임 (원)</label>
-                                    <InputNumber className="w-full mt-1" value={scForm.agreedLaborFee} onValueChange={(e) => setScForm({...scForm, agreedLaborFee: e.value || 0})} />
+                                    <InputNumber className="w-full" value={scForm.agreedLaborFee} onValueChange={(e) => setScForm({...scForm, agreedLaborFee: e.value || 0})} />
                                 </div>
                             </div>
                             <Button label="반출 등록 (Dispatch)" icon="pi pi-upload" onClick={handleDispatchSubcontract} className="mt-3 p-button-success" />
