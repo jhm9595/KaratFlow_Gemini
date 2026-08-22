@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export const OAuth2RedirectHandler: React.FC = () => {
