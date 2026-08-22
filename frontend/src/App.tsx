@@ -484,7 +484,7 @@ function App() {
                         {/* Pipeline Visualizer */}
                         <div className="surface-0 p-3 border-round shadow-1">
                             <h4 className="m-0 mb-3 text-600 font-medium">실시간 공정 흐름 및 바틀넥</h4>
-                            <div className="flex justify-content-between align-items-center px-5 py-4 relative">
+                            <div className="flex justify-content-between align-items-center px-4 relative">
                                 {/* Connecting Line */}
                                 <div className="absolute w-full z-0" style={{ height: '4px', backgroundColor: '#e5e7eb', top: '30px', left: '0' }}></div>
                                 
