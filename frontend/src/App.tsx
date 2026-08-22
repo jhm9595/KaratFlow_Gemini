@@ -78,7 +78,7 @@ function App() {
     };
 
     const requestHandshake = () => {
-        fetch('http://localhost:8888/api/handshake/request', { method: 'POST' })
+        fetch('http://localhost:8888/api/handshake/request', { method: 'POST', headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => {
                 setGeneratedPin(data.pinCode);
@@ -105,7 +105,7 @@ function App() {
     const verifyHandshake = () => {
         fetch('http://localhost:8888/api/handshake/verify', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify({ pinCode: handshakePin })
         })
         .then(async (res) => {
@@ -140,7 +140,7 @@ function App() {
 
     const openSubcontractModal = (orderId: number) => {
         setSelectedOrderId(orderId);
-        fetch(`http://localhost:8888/api/orders/${orderId}/subcontracts`)
+        fetch(`http://localhost:8888/api/orders/${orderId}/subcontracts`, { headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => {
                 setSubcontracts(data);
@@ -151,7 +151,7 @@ function App() {
     const handleDispatchSubcontract = () => {
         fetch(`http://localhost:8888/api/orders/${selectedOrderId}/subcontracts/dispatch`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify(scForm)
         })
         .then(res => res.json())
@@ -178,7 +178,7 @@ function App() {
 
     const openCancelModal = (orderId: number) => {
         setSelectedOrderId(orderId);
-        fetch(`http://localhost:8888/api/orders/${orderId}/cancel-estimate`)
+        fetch(`http://localhost:8888/api/orders/${orderId}/cancel-estimate`, { headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => {
                 setCancelEstimate(data.estimatedFee);
@@ -188,7 +188,7 @@ function App() {
 
     const submitCancelOrder = () => {
         if (!selectedOrderId) return;
-        fetch(`http://localhost:8888/api/orders/${selectedOrderId}/cancel`, { method: 'POST' })
+        fetch(`http://localhost:8888/api/orders/${selectedOrderId}/cancel`, { method: 'POST', headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => {
                 toast.current?.show({ severity: 'success', summary: '주문 취소 완료', detail: `수수료: ₩${data.cancellationFee}`, life: 5000 });
@@ -198,7 +198,7 @@ function App() {
     };
 
     const advanceStage = (orderId: number) => {
-        fetch(`http://localhost:8888/api/orders/${orderId}/advance-stage`, { method: 'POST' })
+        fetch(`http://localhost:8888/api/orders/${orderId}/advance-stage`, { method: 'POST', headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'error') {
@@ -296,7 +296,7 @@ function App() {
 
     const submitChangeRequest = () => {
         if (!selectedOrderId) return;
-        fetch(`http://localhost:8888/api/orders/${selectedOrderId}/hold`, { method: 'POST' })
+        fetch(`http://localhost:8888/api/orders/${selectedOrderId}/hold`, { method: 'POST', headers: getAuthHeaders() })
             .then(() => {
                 setChangeModalVisible(false);
             });
@@ -356,7 +356,7 @@ function App() {
     const handlePrint = async (order: any, mode: 'label' | 'invoice') => {
         if (mode === 'invoice') {
             try {
-                const res = await fetch(`http://localhost:8888/api/orders/${order.id}/invoice`);
+                const res = await fetch(`http://localhost:8888/api/orders/${order.id}/invoice`, { headers: getAuthHeaders() });
                 const invoiceData = await res.json();
                 // Merge the invoice data with the basic order data
                 setPrintOrder({ ...order, invoice: invoiceData });
