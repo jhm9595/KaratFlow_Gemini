@@ -55,7 +55,7 @@ public class OrderController {
         
         Map<String, Object> payload = new HashMap<>();
         payload.put("orderId", orderId);
-        payload.put("message", "Order " + orderId + " placed on HOLD due to change request.");
+        payload.put("message", "주문 #" + orderId + "건이 고객 요청으로 보류(HOLD) 상태가 되었습니다.");
         
         messagingTemplate.convertAndSend("/topic/process-alerts", (Object) payload);
         
@@ -90,7 +90,7 @@ public class OrderController {
         // Send alert
         Map<String, Object> payload = new HashMap<>();
         payload.put("orderId", orderId);
-        payload.put("message", "Order " + orderId + " CANCELLED. Fee: ₩" + res.get("cancellationFee"));
+        payload.put("message", "주문 #" + orderId + "건이 취소되었습니다. 취소 수수료: " + res.get("cancellationFee"));
         messagingTemplate.convertAndSend("/topic/process-alerts", (Object) payload);
 
         return ResponseEntity.ok(res);

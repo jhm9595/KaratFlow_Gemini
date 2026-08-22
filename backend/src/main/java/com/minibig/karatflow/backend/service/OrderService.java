@@ -192,6 +192,10 @@ public class OrderService {
         String nextStage;
 
         switch (currentStage) {
+            case "PENDING":
+            case "접수":
+                nextStage = "CAD";
+                break;
             case "CAD":
                 nextStage = "Casting";
                 break;

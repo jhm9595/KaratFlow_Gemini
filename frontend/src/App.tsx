@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DataTable } from 'primereact/datatable';
@@ -5,8 +6,7 @@ import { Column } from 'primereact/column';
 import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
-import { Timeline } from 'primereact/timeline';
-import { Card } from 'primereact/card';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
 import { Client } from '@stomp/stompjs';
@@ -16,11 +16,14 @@ function App() {
     const { t } = useTranslation();
     const toast = useRef<any>(null);
     const [changeModalVisible, setChangeModalVisible] = useState(false);
+    const navigate = useNavigate();
     const [orders, setOrders] = useState<any[]>([]);
     const [partnerModalVisible, setPartnerModalVisible] = useState(false);
     const [createOrderModalVisible, setCreateOrderModalVisible] = useState(false);
+    const [orderDetailVisible, setOrderDetailVisible] = useState(false);
     
-    const [dashboardStats, setDashboardStats] = useState({
+    const [_liveEvents, _setLiveEvents] = useState<{id: number, message: string, time: string}[]>([]);
+    const [_dashboardStats, setDashboardStats] = useState({
         totalRevenue: 0,
         activeOrders: 0,
         totalOrders: 0,
@@ -204,21 +207,57 @@ function App() {
                     fetchOrders();
                 }
             })
-            .catch(err => {
+            .catch((_err) => {
                 toast.current?.show({ severity: 'error', summary: '오류', detail: '공정 단계 이동 중 오류가 발생했습니다.', life: 3000 });
             });
     };
 
     const fetchOrders = () => {
         fetch('http://localhost:8888/api/orders', { headers: getAuthHeaders() })
-            .then(res => res.json())
-            .then(data => setOrders(data))
-            .catch(err => console.error('Error fetching orders:', err));
+            .then(res => {
+                if (res.status === 401 || res.redirected || (res.url && res.url.includes('/login'))) {
+                    navigate('/login');
+                    throw new Error('Unauthorized');
+                }
+                return res.text();
+            })
+            .then(text => {
+                if (text.trim().startsWith('<')) {
+                    navigate('/login');
+                    throw new Error('Unauthorized html');
+                }
+                return JSON.parse(text);
+            })
+            .then(data => {
+                const mappedData = data.map((o: any) => {
+                    let s = o.stage;
+                    if (s) s = s.toUpperCase();
+                    if (s === 'PENDING') s = '접수';
+                    else if (s === 'CAD') s = 'CAD';
+                    else if (s === 'CASTING' || s === '주물') s = '주물';
+                    else if (s === 'POLISHING' || s === '세공') s = '세공';
+                    else if (s === 'PLATING/INSPECTION' || s === 'COMPLETED' || s === 'DONE' || o.status === 'COMPLETED') s = '완성';
+                    return { ...o, stage: s };
+                });
+                setOrders(mappedData);
+            })
+            .catch((_err) => console.error('Error fetching orders:', _err));
             
         fetch('http://localhost:8888/api/orders/stats', { headers: getAuthHeaders() })
-            .then(res => res.json())
+            .then(res => {
+                if (res.status === 401 || res.redirected || (res.url && res.url.includes('/login'))) {
+                    throw new Error('Unauthorized');
+                }
+                return res.text();
+            })
+            .then(text => {
+                if (text.trim().startsWith('<')) {
+                    throw new Error('Unauthorized html');
+                }
+                return JSON.parse(text);
+            })
             .then(data => setDashboardStats(data))
-            .catch(err => console.error('Error fetching stats:', err));
+            .catch((_err) => console.error('Error fetching stats:', _err));
     };
 
     useEffect(() => {
@@ -247,7 +286,9 @@ function App() {
         });
         client.activate();
 
-        return () => {
+        
+
+    return () => {
             client.deactivate();
         };
     }, []);
@@ -260,14 +301,7 @@ function App() {
             });
     };
 
-    const mockTimeline = [
-        { status: t('stage_cad'), date: '10:00' },
-        { status: t('stage_casting'), date: '12:00' },
-        { status: t('stage_polishing'), date: '15:00' },
-        { status: t('stage_plating'), date: t('pending') },
-        { status: t('stage_inspection'), date: t('pending') }
-    ];
-
+    
     const showHoldAlert = () => {
         // Fallback for simulate button if needed
         toast.current?.show({ severity: 'warn', summary: t('alert_title'), detail: t('alert_desc'), life: 3000 });
@@ -275,7 +309,9 @@ function App() {
 
     const statusBodyTemplate = (rowData: any) => {
         if (rowData.status === 'CANCELLED') {
-            return (
+            
+
+    return (
                 <div className="flex flex-column gap-1">
                     <span className="p-badge p-badge-secondary">취소됨</span>
                     {rowData.cancellationFee > 0 && <small className="text-red-500 font-bold">위약금: ₩{rowData.cancellationFee.toLocaleString()}</small>}
@@ -292,21 +328,8 @@ function App() {
         i18n.changeLanguage(nextLang);
     };
 
-    const surfaceFinishBodyTemplate = (rowData: any) => {
-        if (!rowData.surfaceFinish) return <span className="text-500">-</span>;
-        return <span className="p-badge p-badge-info">{rowData.surfaceFinish}</span>;
-    };
-
-    const engravingBodyTemplate = (rowData: any) => {
-        if (!rowData.engravingText) return <span className="text-500">-</span>;
-        return (
-            <div className="flex flex-column gap-1">
-                <span className="font-bold">{rowData.engravingText}</span>
-                <small className="text-500">{rowData.engravingLocation || ''}</small>
-            </div>
-        );
-    };
-
+    
+    
     const handlePrint = async (order: any, mode: 'label' | 'invoice') => {
         if (mode === 'invoice') {
             try {
@@ -327,60 +350,184 @@ function App() {
         }, 300);
     };
 
-    const actionBodyTemplate = (rowData: any) => {
-        if (rowData.status === 'CANCELLED') return <span className="text-400">액션 없음</span>;
-        
-        return (
-            <div className="flex gap-2">
-                <Button icon="pi pi-forward" tooltip="공정 이동" onClick={() => advanceStage(rowData.id)} disabled={rowData.status === 'COMPLETED'} className="p-button-rounded p-button-success p-button-text" />
-                <Button icon="pi pi-truck" tooltip="외주 감모 추적" onClick={() => openSubcontractModal(rowData.id)} className="p-button-rounded p-button-secondary p-button-text" />
-                <Button icon="pi pi-print" tooltip="라벨 인쇄" onClick={() => handlePrint(rowData, 'label')} className="p-button-rounded p-button-success p-button-text" />
-                <Button icon="pi pi-file-pdf" tooltip="명세서 인쇄" onClick={() => handlePrint(rowData, 'invoice')} className="p-button-rounded p-button-info p-button-text" />
-                <Button icon="pi pi-pencil" tooltip="변경 요청" onClick={() => { setSelectedOrderId(rowData.id); setChangeModalVisible(true); }} className="p-button-rounded p-button-warning p-button-text" />
-                <Button icon="pi pi-trash" tooltip="주문 취소" onClick={() => openCancelModal(rowData.id)} className="p-button-rounded p-button-danger p-button-text" />
-            </div>
-        );
-    };
+    
+    
 
+    const dailyProcessData = [
+        { date: '08/17', CAD: 2.1, 주물: 4.5, 세공: 8.2 },
+        { date: '08/18', CAD: 2.4, 주물: 4.2, 세공: 9.1 },
+        { date: '08/19', CAD: 1.8, 주물: 5.0, 세공: 12.5 }, 
+        { date: '08/20', CAD: 2.5, 주물: 4.1, 세공: 10.8 },
+        { date: '08/21', CAD: 2.0, 주물: 4.8, 세공: 8.5 },
+        { date: '08/22', CAD: 2.2, 주물: 4.4, 세공: 8.0 },
+        { date: '08/23', CAD: 1.9, 주물: 4.0, 세공: 7.5 }
+    ];
+    
+    const dailySubcontractData = [
+        { date: '08/17', 제일도금: 24, 성실주물: 12 },
+        { date: '08/18', 제일도금: 22, 성실주물: 14 },
+        { date: '08/19', 제일도금: 28, 성실주물: 11 },
+        { date: '08/20', 제일도금: 25, 성실주물: 16 },
+        { date: '08/21', 제일도금: 20, 성실주물: 13 },
+        { date: '08/22', 제일도금: 18, 성실주물: 10 },
+        { date: '08/23', 제일도금: 21, 성실주물: 12 }
+    ];
     return (
         <>
-            <div className="p-m-4 p-4 no-print">
-                <Toast ref={toast} />
-                <div className="flex justify-content-between align-items-center mb-4">
-                    <h2>{t('title')}</h2>
+            <Toast ref={toast} />
+            <div className="flex flex-column h-screen surface-ground no-print">
+                {/* APM Header */}
+                <div className="flex justify-content-between align-items-center px-4 py-3 surface-0 border-bottom-1 border-300 shadow-2">
+                    <div className="flex align-items-center gap-3">
+                        <div className="w-2rem h-2rem bg-primary border-circle flex align-items-center justify-content-center shadow-1">
+                            <i className="pi pi-chart-line text-white"></i>
+                        </div>
+                        <h2 className="m-0 text-xl font-bold text-900 tracking-tight">KaratFlow Gemini <span className="text-500 font-normal text-lg ml-2">통합 모니터링 대시보드</span></h2>
+                    </div>
                     <div className="flex gap-2">
-                        <Button label="새 주문 생성" icon="pi pi-plus" className="p-button-primary" onClick={() => setCreateOrderModalVisible(true)} />
-                        <Button label={t('lang')} icon="pi pi-globe" className="p-button-secondary p-button-outlined" onClick={toggleLanguage} />
-                        <Button label={t('invite_partner')} icon="pi pi-users" className="p-button-info" onClick={openHandshakeModal} />
-                        <Button label={t('simulate_hold')} icon="pi pi-bell" className="p-button-warning" onClick={showHoldAlert} />
+                        <Button label="새 주문 생성" icon="pi pi-plus" className="p-button-primary p-button-sm shadow-1" onClick={() => setCreateOrderModalVisible(true)} />
+                        <Button label={t('lang')} icon="pi pi-globe" className="p-button-text p-button-secondary p-button-sm text-700" onClick={toggleLanguage} />
+                        <Button label="협력사 초대" icon="pi pi-users" className="p-button-outlined p-button-info p-button-sm" onClick={openHandshakeModal} />
+                        <Button label="보류 알림 시뮬레이션" icon="pi pi-bell" className="p-button-warning p-button-sm shadow-1" onClick={showHoldAlert} />
+                        
+                        <div className="flex align-items-center gap-2 border-left-1 border-300 pl-3 ml-1">
+                            <div className="w-2rem h-2rem border-circle bg-primary flex align-items-center justify-content-center text-white font-bold text-sm">
+                                <i className="pi pi-user"></i>
+                            </div>
+                            <span className="text-700 font-bold text-sm">로그인됨</span>
+                            <Button icon="pi pi-sign-out" className="p-button-rounded p-button-text p-button-danger ml-2" aria-label="Logout" tooltip="로그아웃" tooltipOptions={{position: 'bottom'}} onClick={() => { localStorage.removeItem('jwtToken'); window.location.href = '/login'; }} />
+                        </div>
                     </div>
                 </div>
 
-                <div className="grid">
-                    <div className="col-12 md:col-8">
-                        {/* @ts-ignore */}
-                        <Card title={t('active_orders')}>
-                            {/* @ts-ignore */}
-                            <DataTable value={orders} size="small" paginator rows={10} selectionMode="single" selection={selectedOrderId === null ? null : orders.find(o => o.id === selectedOrderId)} onSelectionChange={(e) => setSelectedOrderId(e.value?.id)} dataKey="id">
-                                <Column field="orderNo" header="주문 번호" />
-                                <Column field="id" header="ID" />
-                                <Column field="design" header="Design Code" />
-                                <Column field="customerName" header="고객명" />
-                                <Column field="date" header={t('date')}></Column>
-                                <Column header={t('surface_finish')} body={surfaceFinishBodyTemplate}></Column>
-                                <Column header={t('engraving')} body={engravingBodyTemplate}></Column>
-                                <Column field="stage" header={t('status')} body={statusBodyTemplate}></Column>
-                                <Column body={actionBodyTemplate} header="Action" />
-                            </DataTable>
-                        </Card>
+                {/* APM Main Content */}
+                <div className="flex-1 flex overflow-hidden p-3 gap-3">
+                    {/* Left Panel: Metrics & Charts */}
+                    <div className="flex flex-column gap-3" style={{ width: '450px' }}>
+                        <div className="surface-0 p-3 border-round shadow-1">
+                            <h4 className="m-0 mb-3 text-600 font-medium">실시간 주요 지표</h4>
+                            <div className="flex justify-content-between align-items-end mb-3">
+                                <span className="text-600">진행중 주문</span>
+                                <span className="text-3xl font-bold text-900">{orders.filter(o => o.status !== 'CANCELLED' && o.status !== 'COMPLETED').length} <small className="text-sm font-normal text-gray-500">건</small></span>
+                            </div>
+                            <div className="flex justify-content-between align-items-end mb-3">
+                                <span className="text-600">금일 완료</span>
+                                <span className="text-3xl font-bold text-green-400">{orders.filter(o => o.status === 'COMPLETED').length} <small className="text-sm font-normal text-gray-500">건</small></span>
+                            </div>
+                        </div>
+                        
+                        
+                        {/* Advanced Chart 1: 병목 분석 */}
+                        <div className="surface-0 p-3 border-round shadow-1 flex-1 flex flex-column">
+                            <h4 className="m-0 mb-3 text-600 font-medium">작업장 공정 트렌드 현황 (주간)</h4>
+                            <div className="flex-1 w-full" style={{ minHeight: '180px' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={dailyProcessData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                                        <XAxis dataKey="date" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
+                                        <YAxis tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
+                                        <RechartsTooltip contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', color: '#333' }} />
+                                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                                        <Bar dataKey="CAD" stackId="a" fill="#8884d8" name="CAD" />
+                                        <Bar dataKey="주물" stackId="a" fill="#82ca9d" name="주물" />
+                                        <Bar dataKey="세공" stackId="a" fill="#ffc658" name="세공" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Advanced Chart 2: 외주 처리 현황 */}
+                        <div className="surface-0 p-3 border-round shadow-1 flex-1 flex flex-column">
+                            <h4 className="m-0 mb-3 text-600 font-medium">외주 협력업체 처리 시간 추이 (주간)</h4>
+                            <div className="flex-1 w-full" style={{ minHeight: '180px' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={dailySubcontractData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                                        <XAxis dataKey="date" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
+                                        <YAxis tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
+                                        <RechartsTooltip contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', color: '#333' }} />
+                                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                                        <Line type="monotone" dataKey="제일도금" stroke="#8884d8" strokeWidth={3} dot={{r: 4}} />
+                                        <Line type="monotone" dataKey="성실주물" stroke="#82ca9d" strokeWidth={3} dot={{r: 4}} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div className="col-12 md:col-4">
-                        {/* @ts-ignore */}
-                        <Card title={t('pipeline')}>
-                            {/* @ts-ignore */}
-                            <Timeline value={mockTimeline} content={(item: any) => item.status} opposite={(item: any) => item.date} />
-                        </Card>
+
+                    {/* Right Panel: Pipeline & Data Table */}
+                    <div className="flex-1 flex flex-column gap-3 overflow-hidden">
+                        
+                        {/* Pipeline Visualizer */}
+                        <div className="surface-0 p-3 border-round shadow-1">
+                            <h4 className="m-0 mb-3 text-600 font-medium">실시간 공정 흐름 및 바틀넥</h4>
+                            <div className="flex justify-content-between align-items-center px-5 py-4 relative">
+                                {/* Connecting Line */}
+                                <div className="absolute border-top-2 border-300" style={{ top: '35px', left: '4rem', right: '4rem', zIndex: 0 }}></div>
+                                
+                                {[{name: '접수', count: orders.filter(o => o.stage==='PENDING').length}, {name: 'CAD', count: orders.filter(o => o.stage==='CAD').length}, {name: '주물', count: orders.filter(o => o.stage==='CASTING').length}, {name: '세공', count: orders.filter(o => o.stage==='POLISHING').length}, {name: '완성', count: orders.filter(o => o.stage==='COMPLETED').length}].map((s) => {
+                                    const stageColors: Record<string, {bg: string, border: string, text: string}> = {
+                                        '접수': { bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-700' },
+                                        'CAD': { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-700' },
+                                        '주물': { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-700' },
+                                        '세공': { bg: 'bg-pink-100', border: 'border-pink-400', text: 'text-pink-700' },
+                                        '완성': { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-700' }
+                                    };
+                                    const color = stageColors[s.name] || stageColors['접수'];
+                                    
+                                    
+
+    return (
+                                        <div key={s.name} className="flex flex-column align-items-center relative" style={{ zIndex: 1 }}>
+                                            <div className={`flex align-items-center justify-content-center border-circle border-2 ${color.bg} ${color.border} mb-2 shadow-1 bg-white`} style={{ width: '70px', height: '70px' }}>
+                                                <span className={`text-2xl font-bold ${color.text}`}>{s.count}</span>
+                                            </div>
+                                            <span className="text-700 font-medium bg-white px-2">{s.name}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Enhanced Data Table */}
+                        <div className="surface-0 p-3 border-round shadow-1 flex-1 flex flex-column overflow-hidden">
+                            <h4 className="m-0 mb-3 text-600 font-medium">상세 주문 모니터링</h4>
+                            <div className="flex-1 overflow-auto custom-dark-table pb-3">
+                                {/* @ts-ignore */}
+                                <DataTable value={orders} size="small" paginator rows={10} selectionMode="single" selection={selectedOrderId === null ? null : orders.find(o => o.id === selectedOrderId)} onSelectionChange={(e) => { setSelectedOrderId(e.value?.id); if(e.value) setOrderDetailVisible(true); }} dataKey="id" emptyMessage="등록된 주문이 없습니다." className="p-datatable-sm cursor-pointer" rowClassName={() => 'surface-0 text-900 hover:surface-50 transition-colors transition-duration-200'}>
+                                    <Column header="주문 번호" body={(r) => <span className="font-bold text-primary">#{r.orderNo || r.id}</span>} style={{ minWidth: '120px' }} />
+                                    <Column field="design" header="Design" />
+                                    <Column field="customerName" header="고객명" />
+                                    <Column field="stage" header="공정 상태" body={statusBodyTemplate}></Column>
+                                    <Column header="" body={(rowData) => <Button icon="pi pi-eye" onClick={(e) => { e.stopPropagation(); setSelectedOrderId(rowData.id); setOrderDetailVisible(true); }} className="p-button-rounded p-button-text p-button-sm p-button-secondary" aria-label="상세보기" tooltip="상세보기" tooltipOptions={{position: 'left'}} />} style={{ width: '60px' }} />
+                                </DataTable>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Panel: Live Feed */}
+                    <div className="surface-0 p-3 border-round shadow-1 flex flex-column" style={{ width: '350px' }}>
+                        <div className="flex justify-content-between align-items-center mb-3">
+                            <h4 className="m-0 text-600 font-medium">Live Event Feed</h4>
+                            <span className="flex align-items-center gap-2">
+                                <span className="w-1rem h-1rem bg-green-500 border-circle inline-block" style={{ animation: 'pulse 2s infinite' }}></span>
+                                <span className="text-sm text-green-500 font-bold">LIVE</span>
+                            </span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto pr-2" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {_liveEvents.length === 0 ? (
+                                <div className="text-center text-gray-500 py-4 mt-5">최근 발생한 이벤트가 없습니다.</div>
+                            ) : (
+                                _liveEvents.map(ev => (
+                                    <div key={ev.id} className="surface-50 p-3 border-round border-left-3 border-primary shadow-1 fadein animation-duration-300">
+                                        <div className="flex justify-content-between align-items-center mb-1">
+                                            <span className="text-xs text-600"><i className="pi pi-clock mr-1"></i> {ev.time}</span>
+                                        </div>
+                                        <div className="text-sm text-900 line-height-3">{ev.message}</div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -556,7 +703,9 @@ function App() {
                                 <Column field="dispatchedWeightG" header="반출(g)"></Column>
                                 <Column header="반입(g)" body={(r) => {
                                     if (r.status === 'RECEIVED') return <span>{r.receivedWeightG}</span>;
-                                    return (
+                                    
+
+    return (
                                         <div className="flex gap-2 align-items-center">
                                             <InputNumber value={receiveForm[r.id]} onValueChange={(e) => setReceiveForm({...receiveForm, [r.id]: e.value || 0})} className="w-5rem" mode="decimal" minFractionDigits={2} />
                                             <Button icon="pi pi-download" onClick={() => handleReceiveSubcontract(r.id)} className="p-button-sm" tooltip="반입 확인" />
@@ -574,6 +723,42 @@ function App() {
                     </div>
                 </Dialog>
             </div>
+
+
+            <Dialog header="주문 상세 정보" visible={orderDetailVisible} style={{ width: '40vw' }} onHide={() => setOrderDetailVisible(false)}>
+                {selectedOrderId && orders.find(o => o.id === selectedOrderId) && (
+                    (() => {
+                        const rowData = orders.find(o => o.id === selectedOrderId);
+                        
+
+    return (
+                            <div className="flex flex-column gap-4">
+                                <div className="surface-50 p-3 border-round">
+                                    <h3 className="m-0 mb-3 text-800">기본 정보</h3>
+                                    <div className="grid">
+                                        <div className="col-6 mb-2"><span className="text-500">주문 번호:</span> <span className="font-bold">#{rowData.orderNo || rowData.id}</span></div>
+                                        <div className="col-6 mb-2"><span className="text-500">고객명:</span> <span className="font-bold">{rowData.customerName}</span></div>
+                                        <div className="col-6 mb-2"><span className="text-500">디자인:</span> <span className="font-bold">{rowData.design}</span></div>
+                                        <div className="col-6 mb-2"><span className="text-500">현재 공정:</span> <span className="font-bold">{rowData.stage}</span></div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h3 className="m-0 mb-3 text-800">작업 메뉴</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button label="공정 진행" icon="pi pi-forward" onClick={() => advanceStage(rowData.id)} disabled={rowData.status === 'COMPLETED'} className="p-button-success" />
+                                        <Button label="외주 추적" icon="pi pi-truck" onClick={() => { setOrderDetailVisible(false); openSubcontractModal(rowData.id); }} className="p-button-secondary" />
+                                        <Button label="라벨 인쇄" icon="pi pi-print" onClick={() => handlePrint(rowData, 'label')} className="p-button-outlined p-button-success" />
+                                        <Button label="명세서 인쇄" icon="pi pi-file-pdf" onClick={() => handlePrint(rowData, 'invoice')} className="p-button-outlined p-button-info" />
+                                        <Button label="변경 요청" icon="pi pi-pencil" onClick={() => { setOrderDetailVisible(false); setChangeModalVisible(true); }} className="p-button-outlined p-button-warning" />
+                                        <Button label="주문 취소" icon="pi pi-trash" onClick={() => { setOrderDetailVisible(false); openCancelModal(rowData.id); }} className="p-button-outlined p-button-danger" />
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()
+                )}
+            </Dialog>
 
             {/* Print Views */}
             {printOrder && printMode === 'label' && (
