@@ -1,0 +1,35 @@
+name: CI/CD Build and Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Build Backend with Gradle
+      working-directory: ./backend
+      env:
+        # GitHub Secrets에서 환경변수를 주입합니다.
+        KAKAO_CLIENT_ID: $\{{ secrets.KAKAO_CLIENT_ID }}
+        GOOGLE_CLIENT_ID: $\{{ secrets.GOOGLE_CLIENT_ID }}
+        GOOGLE_CLIENT_SECRET: $\{{ secrets.GOOGLE_CLIENT_SECRET }}
+      run: ./gradlew build
+
+    # 배포 단계 (예: Docker 이미지 빌드 후 푸시 등)
+    # - name: Build and Push Docker image
+    #   run: |
+    #     docker build --build-arg KAKAO_CLIENT_ID=$\{{ secrets.KAKAO_CLIENT_ID }} ...

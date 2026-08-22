@@ -32,6 +32,8 @@ const resources = {
       "stage_plating": "PLATING",
       "stage_inspection": "INSPECTION",
       "pending": "Pending",
+      "surface_finish": "Finish",
+      "engraving": "Engraving",
       "lang": "English"
     }
   },
@@ -64,6 +66,8 @@ const resources = {
       "stage_plating": "도금(PLATING)",
       "stage_inspection": "검수(INSPECTION)",
       "pending": "대기 중",
+      "surface_finish": "표면마감",
+      "engraving": "각인정보",
       "lang": "한국어"
     }
   }

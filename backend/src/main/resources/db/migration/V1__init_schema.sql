@@ -20,6 +20,10 @@ CREATE TABLE orders (
     manufacturer_company_id BIGINT REFERENCES companies(company_id),
     order_date DATE NOT NULL,
     status VARCHAR(20) NOT NULL, -- 'PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'
+    order_type VARCHAR(10) NOT NULL DEFAULT 'B2B', -- 'B2B', 'B2C'
+    customer_name VARCHAR(50),
+    customer_phone VARCHAR(30),
+    final_consumer_price DECIMAL(12, 2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -39,7 +43,10 @@ CREATE TABLE order_items (
     quantity INT NOT NULL,
     ring_size VARCHAR(10),
     color VARCHAR(20),
-    engraving VARCHAR(100),
+    engraving_text VARCHAR(100),
+    engraving_font VARCHAR(50),
+    engraving_location VARCHAR(20),
+    surface_finish VARCHAR(30),
     stone_details VARCHAR(255),
     status VARCHAR(20) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
