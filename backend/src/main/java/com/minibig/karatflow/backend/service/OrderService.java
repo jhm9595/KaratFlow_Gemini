@@ -95,6 +95,13 @@ public class OrderService {
                 .date(order.getOrderDate().toString())
                 .stage(workOrder.getCurrentStage())
                 .isHold(workOrder.getIsHold())
+                .createdAt(workOrder.getCreatedAt() != null ? workOrder.getCreatedAt().toString() : null)
+                .pendingCompletedAt(workOrder.getPendingCompletedAt() != null ? workOrder.getPendingCompletedAt().toString() : null)
+                .cadCompletedAt(workOrder.getCadCompletedAt() != null ? workOrder.getCadCompletedAt().toString() : null)
+                .castingCompletedAt(workOrder.getCastingCompletedAt() != null ? workOrder.getCastingCompletedAt().toString() : null)
+                .polishingCompletedAt(workOrder.getPolishingCompletedAt() != null ? workOrder.getPolishingCompletedAt().toString() : null)
+                .platingCompletedAt(workOrder.getPlatingCompletedAt() != null ? workOrder.getPlatingCompletedAt().toString() : null)
+                .completedAt(workOrder.getCompletedAt() != null ? workOrder.getCompletedAt().toString() : null)
                 .engravingText(orderItem.getEngravingText())
                 .engravingLocation(orderItem.getEngravingLocation())
                 .surfaceFinish(orderItem.getSurfaceFinish())
@@ -117,6 +124,13 @@ public class OrderService {
                 .date(row.get("DATE").toString())
                 .stage((String) row.get("STAGE"))
                 .isHold((Boolean) row.get("ISHOLD"))
+                .createdAt(row.get("CREATEDAT") != null ? row.get("CREATEDAT").toString() : null)
+                .pendingCompletedAt(row.get("PENDINGCOMPLETEDAT") != null ? row.get("PENDINGCOMPLETEDAT").toString() : null)
+                .cadCompletedAt(row.get("CADCOMPLETEDAT") != null ? row.get("CADCOMPLETEDAT").toString() : null)
+                .castingCompletedAt(row.get("CASTINGCOMPLETEDAT") != null ? row.get("CASTINGCOMPLETEDAT").toString() : null)
+                .polishingCompletedAt(row.get("POLISHINGCOMPLETEDAT") != null ? row.get("POLISHINGCOMPLETEDAT").toString() : null)
+                .platingCompletedAt(row.get("PLATINGCOMPLETEDAT") != null ? row.get("PLATINGCOMPLETEDAT").toString() : null)
+                .completedAt(row.get("COMPLETEDAT") != null ? row.get("COMPLETEDAT").toString() : null)
                 .engravingText((String) row.get("ENGRAVINGTEXT"))
                 .engravingLocation((String) row.get("ENGRAVINGLOCATION"))
                 .surfaceFinish((String) row.get("SURFACEFINISH"))
@@ -195,27 +209,34 @@ public class OrderService {
             case "PENDING":
             case "접수":
                 nextStage = "CAD";
+                workOrder.setPendingCompletedAt(LocalDateTime.now());
                 break;
             case "CAD":
                 nextStage = "Casting";
+                workOrder.setCadCompletedAt(LocalDateTime.now());
                 break;
             case "Casting":
             case "주물":
                 nextStage = "Polishing";
+                workOrder.setCastingCompletedAt(LocalDateTime.now());
                 break;
             case "Polishing":
             case "세공":
                 nextStage = "Plating/Inspection";
+                workOrder.setPolishingCompletedAt(LocalDateTime.now());
                 break;
             case "Plating/Inspection":
             case "도금":
             case "검수":
                 nextStage = "Completed";
+                workOrder.setPlatingCompletedAt(LocalDateTime.now());
+                workOrder.setCompletedAt(LocalDateTime.now());
                 order.setStatus("COMPLETED");
                 orderRepository.save(order);
                 break;
             default:
                 nextStage = "Completed";
+                workOrder.setCompletedAt(LocalDateTime.now());
                 order.setStatus("COMPLETED");
                 orderRepository.save(order);
                 break;

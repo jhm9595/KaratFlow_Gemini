@@ -16,6 +16,19 @@ public class WorkOrder {
     private String currentStage;
     @Column(name = "is_hold")
     private Boolean isHold;
-    @Column(name = "created_at")
+        @Column(name = "created_at")
     private LocalDateTime createdAt;
+    
+    @Column(name = "pending_completed_at")
+    private LocalDateTime pendingCompletedAt;
+    @Column(name = "cad_completed_at")
+    private LocalDateTime cadCompletedAt;
+    @Column(name = "casting_completed_at")
+    private LocalDateTime castingCompletedAt;
+    @Column(name = "polishing_completed_at")
+    private LocalDateTime polishingCompletedAt;
+    @Column(name = "plating_completed_at")
+    private LocalDateTime platingCompletedAt;
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
 }

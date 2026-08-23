@@ -18,6 +18,14 @@ public class OrderResponseDTO {
     private String customerName;
     private String customerPhone;
     private Double finalConsumerPrice;
-    private String status;
+        private String status;
     private Double cancellationFee;
+    
+    private String createdAt;
+    private String pendingCompletedAt;
+    private String cadCompletedAt;
+    private String castingCompletedAt;
+    private String polishingCompletedAt;
+    private String platingCompletedAt;
+    private String completedAt;
 }
