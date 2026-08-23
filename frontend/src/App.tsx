@@ -778,7 +778,7 @@ function App() {
                         </div>
                     </div>
                 ) : "주문 상세 정보"
-            } visible={orderDetailVisible} style={{ width: '40vw' }} onHide={() =>
+            } visible={orderDetailVisible} style={{ width: '40vw' }} onHide={() => setOrderDetailVisible(false)}> setOrderDetailVisible(false)}>
                 {selectedOrderId && orders.find(o => o.id === selectedOrderId) && (
                     (() => {
                         const rowData = orders.find(o => o.id === selectedOrderId);
