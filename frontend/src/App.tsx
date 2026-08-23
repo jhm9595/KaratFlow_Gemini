@@ -73,11 +73,8 @@ function App() {
     const [businessResult, setBusinessResult] = useState<any>(null);
 
     const getAuthHeaders = () => {
-        const token = localStorage.getItem('jwtToken');
-        return {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        };
+        const token = localStorage.getItem('access_token') || localStorage.getItem('jwtToken');
+        return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
     };
 
     const openHandshakeModal = () => {
@@ -175,10 +172,10 @@ function App() {
     };
 
     const handleReceiveSubcontract = (taskId: number) => {
-        const receivedWeightG = receiveForm[taskId];
+        const receivedWeightG = receiveForm[taskId] || 0;
         fetch(`http://localhost:8888/api/orders/${selectedOrderId}/subcontracts/${taskId}/receive`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify({ receivedWeightG })
         })
         .then(res => res.json())
