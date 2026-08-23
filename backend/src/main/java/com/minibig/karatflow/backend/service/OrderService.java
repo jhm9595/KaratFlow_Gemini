@@ -88,13 +88,16 @@ public class OrderService {
                 .build();
         orderItem = orderItemRepository.save(orderItem);
 
-        WorkOrder workOrder = WorkOrder.builder()
-                .orderItemId(orderItem.getId())
-                .currentStage("PENDING")
-                .isHold(false)
-                .createdAt(LocalDateTime.now())
-                .build();
-        workOrderRepository.save(workOrder);
+        int qty = orderItem.getQuantity() != null ? orderItem.getQuantity() : 1;
+        for (int i = 0; i < qty; i++) {
+            WorkOrder workOrder = WorkOrder.builder()
+                    .orderItemId(orderItem.getId())
+                    .currentStage("PENDING")
+                    .isHold(false)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            workOrderRepository.save(workOrder);
+        }
 
         return OrderResponseDTO.builder()
                 .id(order.getId())
@@ -106,15 +109,15 @@ public class OrderService {
                 .quantity(orderItem.getQuantity())
                 .unmappedProductName(dto.getUnmappedProductName())
                 .date(order.getOrderDate().toString())
-                .stage(workOrder.getCurrentStage())
-                .isHold(workOrder.getIsHold())
-                .createdAt(workOrder.getCreatedAt() != null ? workOrder.getCreatedAt().toString() : null)
-                .pendingCompletedAt(workOrder.getPendingCompletedAt() != null ? workOrder.getPendingCompletedAt().toString() : null)
-                .cadCompletedAt(workOrder.getCadCompletedAt() != null ? workOrder.getCadCompletedAt().toString() : null)
-                .castingCompletedAt(workOrder.getCastingCompletedAt() != null ? workOrder.getCastingCompletedAt().toString() : null)
-                .polishingCompletedAt(workOrder.getPolishingCompletedAt() != null ? workOrder.getPolishingCompletedAt().toString() : null)
-                .platingCompletedAt(workOrder.getPlatingCompletedAt() != null ? workOrder.getPlatingCompletedAt().toString() : null)
-                .completedAt(workOrder.getCompletedAt() != null ? workOrder.getCompletedAt().toString() : null)
+                .stage("PENDING")
+                .isHold(false)
+                .createdAt(java.time.LocalDateTime.now().toString())
+                .pendingCompletedAt(null)
+                .cadCompletedAt(null)
+                .castingCompletedAt(null)
+                .polishingCompletedAt(null)
+                .platingCompletedAt(null)
+                .completedAt(null)
                 .engravingText(orderItem.getEngravingText())
                 .engravingLocation(orderItem.getEngravingLocation())
                 .surfaceFinish(orderItem.getSurfaceFinish())
@@ -201,7 +204,7 @@ public class OrderService {
     public Double calculateCancelEstimate(Long orderId) {
         Order order = orderRepository.findById(orderId).orElseThrow();
         WorkOrder workOrder = workOrderRepository.findByOrderId(orderId).orElse(null);
-        String stage = workOrder != null ? workOrder.getCurrentStage() : "CAD";
+        String stage = workOrder != null ? "PENDING" : "CAD";
 
         Double basePrice = order.getFinalConsumerPrice() != null ? order.getFinalConsumerPrice().doubleValue() : null;
         if (basePrice == null || basePrice == 0) {
@@ -247,7 +250,7 @@ public class OrderService {
         WorkOrder workOrder = workOrderRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("WorkOrder not found"));
 
-        String currentStage = workOrder.getCurrentStage();
+        String currentStage = "PENDING";
         String nextStage;
 
         switch (currentStage) {
