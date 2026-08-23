@@ -174,16 +174,19 @@ function App() {
     };
 
     const handleReceiveSubcontract = (taskId: number) => {
-        const receivedWeightG = receiveForm[taskId] || 0;
-        fetch(`http://localhost:8888/api/orders/${selectedOrderId}/subcontracts/${taskId}/receive`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-            body: JSON.stringify({ receivedWeightG })
-        })
-        .then(res => res.json())
-        .then(updatedTask => {
-            setSubcontracts(subcontracts.map(s => s.id === taskId ? updatedTask : s));
-            toast.current?.show({ severity: 'info', summary: '반입 완료', detail: `감모량: ${updatedTask.lossWeightG}g`, life: 5000 });
+        setReceiveForm(prev => {
+            const receivedWeightG = prev[taskId] || 0;
+            fetch(`http://localhost:8888/api/orders/${selectedOrderId}/subcontracts/${taskId}/receive`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                body: JSON.stringify({ receivedWeightG })
+            })
+            .then(res => res.json())
+            .then(updatedTask => {
+                setSubcontracts(sub => sub.map(s => s.id === taskId ? updatedTask : s));
+                toast.current?.show({ severity: 'info', summary: '반입 완료', detail: `감모량 ${updatedTask.lossWeightG}g`, life: 5000 });
+            });
+            return prev;
         });
     };
 
