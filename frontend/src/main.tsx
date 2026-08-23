@@ -5,6 +5,7 @@ import App from './App'
 import { Login } from './pages/Login'
 import { OAuth2RedirectHandler } from './pages/OAuth2RedirectHandler'
 import { ProductStats } from './pages/ProductStats'
+import { ProductAdmin } from './pages/ProductAdmin'
 import { PrimeReactProvider } from 'primereact/api'
 
 // Core styles
@@ -22,6 +23,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/login" element={<Login />} />
           <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
           <Route path="/stats" element={<ProductStats />} />
+          <Route path="/products" element={<ProductAdmin />} />
           <Route path="/*" element={<App />} />
         </Routes>
       </BrowserRouter>

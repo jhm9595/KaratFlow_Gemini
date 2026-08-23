@@ -14,4 +14,8 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Long> {
                    "JOIN order_items oi ON w.order_item_id = oi.order_item_id " +
                    "WHERE oi.order_id = :orderId LIMIT 1", nativeQuery = true)
     Optional<WorkOrder> findByOrderId(@Param("orderId") Long orderId);
+    @Query(value = "SELECT w.* FROM work_orders w " +
+                   "JOIN order_items oi ON w.order_item_id = oi.order_item_id " +
+                   "WHERE oi.order_id = :orderId", nativeQuery = true)
+    java.util.List<WorkOrder> findAllByOrderId(@Param("orderId") Long orderId);
 }

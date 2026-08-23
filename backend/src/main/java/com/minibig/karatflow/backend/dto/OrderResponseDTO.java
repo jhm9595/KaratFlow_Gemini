@@ -8,6 +8,10 @@ public class OrderResponseDTO {
     private String orderNo;
     private String shortCode;
     private String design;
+    private String brand;
+    private String imageUrl;
+    private Integer quantity;
+    private String unmappedProductName;
     private String date;
     private String stage;
     private Boolean isHold;

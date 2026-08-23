@@ -8,6 +8,10 @@ public class OrderCreateRequestDTO {
     private String customerName;
     private String customerPhone;
     private Long designId;
+    private String unmappedProductName;
+    private String unmappedBrandName;
+    private String imageUrl;
+    private Integer quantity;
     private String engravingText;
     private String engravingLocation;
     private String surfaceFinish;

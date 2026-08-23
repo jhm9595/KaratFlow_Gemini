@@ -21,6 +21,15 @@ public class OrderItem {
     
     private Integer quantity;
     
+    @Column(name = "image_url")
+    private String imageUrl;
+    
+    @Column(name = "unmapped_product_name")
+    private String unmappedProductName;
+    
+    @Column(name = "unmapped_brand_name")
+    private String unmappedBrandName;
+    
     @Column(name = "engraving_text")
     private String engravingText;
     

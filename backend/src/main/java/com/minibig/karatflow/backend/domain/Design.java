@@ -19,6 +19,14 @@ public class Design {
     @Column(name = "base_labor_fee")
     private java.math.BigDecimal baseLaborFee;
     
+    private String brand;
+    
+    @Column(name = "image_url")
+    private String imageUrl;
+    
+    @Column(name = "is_verified")
+    private Boolean isVerified;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 }

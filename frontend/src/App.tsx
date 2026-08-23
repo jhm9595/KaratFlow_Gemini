@@ -7,6 +7,7 @@ import { Column } from 'primereact/column';
 import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
+import { AutoComplete } from 'primereact/autocomplete';
 import { Timeline } from 'primereact/timeline';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import { InputText } from 'primereact/inputtext';
@@ -93,7 +94,35 @@ function App() {
     const [orders, setOrders] = useState<any[]>([]);
     const [partnerModalVisible, setPartnerModalVisible] = useState(false);
     const [createOrderModalVisible, setCreateOrderModalVisible] = useState(false);
-    const [orderDetailVisible, setOrderDetailVisible] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<any>(null);
+    const [filteredProducts, ] = useState<any[]>([]);
+
+    const searchProduct = () => {
+        // @ts-ignore\n        const query = event.query.toLowerCase(); setFilteredProducts([]);
+    };
+
+    const handleFileUpload = (e: any) => {
+        if (e.files && e.files[0]) {
+            setCreateOrderForm({...createOrderForm, imageUrl: '/uploads/mock.png'});
+        }
+    };
+
+        const [orderDetailVisible, setOrderDetailVisible] = useState(false);
+    const [orderDetailData, setOrderDetailData] = useState<any>(null);
+
+    const openOrderDetail = (orderId: number) => {
+        setSelectedOrderId(orderId);
+        fetch(`http://localhost:8888/api/orders/${orderId}/details`, { headers: getAuthHeaders() })
+            .then(res => res.json())
+            .then(data => {
+                setOrderDetailData(data);
+                setOrderDetailVisible(true);
+            })
+            .catch(err => {
+                console.error('Failed to fetch details', err);
+                setOrderDetailVisible(true);
+            });
+    };
     
     const [_liveEvents, _setLiveEvents] = useState<{id: number, message: string, time: string}[]>([]);
     const [_dashboardStats, setDashboardStats] = useState({
@@ -103,15 +132,19 @@ function App() {
         cancellationRate: 0
     });
     
-    const [createOrderForm, setCreateOrderForm] = useState({
+    const [createOrderForm, setCreateOrderForm] = useState<any>({
         orderType: 'B2C',
         customerName: '',
         customerPhone: '',
-        designId: 1, // Defaulting to 1 for dummy
+        designId: 1,
         engravingText: '',
         engravingLocation: '',
         surfaceFinish: '유광',
-        finalConsumerPrice: 0
+        finalConsumerPrice: 0,
+        quantity: 1,
+        unmappedBrandName: '',
+        unmappedProductName: '',
+        imageUrl: ''
     });
 
     const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
@@ -597,7 +630,7 @@ function App() {
                             <h4 className="m-0 mb-3 text-600 font-medium">상세 주문 모니터링</h4>
                             <div className="flex-1 overflow-auto custom-dark-table pb-3">
                                 {/* @ts-ignore */}
-                                <DataTable value={orders} size="small" paginator rows={10} selectionMode="single" selection={selectedOrderId === null ? null : orders.find(o => o.id === selectedOrderId)} onSelectionChange={(e) => { setSelectedOrderId(e.value?.id); if(e.value) setOrderDetailVisible(true); }} dataKey="id" emptyMessage="등록된 주문이 없습니다." className="p-datatable-sm cursor-pointer" rowClassName={() => 'surface-0 text-900 hover:surface-50 transition-colors transition-duration-200'}>
+                                <DataTable value={orders} size="small" paginator rows={10} selectionMode="single" selection={selectedOrderId === null ? null : orders.find(o => o.id === selectedOrderId)} onSelectionChange={(e) => { setSelectedOrderId(e.value?.id); if(e.value) openOrderDetail(e.value.id); }} dataKey="id" emptyMessage="등록된 주문이 없습니다." className="p-datatable-sm cursor-pointer" rowClassName={() => 'surface-0 text-900 hover:surface-50 transition-colors transition-duration-200'}>
                                     <Column header="주문 번호" body={(r) => <span className="font-bold text-primary">#{r.orderNo || r.id}</span>} style={{ minWidth: '120px' }} />
                                     <Column field="design" header="Design" />
                                     <Column field="customerName" header="고객명" />
@@ -635,40 +668,77 @@ function App() {
                 </div>
 
                 {/* @ts-ignore */}
-                <Dialog header="새 주문 생성" visible={createOrderModalVisible} style={{ width: '50vw' }} onHide={() => setCreateOrderModalVisible(false)}>
-                    <div className="flex flex-column gap-3 p-fluid">
-                        <div className="p-inputgroup">
-                            <span className="p-inputgroup-addon">구분</span>
-                            <InputText value={createOrderForm.orderType} onChange={(e) => setCreateOrderForm({...createOrderForm, orderType: e.target.value})} placeholder="B2C, B2B 등" />
+                <Dialog header="새 주문 생성" visible={createOrderModalVisible} style={{ width: '60vw' }} breakpoints={{ '960px': '85vw', '641px': '100vw' }} onHide={() => setCreateOrderModalVisible(false)} className="p-fluid">
+                    <div className="formgrid grid mt-2">
+                        {(!selectedProduct || typeof selectedProduct === 'string') && (
+                        <div className="field col-12 md:col-6">
+                            <label className="font-bold">브랜드 (옵션)</label>
+                            <InputText value={createOrderForm.unmappedBrandName} onChange={(e) => setCreateOrderForm({...createOrderForm, unmappedBrandName: e.target.value})} placeholder="신규 브랜드명" />
                         </div>
-                        <div className="p-inputgroup">
-                            <span className="p-inputgroup-addon">고객명</span>
+                        )}
+                        <div className="field col-12 md:col-6">
+                            <label className="font-bold">제품 검색 (또는 직접 입력) <span className="text-red-500">*</span></label>
+                            <AutoComplete value={selectedProduct} suggestions={filteredProducts} completeMethod={searchProduct} field="name" 
+                                onChange={(e) => {
+                                    setSelectedProduct(e.value);
+                                    if (typeof e.value === 'string') {
+                                        setCreateOrderForm({...createOrderForm, unmappedProductName: e.value});
+                                    }
+                                }} 
+                                placeholder="검색 또는 입력" />
+                        </div>
+                        
+                        <div className="field col-12 md:col-6">
+                            <label className="font-bold">제품 이미지</label>
+                            <div className="flex align-items-center gap-2">
+                                <input type="file" onChange={handleFileUpload} accept="image/*" className="p-inputtext p-component flex-1" style={{padding: '0.5rem'}} />
+                                {createOrderForm.imageUrl && <img src={`http://localhost:8888${createOrderForm.imageUrl}`} alt="preview" className="shadow-2 border-round" style={{width: '40px', height: '40px', objectFit: 'cover'}} />}
+                            </div>
+                        </div>
+
+                        <div className="field col-12 md:col-6">
+                            <label className="font-bold">수량</label>
+                            <InputNumber value={createOrderForm.quantity} onValueChange={(e) => setCreateOrderForm({...createOrderForm, quantity: (e.value === null || e.value === undefined) ? 1 : e.value})} min={1} showButtons />
+                        </div>
+
+                        <div className="field col-12 md:col-4">
+                            <label className="font-bold">주문 구분</label>
+                            <InputText value={createOrderForm.orderType} onChange={(e) => setCreateOrderForm({...createOrderForm, orderType: e.target.value})} placeholder="B2C, B2B" />
+                        </div>
+                        
+                        <div className="field col-12 md:col-4">
+                            <label className="font-bold">고객명</label>
                             <InputText value={createOrderForm.customerName} onChange={(e) => setCreateOrderForm({...createOrderForm, customerName: e.target.value})} placeholder="고객 이름" />
                         </div>
-                        <div className="p-inputgroup">
-                            <span className="p-inputgroup-addon">연락처</span>
+
+                        <div className="field col-12 md:col-4">
+                            <label className="font-bold">연락처</label>
                             <InputText value={createOrderForm.customerPhone} onChange={(e) => setCreateOrderForm({...createOrderForm, customerPhone: e.target.value})} placeholder="010-0000-0000" />
                         </div>
-                        <div className="p-inputgroup">
-                            <span className="p-inputgroup-addon">각인 문구</span>
-                            <InputText value={createOrderForm.engravingText} onChange={(e) => setCreateOrderForm({...createOrderForm, engravingText: e.target.value})} placeholder="각인할 텍스트 (옵션)" />
+
+                        <div className="field col-12 md:col-4">
+                            <label className="font-bold">표면 처리</label>
+                            <InputText value={createOrderForm.surfaceFinish} onChange={(e) => setCreateOrderForm({...createOrderForm, surfaceFinish: e.target.value})} placeholder="유광/무광 등" />
                         </div>
-                        <div className="p-inputgroup">
-                            <span className="p-inputgroup-addon">각인 위치</span>
-                            <InputText value={createOrderForm.engravingLocation} onChange={(e) => setCreateOrderForm({...createOrderForm, engravingLocation: e.target.value})} placeholder="반지 안쪽 등 (옵션)" />
+
+                        <div className="field col-12 md:col-4">
+                            <label className="font-bold">각인 문구</label>
+                            <InputText value={createOrderForm.engravingText} onChange={(e) => setCreateOrderForm({...createOrderForm, engravingText: e.target.value})} placeholder="각인 텍스트" />
                         </div>
-                        <div className="p-inputgroup">
-                            <span className="p-inputgroup-addon">표면 처리</span>
-                            <InputText value={createOrderForm.surfaceFinish} onChange={(e) => setCreateOrderForm({...createOrderForm, surfaceFinish: e.target.value})} placeholder="유광/무광" />
+
+                        <div className="field col-12 md:col-4">
+                            <label className="font-bold">각인 위치</label>
+                            <InputText value={createOrderForm.engravingLocation} onChange={(e) => setCreateOrderForm({...createOrderForm, engravingLocation: e.target.value})} placeholder="반지 안쪽 등" />
                         </div>
-                        <div className="p-inputgroup">
-                            <span className="p-inputgroup-addon">소비자가(₩)</span>
+
+                        <div className="field col-12">
+                            <label className="font-bold">소비자가 (₩)</label>
                             <InputNumber value={createOrderForm.finalConsumerPrice} onValueChange={(e) => setCreateOrderForm({...createOrderForm, finalConsumerPrice: e.value || 0})} mode="currency" currency="KRW" locale="ko-KR" />
                         </div>
                     </div>
-                    <div className="flex justify-content-end mt-4">
-                        <Button label="취소" icon="pi pi-times" onClick={() => setCreateOrderModalVisible(false)} className="p-button-text p-button-secondary mr-2" />
-                        <Button label="주문 등록" icon="pi pi-check" onClick={submitCreateOrder} className="p-button-primary" autoFocus />
+                    <div className="flex justify-content-end mt-4 pt-3 border-top-1 surface-border">
+                        <Button label="취소" icon="pi pi-times" onClick={() => setCreateOrderModalVisible(false)} className="p-button-text p-button-secondary mr-2" style={{width: 'auto'}} />
+                        <Button label="주문 등록" icon="pi pi-check" onClick={submitCreateOrder} className="p-button-primary" style={{width: 'auto'}} autoFocus />
                     </div>
                 </Dialog>
 
@@ -682,7 +752,7 @@ function App() {
                 </Dialog>
 
                 {/* @ts-ignore */}
-                <Dialog header="주문 취소 및 위약금 확인" visible={cancelModalVisible} style={{ width: '40vw' }} onHide={() => setCancelModalVisible(false)}>
+                <Dialog header="주문 취소 및 위약금 확인" visible={cancelModalVisible} style={{ width: '70vw' }} breakpoints={{ '960px': '90vw', '641px': '100vw' }} onHide={() => setCancelModalVisible(false)}>
                     <div className="flex flex-column align-items-center justify-content-center text-center p-4">
                         <i className="pi pi-exclamation-triangle text-red-500" style={{ fontSize: '3rem' }}></i>
                         <h2 className="mt-3">주문을 정말 취소하시겠습니까?</h2>
@@ -841,7 +911,7 @@ function App() {
                         </div>
                     </div>
                 ) : "주문 상세 정보"
-            } visible={orderDetailVisible} style={{ width: '40vw' }} onHide={() => setOrderDetailVisible(false)}>
+            } visible={orderDetailVisible} style={{ width: '70vw' }} breakpoints={{ '960px': '90vw', '641px': '100vw' }} onHide={() => setOrderDetailVisible(false)}>
                 {selectedOrderId && orders.find(o => o.id === selectedOrderId) && (
                     (() => {
                         const rowData = orders.find(o => o.id === selectedOrderId);
@@ -849,22 +919,60 @@ function App() {
 
     return (
                             <div className="flex flex-column gap-4">
-                                <div className="surface-100 p-4 border-round flex flex-column gap-2 text-gray-800">
-                                    <h3 className="m-0 mb-2">기본 정보</h3>
-                                    <div className="flex justify-content-between"><span className="text-600">주문 번호</span> <span className="font-bold">{rowData.orderNo}</span></div>
-                                    <div className="flex justify-content-between"><span className="text-600">고객명</span> <span className="font-bold">{rowData.customerName}</span></div>
-                                    <div className="flex justify-content-between"><span className="text-600">디자인</span> <span className="font-bold">{rowData.design}</span></div>
-                                    <div className="flex justify-content-between"><span className="text-600">표면 마감</span> <span className="font-bold">{rowData.surfaceFinish || '-'}</span></div>
-                                    <div className="flex justify-content-between"><span className="text-600">각인 내용</span> <span className="font-bold">{rowData.engravingText || '-'} ({rowData.engravingLocation})</span></div>
-                                    <div className="flex justify-content-between mt-3 border-top-1 border-300 pt-3"><span className="text-600">현재 상태</span> <span>{statusBodyTemplate(rowData)}</span></div>
+                                <div className="grid">
+                                    <div className="col-12 md:col-6">
+                                        <div className="surface-100 p-4 border-round flex flex-column gap-2 text-gray-800 h-full">
+                                            <h3 className="m-0 mb-2">기본 정보</h3>
+                                            <div className="flex justify-content-between"><span className="text-600">주문 번호</span> <span className="font-bold">{rowData.orderNo}</span></div>
+                                            <div className="flex justify-content-between"><span className="text-600">고객명</span> <span className="font-bold">{rowData.customerName}</span></div>
+                                            <div className="flex justify-content-between"><span className="text-600">디자인</span> <span className="font-bold">{rowData.design}</span></div>
+                                            <div className="flex justify-content-between"><span className="text-600">표면 마감</span> <span className="font-bold">{rowData.surfaceFinish || '-'}</span></div>
+                                            <div className="flex justify-content-between"><span className="text-600">각인 내용</span> <span className="font-bold">{rowData.engravingText || '-'} ({rowData.engravingLocation})</span></div>
+                                            <div className="flex justify-content-between mt-3 border-top-1 border-300 pt-3"><span className="text-600">주문 상태 (대표)</span> <span>{statusBodyTemplate(rowData)}</span></div>
+                                        </div>
+                                    </div>
+                                    <div className="col-12 md:col-6">
+                                        <div className="surface-100 p-4 border-round flex flex-column gap-2 text-gray-800 h-full">
+                                            <h3 className="m-0 mb-2">제품 정보</h3>
+                                            {orderDetailData ? (
+                                                <>
+                                                    <div className="flex justify-content-between"><span className="text-600">브랜드</span> <span className="font-bold">{orderDetailData.brand || '-'}</span></div>
+                                                    <div className="flex justify-content-between"><span className="text-600">제품명</span> <span className="font-bold">{orderDetailData.productName || '-'}</span></div>
+                                                    <div className="flex justify-content-between"><span className="text-600">총 수량</span> <span className="font-bold">{orderDetailData.quantity}개</span></div>
+                                                    {orderDetailData.imageUrl && (
+                                                        <div className="mt-2 text-center">
+                                                            <img src={`http://localhost:8888${orderDetailData.imageUrl}`} alt="제품 이미지" style={{width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px'}} />
+                                                        </div>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <div className="text-500">정보를 불러오는 중...</div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 <div className="surface-100 p-4 border-round flex flex-column gap-2 mt-3">
                                     <h3 className="m-0 mb-3 text-800">공정 진행 타임라인</h3>
                                     {getTimelineEvents(rowData).length > 0 ? (
-                                        <Timeline value={getTimelineEvents(rowData)} align="left" className="customized-timeline" marker={customizedMarker} content={customizedContent} />
+                                        <div className="overflow-x-auto w-full">
+                                            <Timeline value={getTimelineEvents(rowData)} align="top" layout="horizontal" className="customized-timeline" marker={customizedMarker} content={customizedContent} />
+                                        </div>
                                     ) : (
                                         <div className="text-500">진행된 공정이 없습니다.</div>
+                                    )}
+                                </div>
+                                
+                                <div className="surface-100 p-4 border-round flex flex-column gap-2 mt-2">
+                                    <h3 className="m-0 mb-3 text-800">개별 물건 트래킹 (총 {orderDetailData?.workOrders?.length || 0}개)</h3>
+                                    {orderDetailData && orderDetailData.workOrders ? (
+                                        <DataTable value={orderDetailData.workOrders} size="small" stripedRows responsiveLayout="scroll">
+                                            <Column field="id" header="바코드 / W.O." body={(r: any) => <span className="font-bold text-primary">#{r.id}</span>}></Column>
+                                            <Column field="stage" header="공정 상태" body={(r: any) => <span className={`px-2 py-1 border-round text-sm font-bold ${r.stage === '접수' || r.stage === 'PENDING' ? 'bg-indigo-100 text-indigo-700' : (r.stage === 'CAD' ? 'bg-blue-100 text-blue-700' : (r.stage === 'Casting' || r.stage === '주물' ? 'bg-orange-100 text-orange-700' : (r.stage === 'Polishing' || r.stage === '세공' ? 'bg-yellow-100 text-yellow-700' : (r.stage === 'Plating/Inspection' || r.stage === '도금' || r.stage === '검수' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'))))}`}>{r.stage}</span>}></Column>
+                                            <Column field="createdAt" header="생성일자" body={(r: any) => r.createdAt ? new Date(r.createdAt).toLocaleString() : '-'}></Column>
+                                        </DataTable>
+                                    ) : (
+                                        <div className="text-500">물건 목록을 불러오는 중...</div>
                                     )}
                                 </div>
                                 

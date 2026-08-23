@@ -67,12 +67,21 @@ public class OrderService {
         order.setOrderNo("ORD-" + dateStr + "-" + String.format("%03d", order.getId() % 1000));
         order = orderRepository.save(order);
 
-        Design design = designRepository.findById(dto.getDesignId())
-                .orElseThrow(() -> new IllegalArgumentException("Design not found"));
+        Design design = null;
+        if (dto.getDesignId() != null) {
+            design = designRepository.findById(dto.getDesignId())
+                    .orElseThrow(() -> new IllegalArgumentException("Design not found"));
+        } else if (dto.getUnmappedProductName() == null && dto.getImageUrl() == null) {
+            throw new IllegalArgumentException("Either a registered product or an unmapped product name / image must be provided.");
+        }
 
         OrderItem orderItem = OrderItem.builder()
                 .order(order)
                 .design(design)
+                .unmappedProductName(dto.getUnmappedProductName())
+                .unmappedBrandName(dto.getUnmappedBrandName())
+                .imageUrl(dto.getImageUrl())
+                .quantity(dto.getQuantity() != null ? dto.getQuantity() : 1)
                 .engravingText(dto.getEngravingText())
                 .engravingLocation(dto.getEngravingLocation())
                 .surfaceFinish(dto.getSurfaceFinish())
@@ -91,7 +100,11 @@ public class OrderService {
                 .id(order.getId())
                 .orderNo(order.getOrderNo())
                 .shortCode(order.getShortCode())
-                .design(design.getDesignCode())
+                .design(design != null ? design.getDesignCode() : null)
+                .brand(design != null ? design.getBrand() : dto.getUnmappedBrandName())
+                .imageUrl(dto.getImageUrl() != null ? dto.getImageUrl() : (design != null ? design.getImageUrl() : null))
+                .quantity(orderItem.getQuantity())
+                .unmappedProductName(dto.getUnmappedProductName())
                 .date(order.getOrderDate().toString())
                 .stage(workOrder.getCurrentStage())
                 .isHold(workOrder.getIsHold())
@@ -114,6 +127,34 @@ public class OrderService {
                 .build();
     }
 
+        @Transactional(readOnly = true)
+    public com.minibig.karatflow.backend.domain.OrderDetailDTO getOrderDetails(Long orderId) {
+        Order order = orderRepository.findById(orderId).orElseThrow();
+        OrderItem oi = orderItemRepository.findByOrderId(orderId).get(0);
+        Design d = oi.getDesign();
+        List<WorkOrder> workOrders = workOrderRepository.findAllByOrderId(orderId);
+        
+        List<com.minibig.karatflow.backend.domain.OrderDetailDTO.WorkOrderDTO> woDTOs = workOrders.stream().map(w -> 
+            com.minibig.karatflow.backend.domain.OrderDetailDTO.WorkOrderDTO.builder()
+                .id(w.getId())
+                .stage(w.getCurrentStage())
+                .isHold(w.getIsHold())
+                .createdAt(w.getCreatedAt() != null ? w.getCreatedAt().toString() : null)
+                .build()
+        ).collect(Collectors.toList());
+
+        return com.minibig.karatflow.backend.domain.OrderDetailDTO.builder()
+                .orderId(order.getId())
+                .orderNo(order.getOrderNo())
+                .brand(d != null ? d.getBrand() : oi.getUnmappedBrandName())
+                .designCode(d != null ? d.getDesignCode() : null)
+                .productName(d != null ? d.getName() : oi.getUnmappedProductName())
+                .imageUrl(oi.getImageUrl() != null ? oi.getImageUrl() : (d != null ? d.getImageUrl() : null))
+                .quantity(oi.getQuantity())
+                .workOrders(woDTOs)
+                .build();
+    }
+
     public List<OrderResponseDTO> getDashboardOrders() {
         List<Map<String, Object>> rows = orderRepository.findDashboardOrders();
         return rows.stream().map(row -> OrderResponseDTO.builder()
@@ -121,6 +162,10 @@ public class OrderService {
                 .orderNo((String) row.get("ORDERNO"))
                 .shortCode((String) row.get("SHORTCODE"))
                 .design((String) row.get("DESIGN"))
+                .brand((String) row.get("BRAND"))
+                .imageUrl((String) row.get("IMAGEURL"))
+                .quantity(row.get("QUANTITY") != null ? ((Number) row.get("QUANTITY")).intValue() : null)
+                .unmappedProductName((String) row.get("UNMAPPEDPRODUCTNAME"))
                 .date(row.get("DATE").toString())
                 .stage((String) row.get("STAGE"))
                 .isHold((Boolean) row.get("ISHOLD"))
