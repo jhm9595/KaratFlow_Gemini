@@ -14,6 +14,18 @@ import { Client } from '@stomp/stompjs';
 import i18n from './i18n';
 
 function App() {
+
+    const getEventBorderColor = (msg: string) => {
+        if (!msg) return '#3B82F6';
+        if (msg.includes('접수') || msg.includes('신규')) return '#64748B';
+        if (msg.includes('CAD')) return '#3B82F6';
+        if (msg.includes('주물')) return '#F59E0B';
+        if (msg.includes('세공')) return '#EF4444';
+        if (msg.includes('완성')) return '#22C55E';
+        if (msg.includes('보류') || msg.includes('HOLD')) return '#EAB308';
+        return '#3B82F6';
+    };
+
     const { t } = useTranslation();
     const toast = useRef<any>(null);
     const [changeModalVisible, setChangeModalVisible] = useState(false);
