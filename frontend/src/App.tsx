@@ -72,12 +72,9 @@ function App() {
     const [businessNumber, setBusinessNumber] = useState('');
     const [businessResult, setBusinessResult] = useState<any>(null);
 
-        const getAuthHeaders = (): Record<string, string> => {
+    const getAuthHeaders = () => {
         const token = localStorage.getItem('access_token') || localStorage.getItem('jwtToken');
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = Bearer ;
-        return headers;
-    };
+        return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
     };
 
     const openHandshakeModal = () => {
