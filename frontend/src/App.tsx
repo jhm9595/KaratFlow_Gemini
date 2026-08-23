@@ -739,7 +739,10 @@ function App() {
                             <DataTable value={subcontracts} responsiveLayout="scroll">
                                 <Column field="taskName" header="작업명"></Column>
                                 <Column field="subcontractorName" header="외주업체"></Column>
-                                <Column field="status" header="상태" body={(r) => <span className={`p-badge ${r.status === 'RECEIVED' ? 'p-badge-info' : 'p-badge-warning'}`}>{r.status}</span>}></Column>
+                                <Column field="status" header="상태" body={(r) => {
+                                      const isReceived = r.status === 'RECEIVED';
+                                      return <Tag severity={isReceived ? 'success' : 'warning'} value={isReceived ? '반입완료' : '반출됨'} rounded></Tag>;
+                                  }}></Column>
                                 <Column field="dispatchedWeightG" header="반출(g)"></Column>
                                 <Column header="반입(g)" body={(r) => {
                                     if (r.status === 'RECEIVED') return <span>{r.receivedWeightG}</span>;
