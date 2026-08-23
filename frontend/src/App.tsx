@@ -497,18 +497,18 @@ function App() {
                                     name: stage,
                                     count: orders.filter(o => o.stage === stage).length
                                 })).map((s) => {
-                                    const stageColors: Record<string, {bg: string, border: string, text: string}> = {
-                                        '접수': { bg: 'bg-primary', border: 'border-primary', text: 'text-white' },
-                                        'CAD': { bg: 'bg-blue-500', border: 'border-blue-500', text: 'text-white' },
-                                        '주물': { bg: 'bg-orange-500', border: 'border-orange-500', text: 'text-white' },
-                                        '세공': { bg: 'bg-red-500', border: 'border-red-500', text: 'text-white' },
-                                        '완성': { bg: 'bg-green-500', border: 'border-green-500', text: 'text-white' }
-                                    };
+                                    const stageColors: Record<string, {bg: string, border: string, text: string, bgHex: string, borderHex: string}> = {
+                                          '접수': { bg: '', border: '', text: 'text-white', bgHex: '#3B82F6', borderHex: '#2563EB' },
+                                          'CAD': { bg: '', border: '', text: 'text-white', bgHex: '#3B82F6', borderHex: '#2563EB' },
+                                          '주물': { bg: '', border: '', text: 'text-white', bgHex: '#F59E0B', borderHex: '#D97706' },
+                                          '세공': { bg: '', border: '', text: 'text-white', bgHex: '#EF4444', borderHex: '#DC2626' },
+                                          '완성': { bg: '', border: '', text: 'text-white', bgHex: '#22C55E', borderHex: '#16A34A' }
+                                      };
                                     const color = stageColors[s.name] || stageColors['접수'];
                                     
                                     return (
                                         <div key={s.name} className="flex flex-column align-items-center z-1 relative bg-white" style={{ borderRadius: '50%' }}>
-                                            <div className={`flex align-items-center justify-content-center border-circle border-2 ${color.bg} ${color.border} mb-2 shadow-1`} style={{ width: '60px', height: '60px' }}>
+                                            <div className={`flex align-items-center justify-content-center border-circle border-2 mb-2 shadow-1`} style={{ width: '60px', height: '60px', backgroundColor: color.bgHex, borderColor: color.borderHex }}>
                                                 <span className={`text-2xl font-bold ${color.text}`}>{s.count}</span>
                                             </div>
                                             <span className="text-700 font-medium bg-white px-2">{s.name}</span>
