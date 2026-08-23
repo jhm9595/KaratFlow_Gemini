@@ -498,7 +498,7 @@ function App() {
                                     count: orders.filter(o => o.stage === stage).length
                                 })).map((s) => {
                                     const stageColors: Record<string, {bg: string, border: string, text: string, bgHex: string, borderHex: string}> = {
-                                          '접수': { bg: '', border: '', text: 'text-white', bgHex: '#3B82F6', borderHex: '#2563EB' },
+                                          '접수': { bg: '', border: '', text: 'text-white', bgHex: '#64748B', borderHex: '#475569' },
                                           'CAD': { bg: '', border: '', text: 'text-white', bgHex: '#3B82F6', borderHex: '#2563EB' },
                                           '주물': { bg: '', border: '', text: 'text-white', bgHex: '#F59E0B', borderHex: '#D97706' },
                                           '세공': { bg: '', border: '', text: 'text-white', bgHex: '#EF4444', borderHex: '#DC2626' },
