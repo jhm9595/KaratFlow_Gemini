@@ -768,7 +768,17 @@ function App() {
             </div>
 
 
-            <Dialog header="주문 상세 정보" visible={orderDetailVisible} style={{ width: '40vw' }} onHide={() => setOrderDetailVisible(false)}>
+            <Dialog header={
+                selectedOrderId && orders.find(o => o.id === selectedOrderId) ? (
+                    <div className="flex justify-content-between align-items-center w-full" style={{ paddingRight: '2rem' }}>
+                        <span>주문 상세 정보</span>
+                        <div className="flex gap-2">
+                            <Button icon="pi pi-print" tooltip="라벨 인쇄" tooltipOptions={{ position: 'bottom' }} onClick={() => handlePrint(orders.find(o => o.id === selectedOrderId), 'label')} className="p-button-rounded p-button-text p-button-success p-button-sm" />
+                            <Button icon="pi pi-file-pdf" tooltip="명세서 인쇄" tooltipOptions={{ position: 'bottom' }} onClick={() => handlePrint(orders.find(o => o.id === selectedOrderId), 'invoice')} className="p-button-rounded p-button-text p-button-info p-button-sm" />
+                        </div>
+                    </div>
+                ) : "주문 상세 정보"
+            } visible={orderDetailVisible} style={{ width: '40vw' }} onHide={() => setOrderDetailVisible(false)}> setOrderDetailVisible(false)}>
                 {selectedOrderId && orders.find(o => o.id === selectedOrderId) && (
                     (() => {
                         const rowData = orders.find(o => o.id === selectedOrderId);
