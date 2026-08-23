@@ -18,7 +18,10 @@ public class ProductAdminController {
     private final ProductService productService;
 
     @GetMapping
-    
+    public ResponseEntity<List<Design>> getAllProducts() {
+        return ResponseEntity.ok(productService.getAllProducts());
+    }
+
     @PostMapping
     public ResponseEntity<Design> createProduct(@RequestBody Map<String, Object> payload) {
         String brand = (String) payload.get("brand");
@@ -27,10 +30,6 @@ public class ProductAdminController {
         String imageUrl = (String) payload.get("imageUrl");
         java.math.BigDecimal baseLaborFee = payload.get("baseLaborFee") != null ? new java.math.BigDecimal(payload.get("baseLaborFee").toString()) : null;
         return ResponseEntity.ok(productService.createProduct(brand, designCode, name, baseLaborFee, imageUrl));
-    }
-
-    public ResponseEntity<List<Design>> getAllProducts() {
-        return ResponseEntity.ok(productService.getAllProducts());
     }
 
     @GetMapping("/candidates")
