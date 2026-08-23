@@ -95,10 +95,25 @@ function App() {
     const [partnerModalVisible, setPartnerModalVisible] = useState(false);
     const [createOrderModalVisible, setCreateOrderModalVisible] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
-    const [filteredProducts, ] = useState<any[]>([]);
+    const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
+    const [allProducts, setAllProducts] = useState<any[]>([]);
 
-    const searchProduct = () => {
-        // @ts-ignore\n        const query = event.query.toLowerCase(); setFilteredProducts([]);
+    // Load all products once for AutoComplete suggestions
+    const loadAllProducts = () => {
+        fetch('http://localhost:8888/api/products', { headers: getAuthHeaders() })
+            .then(res => res.json())
+            .then(data => setAllProducts(Array.isArray(data) ? data : []))
+            .catch(() => {});
+    };
+
+    const searchProduct = (event: any) => {
+        const query = (event.query || '').toLowerCase();
+        const filtered = allProducts.filter((p: any) =>
+            (p.name || '').toLowerCase().includes(query) ||
+            (p.brand || '').toLowerCase().includes(query) ||
+            (p.designCode || '').toLowerCase().includes(query)
+        );
+        setFilteredProducts(filtered);
     };
 
     const handleFileUpload = (e: any) => {
@@ -520,7 +535,7 @@ function App() {
                         <h2 className="m-0 text-xl font-bold text-900 tracking-tight">KaratFlow Gemini <span className="text-500 font-normal text-lg ml-2">통합 모니터링 대시보드</span></h2>
                     </div>
                     <div className="flex gap-2">
-                        <Button label="새 주문 생성" icon="pi pi-plus" className="p-button-primary p-button-sm shadow-1" onClick={() => setCreateOrderModalVisible(true)} />
+                        <Button label="새 주문 생성" icon="pi pi-plus" className="p-button-primary p-button-sm shadow-1" onClick={() => { setCreateOrderModalVisible(true); loadAllProducts(); }} />
                         <Button label={t('lang')} icon="pi pi-globe" className="p-button-text p-button-secondary p-button-sm text-700" onClick={toggleLanguage} />
                         <Button label="협력사 초대" icon="pi pi-users" className="p-button-outlined p-button-info p-button-sm" onClick={openHandshakeModal} />
                         <Button label="보류 알림 시뮬레이션" icon="pi pi-bell" className="p-button-warning p-button-sm shadow-1" onClick={showHoldAlert} />
@@ -681,10 +696,22 @@ function App() {
                             <AutoComplete value={selectedProduct} suggestions={filteredProducts} completeMethod={searchProduct} field="name" 
                                 onChange={(e) => {
                                     setSelectedProduct(e.value);
-                                    if (typeof e.value === 'string') {
-                                        setCreateOrderForm({...createOrderForm, unmappedProductName: e.value});
+                                    if (typeof e.value === 'object' && e.value !== null) {
+                                        // Registered product selected
+                                        setCreateOrderForm({...createOrderForm, designId: e.value.id, unmappedProductName: '', unmappedBrandName: ''});
+                                    } else if (typeof e.value === 'string') {
+                                        setCreateOrderForm({...createOrderForm, designId: 0, unmappedProductName: e.value});
                                     }
                                 }} 
+                                itemTemplate={(item: any) => (
+                                    <div className="flex align-items-center gap-2">
+                                        {item.imageUrl && <img src={`http://localhost:8888${item.imageUrl}`} alt={item.name} style={{width: '28px', height: '28px', objectFit: 'cover', borderRadius: '4px'}} />}
+                                        <div>
+                                            <div className="font-bold text-sm">{item.brand} - {item.name}</div>
+                                            <div className="text-xs text-500">{item.designCode}</div>
+                                        </div>
+                                    </div>
+                                )}
                                 placeholder="검색 또는 입력" />
                         </div>
                         
