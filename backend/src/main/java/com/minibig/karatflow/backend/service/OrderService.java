@@ -81,7 +81,7 @@ public class OrderService {
 
         WorkOrder workOrder = WorkOrder.builder()
                 .orderItemId(orderItem.getId())
-                .currentStage("CAD")
+                .currentStage("PENDING")
                 .isHold(false)
                 .createdAt(LocalDateTime.now())
                 .build();
