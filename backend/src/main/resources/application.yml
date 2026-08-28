@@ -21,7 +21,7 @@ spring:
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
   datasource:
-    url: jdbc:h2:mem:karatflow;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    url: jdbc:h2:file:./karatflow;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;AUTO_SERVER=TRUE
     username: sa
     password: 
     driver-class-name: org.h2.Driver
@@ -31,16 +31,16 @@ spring:
       path: /h2-console
   sql:
     init:
-      mode: always
+      mode: never
   jpa:
-    defer-datasource-initialization: true
+    defer-datasource-initialization: false
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
-    show-sql: true
+    show-sql: false
   flyway:
     enabled: false
     baseline-on-migrate: true
