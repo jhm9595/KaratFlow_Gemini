@@ -2,6 +2,8 @@ import { Tag } from 'primereact/tag';
 import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Image } from 'primereact/image';
+import { Badge } from 'primereact/badge';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Toast } from 'primereact/toast';
@@ -645,8 +647,12 @@ function App() {
                             <h4 className="m-0 mb-3 text-600 font-medium">상세 주문 모니터링</h4>
                             <div className="flex-1 overflow-auto custom-dark-table pb-3">
                                 {/* @ts-ignore */}
-                                <DataTable value={orders} size="small" paginator rows={10} selectionMode="single" selection={selectedOrderId === null ? null : orders.find(o => o.id === selectedOrderId)} onSelectionChange={(e) => { setSelectedOrderId(e.value?.id); if(e.value) openOrderDetail(e.value.id); }} dataKey="id" emptyMessage="등록된 주문이 없습니다." className="p-datatable-sm cursor-pointer" rowClassName={() => 'surface-0 text-900 hover:surface-50 transition-colors transition-duration-200'}>
+                                <DataTable value={orders} size="small" paginator rows={10} selectionMode="single" selection={selectedOrderId === null ? null : orders.find(o => o.id === selectedOrderId)} onSelectionChange={(e) => { setSelectedOrderId(e.value?.id); if(e.value) openOrderDetail(e.value.id); }} dataKey="id" emptyMessage="등록된 주문이 없습니다." className="p-datatable-sm cursor-pointer" rowClassName={(row: any) => row.isHold ? 'hold-pulse-row' : 'surface-0 text-900 hover:surface-50 transition-colors transition-duration-200'}>
+                                    <Column header="" style={{width:'52px'}} body={(row: any) => row.imageUrl ? (
+                                    <Image src={`http://localhost:8888${row.imageUrl}`} alt="" width="36" height="36" preview style={{objectFit:'cover', borderRadius:'6px'}} />
+                                ) : <span className="pi pi-image text-300" />} />
                                     <Column header="주문 번호" body={(r) => <span className="font-bold text-primary">#{r.orderNo || r.id}</span>} style={{ minWidth: '120px' }} />
+                                    <Column header="수량" style={{width:'72px'}} body={(row: any) => <Badge value={`${row.quantity ?? 1}건`} severity="info" />} />
                                     <Column field="design" header="Design" />
                                     <Column field="customerName" header="고객명" />
                                     <Column field="stage" header="공정 상태" body={statusBodyTemplate}></Column>
@@ -994,6 +1000,7 @@ function App() {
                                     <h3 className="m-0 mb-3 text-800">개별 물건 트래킹 (총 {orderDetailData?.workOrders?.length || 0}개)</h3>
                                     {orderDetailData && orderDetailData.workOrders ? (
                                         <DataTable value={orderDetailData.workOrders} size="small" stripedRows responsiveLayout="scroll">
+                                        <Column field="workOrderNo" header="바코드" />
                                             <Column field="id" header="바코드 / W.O." body={(r: any) => <span className="font-bold text-primary">#{r.id}</span>}></Column>
                                             <Column field="stage" header="공정 상태" body={(r: any) => <span className={`px-2 py-1 border-round text-sm font-bold ${r.stage === '접수' || r.stage === 'PENDING' ? 'bg-indigo-100 text-indigo-700' : (r.stage === 'CAD' ? 'bg-blue-100 text-blue-700' : (r.stage === 'Casting' || r.stage === '주물' ? 'bg-orange-100 text-orange-700' : (r.stage === 'Polishing' || r.stage === '세공' ? 'bg-yellow-100 text-yellow-700' : (r.stage === 'Plating/Inspection' || r.stage === '도금' || r.stage === '검수' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'))))}`}>{r.stage}</span>}></Column>
                                             <Column field="createdAt" header="생성일자" body={(r: any) => r.createdAt ? new Date(r.createdAt).toLocaleString() : '-'}></Column>
