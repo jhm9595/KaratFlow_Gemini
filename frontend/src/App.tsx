@@ -58,7 +58,7 @@ const getTimelineEvents = (rowData: any) => {
 };
 
 const customizedMarker = (item: any) => {
-    
+
     // Gold Price Calculations
     const todayGold = goldPriceData.length > 0 ? goldPriceData[goldPriceData.length - 1] : { price24k: 0, price18k: 0, price14k: 0 };
     const yesterdayGold = goldPriceData.length > 1 ? goldPriceData[goldPriceData.length - 2] : todayGold;
@@ -75,15 +75,6 @@ const customizedMarker = (item: any) => {
 };
 
 const customizedContent = (item: any) => {
-    
-    // Gold Price Calculations
-    const todayGold = goldPriceData.length > 0 ? goldPriceData[goldPriceData.length - 1] : { price24k: 0, price18k: 0, price14k: 0 };
-    const yesterdayGold = goldPriceData.length > 1 ? goldPriceData[goldPriceData.length - 2] : todayGold;
-    
-    const delta24k = todayGold.price24k - yesterdayGold.price24k;
-    const delta18k = todayGold.price18k - yesterdayGold.price18k;
-    const delta14k = todayGold.price14k - yesterdayGold.price14k;
-
     return (
         <div className="mb-4">
             <div className="font-bold text-700">{item.stage}</div>
@@ -441,15 +432,6 @@ function App() {
 
         
 
-    
-    // Gold Price Calculations
-    const todayGold = goldPriceData.length > 0 ? goldPriceData[goldPriceData.length - 1] : { price24k: 0, price18k: 0, price14k: 0 };
-    const yesterdayGold = goldPriceData.length > 1 ? goldPriceData[goldPriceData.length - 2] : todayGold;
-    
-    const delta24k = todayGold.price24k - yesterdayGold.price24k;
-    const delta18k = todayGold.price18k - yesterdayGold.price18k;
-    const delta14k = todayGold.price14k - yesterdayGold.price14k;
-
     return () => {
             client.deactivate();
         };
@@ -471,16 +453,7 @@ function App() {
 
     const statusBodyTemplate = (rowData: any) => {
         if (rowData.status === 'CANCELLED') {
-            
-    // Gold Price Calculations
-    const todayGold = goldPriceData.length > 0 ? goldPriceData[goldPriceData.length - 1] : { price24k: 0, price18k: 0, price14k: 0 };
-    const yesterdayGold = goldPriceData.length > 1 ? goldPriceData[goldPriceData.length - 2] : todayGold;
-    
-    const delta24k = todayGold.price24k - yesterdayGold.price24k;
-    const delta18k = todayGold.price18k - yesterdayGold.price18k;
-    const delta14k = todayGold.price14k - yesterdayGold.price14k;
-
-    return (
+            return (
                 <div className="flex flex-column gap-1">
                     <span className="p-badge p-badge-secondary">취소됨</span>
                     {rowData.cancellationFee > 0 && <small className="text-red-500 font-bold">위약금 ₩{rowData.cancellationFee.toLocaleString()}</small>}
@@ -510,16 +483,7 @@ function App() {
         
         const mapped = stageMap[s] || { label: s, severity: null };
         
-        
-    // Gold Price Calculations
-    const todayGold = goldPriceData.length > 0 ? goldPriceData[goldPriceData.length - 1] : { price24k: 0, price18k: 0, price14k: 0 };
-    const yesterdayGold = goldPriceData.length > 1 ? goldPriceData[goldPriceData.length - 2] : todayGold;
-    
-    const delta24k = todayGold.price24k - yesterdayGold.price24k;
-    const delta18k = todayGold.price18k - yesterdayGold.price18k;
-    const delta14k = todayGold.price14k - yesterdayGold.price14k;
-
-    return (
+        return (
             <Tag severity={mapped.severity} value={mapped.label} rounded></Tag>
         );
     };
@@ -566,15 +530,6 @@ function App() {
     ];
     
     const [goldPriceData, setGoldPriceData] = useState<any[]>([]);
-    
-    // Gold Price Calculations
-    const todayGold = goldPriceData.length > 0 ? goldPriceData[goldPriceData.length - 1] : { price24k: 0, price18k: 0, price14k: 0 };
-    const yesterdayGold = goldPriceData.length > 1 ? goldPriceData[goldPriceData.length - 2] : todayGold;
-    
-    const delta24k = todayGold.price24k - yesterdayGold.price24k;
-    const delta18k = todayGold.price18k - yesterdayGold.price18k;
-    const delta14k = todayGold.price14k - yesterdayGold.price14k;
-
     return (
         <>
             <Toast ref={toast} />
@@ -680,16 +635,7 @@ function App() {
                                       };
                                     const color = stageColors[s.name] || stageColors['접수'];
                                     
-                                    
-    // Gold Price Calculations
-    const todayGold = goldPriceData.length > 0 ? goldPriceData[goldPriceData.length - 1] : { price24k: 0, price18k: 0, price14k: 0 };
-    const yesterdayGold = goldPriceData.length > 1 ? goldPriceData[goldPriceData.length - 2] : todayGold;
-    
-    const delta24k = todayGold.price24k - yesterdayGold.price24k;
-    const delta18k = todayGold.price18k - yesterdayGold.price18k;
-    const delta14k = todayGold.price14k - yesterdayGold.price14k;
-
-    return (
+                                    return (
                                         <div key={s.name} className="flex flex-column align-items-center z-1 relative bg-white" style={{ borderRadius: '50%' }}>
                                             <div className={`flex align-items-center justify-content-center border-circle border-2 mb-2 shadow-1`} style={{ width: '60px', height: '60px', backgroundColor: color.bgHex, borderColor: color.borderHex }}>
                                                 <span className={`text-2xl font-bold ${color.text}`}>{s.count}</span>
@@ -973,15 +919,6 @@ function App() {
                                     if (r.status === 'RECEIVED') return <span>{r.receivedWeightG}</span>;
                                     
 
-    
-    // Gold Price Calculations
-    const todayGold = goldPriceData.length > 0 ? goldPriceData[goldPriceData.length - 1] : { price24k: 0, price18k: 0, price14k: 0 };
-    const yesterdayGold = goldPriceData.length > 1 ? goldPriceData[goldPriceData.length - 2] : todayGold;
-    
-    const delta24k = todayGold.price24k - yesterdayGold.price24k;
-    const delta18k = todayGold.price18k - yesterdayGold.price18k;
-    const delta14k = todayGold.price14k - yesterdayGold.price14k;
-
     return (
                                         <div className="flex gap-2 align-items-center">
                                             <InputNumber value={receiveForm[r.id]} onValueChange={(e) => setReceiveForm({...receiveForm, [r.id]: e.value || 0})} className="w-5rem" mode="decimal" minFractionDigits={2} />
@@ -1017,15 +954,6 @@ function App() {
                     (() => {
                         const rowData = orders.find(o => o.id === selectedOrderId);
                         
-
-    
-    // Gold Price Calculations
-    const todayGold = goldPriceData.length > 0 ? goldPriceData[goldPriceData.length - 1] : { price24k: 0, price18k: 0, price14k: 0 };
-    const yesterdayGold = goldPriceData.length > 1 ? goldPriceData[goldPriceData.length - 2] : todayGold;
-    
-    const delta24k = todayGold.price24k - yesterdayGold.price24k;
-    const delta18k = todayGold.price18k - yesterdayGold.price18k;
-    const delta14k = todayGold.price14k - yesterdayGold.price14k;
 
     return (
                             <div className="flex flex-column gap-4">
