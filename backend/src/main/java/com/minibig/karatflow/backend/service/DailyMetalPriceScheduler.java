@@ -1,7 +1,5 @@
 package com.minibig.karatflow.backend.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.minibig.karatflow.backend.domain.DailyMetalPrice;
 import com.minibig.karatflow.backend.repository.DailyMetalPriceRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +23,7 @@ public class DailyMetalPriceScheduler {
 
     private final DailyMetalPriceRepository dailyMetalPriceRepository;
     private final RestTemplate restTemplate = new RestTemplate();
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    
 
     @Value("${gold.api.key:}")
     private String goldApiKey;
@@ -80,45 +78,35 @@ public class DailyMetalPriceScheduler {
         }
 
         try {
-            // Get yesterday's date (or today, but KRX closes at 15:30)
-            // Let's not specify basDt to get the most recent data
-            String urlStr = "https://apis.data.go.kr/1160100/service/GetGeneralProductInfoService/getGoldPriceInfo"
-                    + "?serviceKey=" + goldApiKey
-                    + "&resultType=json"
-                    + "&numOfRows=1"
-                    + "&pageNo=1"
-                    + "&itmsNm=금 99.99_1Kg"; // You can URL encode if needed, but Spring handles it in URI components
-
-            URI uri = UriComponentsBuilder.fromHttpUrl("https://apis.data.go.kr/1160100/service/GetGeneralProductInfoService/getGoldPriceInfo")
-                    .queryParam("serviceKey", goldApiKey)
-                    .queryParam("resultType", "json")
-                    .queryParam("numOfRows", 1)
-                    .queryParam("pageNo", 1)
-                    // .queryParam("itmsNm", "금 99.99_1Kg") // sometimes Korean characters cause issues with UriComponentsBuilder, let's omit to just get the top result which is usually 1Kg or 100g
-                    .build(true).toUri(); // true = already encoded (actually serviceKey needs to be NOT encoded twice, but let's just use string)
-            
-            // Rebuilding URI to prevent double encoding of serviceKey which is common issue with data.go.kr
             String rawUri = "https://apis.data.go.kr/1160100/service/GetGeneralProductInfoService/getGoldPriceInfo?serviceKey=" + goldApiKey + "&resultType=json&numOfRows=1&pageNo=1";
+            log.info("Calling Gold API...");
             
-            log.info("Calling Gold API: {}", "https://apis.data.go.kr/1160100/service/GetGeneralProductInfoService/getGoldPriceInfo?serviceKey=...&resultType=json");
-            String response = restTemplate.getForObject(new URI(rawUri), String.class);
+            java.util.Map<String, Object> response = restTemplate.getForObject(new java.net.URI(rawUri), java.util.Map.class);
             
-            JsonNode root = objectMapper.readTree(response);
-            JsonNode items = root.path("response").path("body").path("items").path("item");
-            
-            if (items.isArray() && items.size() > 0) {
-                JsonNode firstItem = items.get(0);
-                String clprStr = firstItem.path("clpr").asText();
-                double clpr = Double.parseDouble(clprStr); // Price per 1g
-                log.info("API returned 1g price: {} for item: {}", clpr, firstItem.path("itmsNm").asText());
-                
-                // Convert 1g price to 3.75g (1돈)
-                double price375 = clpr * 3.75;
-                return Math.round(price375);
-            } else {
-                log.warn("API returned no items. Response: {}", response);
-                return -1;
+            if (response != null && response.containsKey("response")) {
+                java.util.Map<String, Object> resBody = (java.util.Map<String, Object>) response.get("response");
+                if (resBody != null && resBody.containsKey("body")) {
+                    java.util.Map<String, Object> body = (java.util.Map<String, Object>) resBody.get("body");
+                    if (body != null && body.containsKey("items")) {
+                        java.util.Map<String, Object> itemsMap = (java.util.Map<String, Object>) body.get("items");
+                        if (itemsMap != null && itemsMap.containsKey("item")) {
+                            java.util.List<java.util.Map<String, Object>> itemList = (java.util.List<java.util.Map<String, Object>>) itemsMap.get("item");
+                            if (itemList != null && !itemList.isEmpty()) {
+                                java.util.Map<String, Object> firstItem = itemList.get(0);
+                                String clprStr = String.valueOf(firstItem.get("clpr"));
+                                double clpr = Double.parseDouble(clprStr); // Price per 1g
+                                log.info("API returned 1g price: {} for item: {}", clpr, firstItem.get("itmsNm"));
+                                
+                                // Convert 1g price to 3.75g (1돈)
+                                double price375 = clpr * 3.75;
+                                return Math.round(price375);
+                            }
+                        }
+                    }
+                }
             }
+            log.warn("API returned invalid or empty response structure");
+            return -1;
 
         } catch (Exception e) {
             log.error("API Call failed: {}", e.getMessage(), e);
