@@ -387,6 +387,11 @@ function App() {
 
     useEffect(() => {
         fetchOrders();
+        
+        fetch('http://localhost:8888/api/metal-prices/recent', { headers: getAuthHeaders() })
+            .then(res => res.json())
+            .then(data => setGoldPriceData(data))
+            .catch(err => console.error('Failed to fetch metal prices', err));
 
         const client = new Client({
             brokerURL: 'ws://localhost:8888/ws-alerts-raw',
@@ -515,15 +520,7 @@ function App() {
         { date: '08/23', CAD: 1.9, 주물: 4.0, 세공: 7.5 }
     ];
     
-    const goldPriceData = [
-        { date: '08/28', price: 442000 },
-        { date: '08/29', price: 445000 },
-        { date: '08/30', price: 443500 },
-        { date: '08/31', price: 448000 },
-        { date: '09/01', price: 451000 },
-        { date: '09/02', price: 453000 },
-        { date: '09/03', price: 455000 }
-    ];
+    const [goldPriceData, setGoldPriceData] = useState<any[]>([]);
     return (
         <>
             <Toast ref={toast} />
