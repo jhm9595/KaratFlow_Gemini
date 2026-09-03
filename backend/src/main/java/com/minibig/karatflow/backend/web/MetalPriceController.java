@@ -32,7 +32,14 @@ public class MetalPriceController {
                 .map(price -> {
                     Map<String, Object> map = new HashMap<>();
                     map.put("date", price.getPriceDate().format(DateTimeFormatter.ofPattern("MM/dd")));
-                    map.put("price", price.getPricePer375g());
+                    
+                    double p24 = price.getPricePer375g();
+                    double p18 = Math.round((p24 * 0.825) / 100) * 100;
+                    double p14 = Math.round((p24 * 0.6435) / 100) * 100;
+
+                    map.put("price24k", p24);
+                    map.put("price18k", p18);
+                    map.put("price14k", p14);
                     return map;
                 })
                 .collect(Collectors.toList());
