@@ -515,14 +515,14 @@ function App() {
         { date: '08/23', CAD: 1.9, 주물: 4.0, 세공: 7.5 }
     ];
     
-    const dailySubcontractData = [
-        { date: '08/17', 제일도금: 24, 성실주물: 12 },
-        { date: '08/18', 제일도금: 22, 성실주물: 14 },
-        { date: '08/19', 제일도금: 28, 성실주물: 11 },
-        { date: '08/20', 제일도금: 25, 성실주물: 16 },
-        { date: '08/21', 제일도금: 20, 성실주물: 13 },
-        { date: '08/22', 제일도금: 18, 성실주물: 10 },
-        { date: '08/23', 제일도금: 21, 성실주물: 12 }
+    const goldPriceData = [
+        { date: '08/28', price: 442000 },
+        { date: '08/29', price: 445000 },
+        { date: '08/30', price: 443500 },
+        { date: '08/31', price: 448000 },
+        { date: '09/01', price: 451000 },
+        { date: '09/02', price: 453000 },
+        { date: '09/03', price: 455000 }
     ];
     return (
         <>
@@ -588,19 +588,18 @@ function App() {
                             </div>
                         </div>
 
-                        {/* Advanced Chart 2: 외주 처리 현황 */}
+                        {/* Advanced Chart 2: 실시간 금 시세 */}
                         <div className="surface-0 p-3 border-round shadow-1 flex-1 flex flex-column">
-                            <h4 className="m-0 mb-3 text-600 font-medium">외주 협력업체 처리 시간 추이 (주간)</h4>
+                            <h4 className="m-0 mb-3 text-600 font-medium">최근 금 시세 추이 (24k 3.75g 기준)</h4>
                             <div className="flex-1 w-full" style={{ minHeight: '180px' }}>
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={dailySubcontractData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                    <LineChart data={goldPriceData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                                         <XAxis dataKey="date" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-                                        <YAxis tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-                                        <RechartsTooltip contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', color: '#333' }} />
+                                        <YAxis domain={['dataMin - 2000', 'dataMax + 2000']} tickFormatter={(val) => (val/10000) + '만'} tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
+                                        <RechartsTooltip formatter={(value: any) => ['₩' + (value || 0).toLocaleString(), '금 시세']} contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', color: '#333' }} />
                                         <Legend wrapperStyle={{ fontSize: '12px' }} />
-                                        <Line type="monotone" dataKey="제일도금" stroke="#8884d8" strokeWidth={3} dot={{r: 4}} />
-                                        <Line type="monotone" dataKey="성실주물" stroke="#82ca9d" strokeWidth={3} dot={{r: 4}} />
+                                        <Line type="monotone" dataKey="price" name="순금 시세(원)" stroke="#eab308" strokeWidth={3} dot={{r: 4, fill: '#ca8a04'}} activeDot={{r: 6}} />
                                     </LineChart>
                                 </ResponsiveContainer>
                             </div>
