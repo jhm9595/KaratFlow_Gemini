@@ -7,6 +7,8 @@ import { Badge } from 'primereact/badge';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Toast } from 'primereact/toast';
+import { ProcessManager } from './ProcessManager';
+import { GoldToolsModal } from './GoldToolsModal';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { AutoComplete } from 'primereact/autocomplete';
@@ -58,14 +60,6 @@ const getTimelineEvents = (rowData: any) => {
 };
 
 const customizedMarker = (item: any) => {
-
-    // Gold Price Calculations
-    const todayGold = goldPriceData.length > 0 ? goldPriceData[goldPriceData.length - 1] : { price24k: 0, price18k: 0, price14k: 0 };
-    const yesterdayGold = goldPriceData.length > 1 ? goldPriceData[goldPriceData.length - 2] : todayGold;
-    
-    const delta24k = todayGold.price24k - yesterdayGold.price24k;
-    const delta18k = todayGold.price18k - yesterdayGold.price18k;
-    const delta14k = todayGold.price14k - yesterdayGold.price14k;
 
     return (
         <span className="flex w-2rem h-2rem align-items-center justify-content-center text-white border-circle z-1 shadow-1" style={{ backgroundColor: item.color }}>
@@ -181,6 +175,10 @@ function App() {
     const [cancelEstimate, setCancelEstimate] = useState<number | null>(null);
 
     const [subcontractModalVisible, setSubcontractModalVisible] = useState(false);
+        const [processManagerVisible, setProcessManagerVisible] = useState(false);
+    const [goldToolsVisible, setGoldToolsVisible] = useState(false);
+    const [processTemplates, setProcessTemplates] = useState<any[]>([]);
+
     const [subcontracts, setSubcontracts] = useState<any[]>([]);
     const [scForm, setScForm] = useState({ taskName: '', subcontractorName: '', dispatchedWeightG: 0, agreedLaborFee: 0 });
     const [receiveForm, setReceiveForm] = useState<{ [key: number]: number }>({});
@@ -529,7 +527,23 @@ function App() {
         { date: '08/23', CAD: 1.9, 주물: 4.0, 세공: 7.5 }
     ];
     
+    
     const [goldPriceData, setGoldPriceData] = useState<any[]>([]);
+    // --- Gold Price Display Logic ---
+    const todayGold = goldPriceData.length > 0 ? goldPriceData[goldPriceData.length - 1] : { price24k: 0, price18k: 0, price14k: 0 };
+    const yesterdayGold = goldPriceData.length > 1 ? goldPriceData[goldPriceData.length - 2] : todayGold;
+    
+    const delta24k = todayGold.price24k - yesterdayGold.price24k;
+    const delta18k = todayGold.price18k - yesterdayGold.price18k;
+    const delta14k = todayGold.price14k - yesterdayGold.price14k;
+
+    const renderDelta = (delta: number) => {
+        if (delta > 0) return <span className="text-red-500 text-sm font-bold">▲ {delta.toLocaleString()}</span>;
+        if (delta < 0) return <span className="text-blue-500 text-sm font-bold">▼ {Math.abs(delta).toLocaleString()}</span>;
+        return <span className="text-600 text-sm font-bold">-</span>;
+    };
+    // ---------------------------------
+
     return (
         <>
             <Toast ref={toast} />
@@ -537,15 +551,14 @@ function App() {
                 {/* APM Header */}
                 <div className="flex justify-content-between align-items-center px-4 py-3 surface-0 border-bottom-1 border-300 shadow-2">
                     <div className="flex align-items-center gap-3">
-                        <div className="w-2rem h-2rem bg-primary border-circle flex align-items-center justify-content-center shadow-1">
-                            <i className="pi pi-chart-line text-white"></i>
-                        </div>
+                        <img src="/logo.png" alt="KaratFlow Logo" style={{ width: '32px', height: '32px' }} />
                         <h2 className="m-0 text-xl font-bold text-900 tracking-tight">KaratFlow Gemini <span className="text-500 font-normal text-lg ml-2">통합 모니터링 대시보드</span></h2>
                     </div>
                     <div className="flex gap-2">
                         <Button label="새 주문 생성" icon="pi pi-plus" className="p-button-primary p-button-sm shadow-1" onClick={() => { setCreateOrderModalVisible(true); loadAllProducts(); }} />
                         <Button label={t('lang')} icon="pi pi-globe" className="p-button-text p-button-secondary p-button-sm text-700" onClick={toggleLanguage} />
                         <Button label="협력사 초대" icon="pi pi-users" className="p-button-outlined p-button-info p-button-sm" onClick={openHandshakeModal} />
+                        <Button label="공정 관리" icon="pi pi-sitemap" className="p-button-outlined p-button-help p-button-sm" onClick={() => setProcessManagerVisible(true)} tooltip="공장 공정 단계를 커스터마이징합니다" tooltipOptions={{position: "bottom"}} />
                         <Button label="보류 알림 시뮬레이션" icon="pi pi-bell" className="p-button-warning p-button-sm shadow-1" onClick={showHoldAlert} />
                         
                         <div className="flex align-items-center gap-2 border-left-1 border-300 pl-3 ml-1">
@@ -596,19 +609,58 @@ function App() {
 
                         {/* Advanced Chart 2: 실시간 금 시세 */}
                         <div className="surface-0 p-3 border-round shadow-1 flex-1 flex flex-column">
-                            <h4 className="m-0 mb-3 text-600 font-medium">최근 금 시세 추이 (24k 3.75g 기준)</h4>
+                            <div className="flex justify-content-between align-items-center mb-3">
+                                <h4 className="m-0 text-600 font-medium">오늘의 금 시세 (3.75g 기준)</h4>
+                            </div>
+                            <div className="flex gap-2 mb-3">
+                                <div className="flex-1 surface-50 p-2 border-round text-center border-1 border-300">
+                                    <div className="text-xs text-600 mb-1">24K (순금)</div>
+                                    <div className="font-bold text-yellow-600 text-lg">₩{todayGold.price24k.toLocaleString()}</div>
+                                    <div className="mt-1">{renderDelta(delta24k)}</div>
+                                </div>
+                                <div className="flex-1 surface-50 p-2 border-round text-center border-1 border-300">
+                                    <div className="text-xs text-600 mb-1">18K</div>
+                                    <div className="font-bold text-orange-500 text-lg">₩{todayGold.price18k.toLocaleString()}</div>
+                                    <div className="mt-1">{renderDelta(delta18k)}</div>
+                                </div>
+                                <div className="flex-1 surface-50 p-2 border-round text-center border-1 border-300">
+                                    <div className="text-xs text-600 mb-1">14K</div>
+                                    <div className="font-bold text-purple-500 text-lg">₩{todayGold.price14k.toLocaleString()}</div>
+                                    <div className="mt-1">{renderDelta(delta14k)}</div>
+                                </div>
+                            </div>
+
                             <div className="flex-1 w-full" style={{ minHeight: '180px' }}>
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={goldPriceData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+                                    <AreaChart data={goldPriceData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+                                        <defs>
+                                            <linearGradient id="color24k" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#eab308" stopOpacity={0.8}/>
+                                                <stop offset="95%" stopColor="#eab308" stopOpacity={0}/>
+                                            </linearGradient>
+                                            <linearGradient id="color18k" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/>
+                                                <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                                            </linearGradient>
+                                            <linearGradient id="color14k" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
+                                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                                         <XAxis dataKey="date" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-                                        <YAxis domain={['dataMin - 2000', 'dataMax + 2000']} tickFormatter={(val) => (val/10000) + '만'} tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-                                        <RechartsTooltip formatter={(value: any) => ['₩' + (value || 0).toLocaleString(), '금 시세']} contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', color: '#333' }} />
+                                        <YAxis domain={['auto', 'auto']} tickFormatter={(val) => (val/10000) + '만'} tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
+                                        <RechartsTooltip formatter={(value) => ['₩' + (value || 0).toLocaleString(), '']} contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', color: '#333' }} />
                                         <Legend wrapperStyle={{ fontSize: '12px' }} />
-                                        <Line type="monotone" dataKey="price" name="순금 시세(원)" stroke="#eab308" strokeWidth={3} dot={{r: 4, fill: '#ca8a04'}} activeDot={{r: 6}} />
-                                    </LineChart>
+                                        <Area type="monotone" dataKey="price24k" name="24K (순금)" stroke="#eab308" fillOpacity={1} fill="url(#color24k)" />
+                                        <Area type="monotone" dataKey="price18k" name="18K" stroke="#f97316" fillOpacity={1} fill="url(#color18k)" />
+                                        <Area type="monotone" dataKey="price14k" name="14K" stroke="#8b5cf6" fillOpacity={1} fill="url(#color14k)" />
+                                    </AreaChart>
                                 </ResponsiveContainer>
                             </div>
+                                <div className="flex justify-content-end mt-2">
+                                    <Button label="✨ 금 시세 심층 도구 및 계산기" className="p-button-outlined p-button-sm p-button-warning" icon="pi pi-calculator" onClick={() => setGoldToolsVisible(true)} />
+                                </div>
                         </div>
                     </div>
 
@@ -1099,7 +1151,13 @@ function App() {
                         </div>
                     )}
                 </div>
+
             )}
+
+            {/* @ts-ignore */}
+            <ProcessManager visible={processManagerVisible} onHide={() => setProcessManagerVisible(false)} />
+            {/* @ts-ignore */}
+            <GoldToolsModal visible={goldToolsVisible} onHide={() => setGoldToolsVisible(false)} recentPrices={goldPriceData} />
         </>
     );
 }

@@ -1,11 +1,11 @@
 package com.minibig.karatflow.backend.web;
+
 import com.minibig.karatflow.backend.domain.ProcessTemplate;
 import com.minibig.karatflow.backend.service.ProcessTemplateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -18,5 +18,21 @@ public class ProcessTemplateController {
     @GetMapping
     public ResponseEntity<List<ProcessTemplate>> getAll() {
         return ResponseEntity.ok(processTemplateService.getAllTemplates());
+    }
+
+    @PostMapping
+    public ResponseEntity<ProcessTemplate> create(@RequestBody ProcessTemplate template) {
+        return ResponseEntity.ok(processTemplateService.createTemplate(template));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ProcessTemplate> update(@PathVariable Long id, @RequestBody ProcessTemplate template) {
+        return ResponseEntity.ok(processTemplateService.updateTemplate(id, template));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        processTemplateService.deleteTemplate(id);
+        return ResponseEntity.ok().build();
     }
 }

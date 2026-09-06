@@ -14,7 +14,7 @@ export const Login: React.FC = () => {
 
   return (
     <div className="flex align-items-center justify-content-center min-h-screen surface-200">
-      <Card title="KaratFlow 로그인" className="w-full md:w-4 shadow-5 text-center">
+      <Card title={<div className="flex align-items-center justify-content-center gap-2"><img src="/logo.png" style={{width:'40px', height:'40px'}} /> KaratFlow 로그인</div>} className="w-full md:w-4 shadow-5 text-center">
         <p className="text-500 mb-5">총판 및 협력사 관리 시스템</p>
         
         <div className="flex flex-column gap-3">
