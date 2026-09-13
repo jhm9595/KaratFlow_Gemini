@@ -21,8 +21,14 @@ public class DailyMetalPrice {
     private LocalDate priceDate;
 
     @Column(nullable = false)
-    private Double pricePer375g; // 돈(3.75g)당 시세
+    private Double pricePer375g; // 순금 3.75g 기준 시세
 
     @Column(nullable = false)
-    private String metalType; // e.g. "GOLD_24K", "GOLD_18K", "GOLD_14K"
+    private String metalType; // e.g. "GOLD_24K"
+
+    @Column
+    private Double tradingVolume; // 거래량 (ACC_TRDVOL)
+
+    @Column
+    private Double tradingValue; // 거래대금 (ACC_TRDVAL)
 }

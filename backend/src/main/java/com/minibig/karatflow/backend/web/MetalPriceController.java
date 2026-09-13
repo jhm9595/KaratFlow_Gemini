@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +39,10 @@ public class MetalPriceController {
                     map.put("price24k", p24);
                     map.put("price18k", p18);
                     map.put("price14k", p14);
+                    
+                    map.put("volume", price.getTradingVolume() != null ? price.getTradingVolume() : 0.0);
+                    map.put("value", price.getTradingValue() != null ? price.getTradingValue() : 0.0);
+                    
                     return map;
                 })
                 .collect(Collectors.toList());

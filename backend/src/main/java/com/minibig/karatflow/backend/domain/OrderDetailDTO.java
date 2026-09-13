@@ -21,8 +21,18 @@ public class OrderDetailDTO {
     private String engravingText;
     private String engravingLocation;
     private String surfaceFinish;
-
     private List<WorkOrderDTO> workOrders;
+    private List<TimelineEventDTO> timelineEvents;
+
+    @Data
+    @Builder
+    public static class TimelineEventDTO {
+        private String stage;
+        private String date;
+        private String icon;
+        private String color;
+        private String elapsed;
+    }
 
     @Data
     @Builder

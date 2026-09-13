@@ -13,6 +13,7 @@ import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { AutoComplete } from 'primereact/autocomplete';
 import { Timeline } from 'primereact/timeline';
+
 import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
@@ -177,7 +178,7 @@ function App() {
     const [subcontractModalVisible, setSubcontractModalVisible] = useState(false);
         const [processManagerVisible, setProcessManagerVisible] = useState(false);
     const [goldToolsVisible, setGoldToolsVisible] = useState(false);
-    const [processTemplates, setProcessTemplates] = useState<any[]>([]);
+    
 
     const [subcontracts, setSubcontracts] = useState<any[]>([]);
     const [scForm, setScForm] = useState({ taskName: '', subcontractorName: '', dispatchedWeightG: 0, agreedLaborFee: 0 });

@@ -18,6 +18,10 @@ import java.util.stream.Collectors;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+
+    private final WorkOrderHistoryRepository historyRepository;
+    private final ProcessTemplateRepository templateRepository;
+
     private final OrderItemRepository orderItemRepository;
     private final WorkOrderRepository workOrderRepository;
     private final DesignRepository designRepository;
@@ -180,6 +184,30 @@ public class OrderService {
         Design d = oi.getDesign();
         List<WorkOrder> wos = workOrderRepository.findAllByOrderId(orderId);
 
+        
+        List<OrderDetailDTO.TimelineEventDTO> timeline = new java.util.ArrayList<>();
+        if (!wos.isEmpty()) {
+            WorkOrder firstWo = wos.get(0);
+            if (firstWo.getTemplate() != null && firstWo.getTemplate().getSteps() != null) {
+                List<WorkOrderHistory> histories = historyRepository.findByWorkOrderIdOrderByStepOrderAsc(firstWo.getId());
+                java.util.Map<String, String> historyMap = histories.stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                        WorkOrderHistory::getStepName, 
+                        h -> h.getCompletedAt().toString(),
+                        (existing, replacement) -> existing
+                    ));
+                    
+                for (ProcessTemplateStep step : firstWo.getTemplate().getSteps()) {
+                    timeline.add(OrderDetailDTO.TimelineEventDTO.builder()
+                        .stage(step.getStageName() != null ? step.getStageName() : step.getStageCode())
+                        .date(historyMap.get(step.getStageCode()))
+                        .icon("pi pi-circle")
+                        .color("#9E9E9E")
+                        .build());
+                }
+            }
+        }
+
         List<OrderDetailDTO.WorkOrderDTO> woDTOs = wos.stream().map(w ->
                 OrderDetailDTO.WorkOrderDTO.builder()
                         .id(w.getId())
@@ -219,9 +247,9 @@ public class OrderService {
         WorkOrder target = wos.stream()
                 .filter(w -> !"COMPLETED".equals(w.getCurrentStage()))
                 .findFirst().orElse(wos.get(0));
-        String newStage = nextStage(target.getCurrentStage());
+        String newStage = nextStage(target);
         target.setCurrentStage(newStage);
-        setStageTimestamp(target, newStage);
+        recordHistory(target, newStage);
         workOrderRepository.save(target);
         Map<String, Object> res = new HashMap<>();
         res.put("workOrderId", target.getId());
@@ -234,16 +262,27 @@ public class OrderService {
     public OrderResponseDTO advanceStage(Long workOrderId) {
         WorkOrder wo = workOrderRepository.findById(workOrderId)
                 .orElseThrow(() -> new IllegalArgumentException("WorkOrder not found: " + workOrderId));
-        String newStage = nextStage(wo.getCurrentStage());
+        String newStage = nextStage(wo);
         wo.setCurrentStage(newStage);
-        setStageTimestamp(wo, newStage);
+        recordHistory(wo, newStage);
         workOrderRepository.save(wo);
         OrderItem oi = orderItemRepository.findById(wo.getOrderItemId()).orElseThrow();
         Order order = oi.getOrder();
         Design d = oi.getDesign();
         List<WorkOrder> all = workOrderRepository.findAllByOrderId(order.getId());
-        String rep = all.stream().map(WorkOrder::getCurrentStage)
-                .min(Comparator.comparingInt(OrderService::stageIndex)).orElse(newStage);
+        String rep = newStage;
+        WorkOrder minWo = null;
+        int minIdx = 999;
+        for (WorkOrder w : all) {
+            int idx = stageIndex(w);
+            if (idx < minIdx) {
+                minIdx = idx;
+                minWo = w;
+            }
+        }
+        if (minWo != null && minWo.getCurrentStage() != null) {
+            rep = minWo.getCurrentStage();
+        }
         return OrderResponseDTO.builder()
                 .id(order.getId()).orderNo(order.getOrderNo()).shortCode(order.getShortCode())
                 .design(d != null ? d.getDesignCode() : null)
@@ -315,37 +354,57 @@ public class OrderService {
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    private String nextStage(String current) {
-        return switch (current) {
-            case "PENDING" -> "CAD";
-            case "CAD" -> "CASTING";
-            case "CASTING" -> "POLISHING";
-            case "POLISHING" -> "PLATING";
-            case "PLATING" -> "COMPLETED";
-            default -> "COMPLETED";
-        };
+    private ProcessTemplateStep getCurrentStep(WorkOrder wo) {
+        if (wo.getTemplate() == null || wo.getTemplate().getSteps() == null) return null;
+        return wo.getTemplate().getSteps().stream()
+                .filter(s -> s.getStageCode().equals(wo.getCurrentStage()))
+                .findFirst().orElse(null);
     }
 
-    private static int stageIndex(String stage) {
-        return switch (stage) {
-            case "PENDING" -> 0;
-            case "CAD" -> 1;
-            case "CASTING" -> 2;
-            case "POLISHING" -> 3;
-            case "PLATING" -> 4;
-            case "COMPLETED" -> 5;
-            default -> 99;
-        };
+    private String nextStage(WorkOrder wo) {
+        if (wo.getTemplate() == null || wo.getTemplate().getSteps() == null) {
+            String curr = wo.getCurrentStage() != null ? wo.getCurrentStage() : "";
+            return switch (curr) {
+                case "PENDING" -> "CAD";
+                case "CAD" -> "CASTING";
+                case "CASTING" -> "POLISHING";
+                case "POLISHING" -> "PLATING";
+                case "PLATING" -> "COMPLETED";
+                default -> "COMPLETED";
+            };
+        }
+        
+        ProcessTemplateStep current = getCurrentStep(wo);
+        if (current == null) {
+            return wo.getTemplate().getSteps().isEmpty() ? "COMPLETED" : wo.getTemplate().getSteps().get(0).getStageCode();
+        }
+        
+        return wo.getTemplate().getSteps().stream()
+                .filter(s -> s.getStepOrder() > current.getStepOrder())
+                .findFirst()
+                .map(ProcessTemplateStep::getStageCode)
+                .orElse("COMPLETED");
     }
 
-    private void setStageTimestamp(WorkOrder wo, String stage) {
-        LocalDateTime now = LocalDateTime.now();
-        switch (stage) {
-            case "CAD" -> wo.setPendingCompletedAt(now);
-            case "CASTING" -> wo.setCadCompletedAt(now);
-            case "POLISHING" -> wo.setCastingCompletedAt(now);
-            case "PLATING" -> wo.setPolishingCompletedAt(now);
-            case "COMPLETED" -> wo.setCompletedAt(now);
+    private int stageIndex(WorkOrder wo) {
+        ProcessTemplateStep step = getCurrentStep(wo);
+        return step != null ? step.getStepOrder() : 99;
+    }
+
+    private void recordHistory(WorkOrder wo, String stage) {
+        ProcessTemplateStep step = getCurrentStep(wo);
+        int order = step != null ? step.getStepOrder() : 0;
+        
+        WorkOrderHistory history = WorkOrderHistory.builder()
+                .workOrder(wo)
+                .stepName(stage)
+                .stepOrder(order)
+                .completedAt(LocalDateTime.now())
+                .build();
+        historyRepository.save(history);
+        
+        if ("COMPLETED".equals(stage)) {
+            wo.setCompletedAt(LocalDateTime.now());
         }
     }
 }
