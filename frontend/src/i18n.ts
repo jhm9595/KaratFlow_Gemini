@@ -41,7 +41,6 @@ const resources = {
     translation: {
       "title": "KaratFlow Gemini - 통합 모니터링 대시보드",
       "invite_partner": "협력사 초대",
-      "simulate_hold": "보류 알림 시뮬레이션",
       "active_orders": "진행 중인 작업지시서",
       "order_id": "주문 번호",
       "design": "디자인",

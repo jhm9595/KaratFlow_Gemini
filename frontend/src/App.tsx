@@ -464,11 +464,6 @@ function App() {
             });
     };
 
-    
-    const showHoldAlert = () => {
-        // Fallback for simulate button if needed
-        toast.current?.show({ severity: 'warn', summary: t('alert_title'), detail: t('alert_desc'), life: 3000 });
-    };
 
     const statusBodyTemplate = (rowData: any) => {
         if (rowData.status === 'CANCELLED') {
@@ -584,7 +579,6 @@ function App() {
                         <Button label={t('lang')} icon="pi pi-globe" className="p-button-text p-button-secondary p-button-sm text-700" onClick={toggleLanguage} />
                         <Button label="협력사 초대" icon="pi pi-users" className="p-button-outlined p-button-info p-button-sm" onClick={openHandshakeModal} />
                         <Button label="공정 관리" icon="pi pi-sitemap" className="p-button-outlined p-button-help p-button-sm" onClick={() => setProcessManagerVisible(true)} tooltip="공장 공정 단계를 커스터마이징합니다" tooltipOptions={{position: "bottom"}} />
-                        <Button label="보류 알림 시뮬레이션" icon="pi pi-bell" className="p-button-warning p-button-sm shadow-1" onClick={showHoldAlert} />
                         
                         <div className="flex align-items-center gap-2 border-left-1 border-300 pl-3 ml-1">
                             <div className="w-2rem h-2rem border-circle bg-primary flex align-items-center justify-content-center text-white font-bold text-sm">
