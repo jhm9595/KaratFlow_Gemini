@@ -185,46 +185,103 @@ public class OrderService {
     public OrderDetailDTO getOrderDetails(Long orderId) {
         Order order = orderRepository.findById(orderId).orElseThrow();
         List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
-        if (items.isEmpty()) throw new IllegalStateException("No items for order " + orderId);
-        OrderItem oi = items.get(0);
-        Design d = oi.getDesign();
+        OrderItem oi = items.isEmpty() ? null : items.get(0);
+        Design d = oi != null ? oi.getDesign() : null;
         List<WorkOrder> wos = workOrderRepository.findAllByOrderId(orderId);
 
+        // Fetch template
+        ProcessTemplate template = null;
+        if (!wos.isEmpty() && wos.get(0).getTemplate() != null) {
+            template = wos.get(0).getTemplate();
+        } else {
+            template = templateRepository.findAll().stream()
+                    .filter(t -> Boolean.TRUE.equals(t.getIsDefault()))
+                    .findFirst().orElse(null);
+        }
+
         List<OrderDetailDTO.TimelineEventDTO> timeline = new ArrayList<>();
-        if (!wos.isEmpty()) {
-            WorkOrder firstWo = wos.get(0);
-            if (firstWo.getTemplate() != null && firstWo.getTemplate().getSteps() != null) {
+        WorkOrder firstWo = !wos.isEmpty() ? wos.get(0) : null;
+        String currentStageName = firstWo != null ? firstWo.getCurrentStage() : "접수";
+
+        if (template != null && template.getSteps() != null && !template.getSteps().isEmpty()) {
+            Map<String, String> historyMap = new HashMap<>();
+            if (firstWo != null) {
                 List<WorkOrderHistory> histories = historyRepository.findByWorkOrderIdOrderByStepOrderAsc(firstWo.getId());
-                Map<String, String> historyMap = histories.stream()
-                    .collect(Collectors.toMap(
-                        WorkOrderHistory::getStepName, 
-                        h -> h.getCompletedAt().toString(),
-                        (existing, replacement) -> existing
-                    ));
-                    
-                for (ProcessTemplateStep step : firstWo.getTemplate().getSteps()) {
-                    String name = step.getStageName() != null ? step.getStageName() : step.getStageCode();
-                    String date = historyMap.get(name) != null ? historyMap.get(name) : historyMap.get(step.getStageCode());
-                    boolean completed = date != null;
-                    timeline.add(OrderDetailDTO.TimelineEventDTO.builder()
-                        .stage(name)
-                        .date(date)
-                        .icon(completed ? "pi pi-check" : "pi pi-circle")
-                        .color(completed ? "#22C55E" : "#9E9E9E")
-                        .build());
+                for (WorkOrderHistory h : histories) {
+                    if (h.getStepName() != null && h.getCompletedAt() != null) {
+                        historyMap.put(h.getStepName(), h.getCompletedAt().toString());
+                    }
                 }
+            }
+
+            List<ProcessTemplateStep> steps = template.getSteps();
+            int currentStepIdx = -1;
+            for (int i = 0; i < steps.size(); i++) {
+                String name = steps.get(i).getStageName() != null ? steps.get(i).getStageName() : steps.get(i).getStageCode();
+                if (name.equals(currentStageName)) {
+                    currentStepIdx = i;
+                    break;
+                }
+            }
+
+            for (int i = 0; i < steps.size(); i++) {
+                ProcessTemplateStep step = steps.get(i);
+                String name = step.getStageName() != null ? step.getStageName() : step.getStageCode();
+                String date = historyMap.get(name) != null ? historyMap.get(name) : historyMap.get(step.getStageCode());
+                
+                boolean isCompleted = (date != null) || (currentStepIdx >= 0 && i <= currentStepIdx);
+                if (date == null && isCompleted) {
+                    date = order.getCreatedAt() != null ? order.getCreatedAt().toString() : LocalDateTime.now().toString();
+                }
+
+                timeline.add(OrderDetailDTO.TimelineEventDTO.builder()
+                    .stage(name)
+                    .date(isCompleted ? date : null)
+                    .icon(isCompleted ? "pi pi-check" : "pi pi-circle")
+                    .color(isCompleted ? "#22C55E" : "#9E9E9E")
+                    .build());
+            }
+        } else {
+            // Fallback default stages
+            String[] defaultStages = new String[]{"접수", "CAD", "주물", "세공", "완성"};
+            int currentIdx = 0;
+            for (int i = 0; i < defaultStages.length; i++) {
+                if (defaultStages[i].equals(currentStageName)) {
+                    currentIdx = i;
+                    break;
+                }
+            }
+            for (int i = 0; i < defaultStages.length; i++) {
+                boolean completed = i <= currentIdx;
+                timeline.add(OrderDetailDTO.TimelineEventDTO.builder()
+                    .stage(defaultStages[i])
+                    .date(completed ? (order.getCreatedAt() != null ? order.getCreatedAt().toString() : null) : null)
+                    .icon(completed ? "pi pi-check" : "pi pi-circle")
+                    .color(completed ? "#22C55E" : "#9E9E9E")
+                    .build());
             }
         }
 
-        List<OrderDetailDTO.WorkOrderDTO> woDTOs = wos.stream().map(w ->
-                OrderDetailDTO.WorkOrderDTO.builder()
-                        .id(w.getId())
-                        .workOrderNo(w.getWorkOrderNo())
-                        .stage(w.getCurrentStage())
-                        .isHold(w.getIsHold())
-                        .createdAt(w.getCreatedAt() != null ? w.getCreatedAt().toString() : null)
-                        .build()
-        ).collect(Collectors.toList());
+        List<OrderDetailDTO.WorkOrderDTO> woDTOs = new ArrayList<>();
+        if (!wos.isEmpty()) {
+            woDTOs = wos.stream().map(w ->
+                    OrderDetailDTO.WorkOrderDTO.builder()
+                            .id(w.getId())
+                            .workOrderNo(w.getWorkOrderNo() != null ? w.getWorkOrderNo() : "WO-" + w.getId())
+                            .stage(w.getCurrentStage())
+                            .isHold(w.getIsHold())
+                            .createdAt(w.getCreatedAt() != null ? w.getCreatedAt().toString() : null)
+                            .build()
+            ).collect(Collectors.toList());
+        } else {
+            woDTOs.add(OrderDetailDTO.WorkOrderDTO.builder()
+                    .id(order.getId())
+                    .workOrderNo(order.getOrderNo() != null ? order.getOrderNo() : "WO-" + order.getId())
+                    .stage(currentStageName)
+                    .isHold(false)
+                    .createdAt(order.getCreatedAt() != null ? order.getCreatedAt().toString() : null)
+                    .build());
+        }
 
         return OrderDetailDTO.builder()
                 .orderId(order.getId())
@@ -233,15 +290,15 @@ public class OrderService {
                 .customerPhone(order.getCustomerPhone())
                 .orderType(order.getOrderType())
                 .orderDate(order.getOrderDate() != null ? order.getOrderDate().toString() : null)
-                .brand(d != null ? d.getBrand() : oi.getUnmappedBrandName())
+                .brand(d != null ? d.getBrand() : (oi != null ? oi.getUnmappedBrandName() : null))
                 .designCode(d != null ? d.getDesignCode() : null)
-                .productName(d != null ? d.getName() : oi.getUnmappedProductName())
-                .imageUrl(oi.getImageUrl() != null ? oi.getImageUrl()
+                .productName(d != null ? d.getName() : (oi != null ? oi.getUnmappedProductName() : null))
+                .imageUrl(oi != null && oi.getImageUrl() != null ? oi.getImageUrl()
                         : (d != null ? d.getImageUrl() : null))
-                .quantity(oi.getQuantity())
-                .engravingText(oi.getEngravingText())
-                .engravingLocation(oi.getEngravingLocation())
-                .surfaceFinish(oi.getSurfaceFinish())
+                .quantity(oi != null ? oi.getQuantity() : 1)
+                .engravingText(oi != null ? oi.getEngravingText() : null)
+                .engravingLocation(oi != null ? oi.getEngravingLocation() : null)
+                .surfaceFinish(oi != null ? oi.getSurfaceFinish() : null)
                 .workOrders(woDTOs)
                 .timelineEvents(timeline)
                 .build();

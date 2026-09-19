@@ -1040,6 +1040,7 @@ function App() {
                     onHide={() => setOrderDetailVisible(false)}
                     order={orders.find(o => o.id === selectedOrderId)}
                     orderDetailData={orderDetailData}
+                    pipelineStages={pipelineStages}
                     advanceStage={advanceStage}
                     openSubcontractModal={(id) => { setOrderDetailVisible(false); openSubcontractModal(id); }}
                     openChangeModal={() => { setOrderDetailVisible(false); setChangeModalVisible(true); }}
