@@ -30,4 +30,10 @@ public class ProcessTemplateStep {
     
     @Column(name = "is_subcontract")
     private Boolean isSubcontract;
+
+    @Column(name = "color_hex")
+    private String colorHex;
+
+    @Column(name = "color_gradient")
+    private String colorGradient;
 }
