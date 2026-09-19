@@ -112,7 +112,7 @@ function App() {
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
     const [allProducts, setAllProducts] = useState<any[]>([]);
-    const [pipelineStages, setPipelineStages] = useState<string[]>(['접수', 'CAD', '주물', '세공', '완성']);
+    const [pipelineStages, setPipelineStages] = useState<string[]>(['접수', 'CAD', '주물', '세공', '완료']);
 
     const fetchPipelineStages = () => {
         fetch('http://localhost:8888/api/process-templates', { headers: getAuthHeaders() })
@@ -491,7 +491,10 @@ function App() {
         if (rawStage === 'PENDING') rawStage = '접수';
         else if (rawStage === 'CASTING') rawStage = '주물';
         else if (rawStage === 'POLISHING') rawStage = '세공';
-        else if (rawStage === 'COMPLETED' || rawStage === 'DONE' || rowData.status === 'COMPLETED') rawStage = '완성';
+        else if (rawStage === 'COMPLETED' || rawStage === 'DONE' || rowData.status === 'COMPLETED') {
+            const lastStage = (pipelineStages && pipelineStages.length > 0) ? pipelineStages[pipelineStages.length - 1] : '완료';
+            rawStage = (rowData.stage && rowData.stage !== 'COMPLETED' && rowData.stage !== 'DONE') ? rowData.stage : lastStage;
+        }
         
         const stageSeverities: Record<string, 'success' | 'info' | 'warning' | 'danger' | null> = {
             '접수': null,

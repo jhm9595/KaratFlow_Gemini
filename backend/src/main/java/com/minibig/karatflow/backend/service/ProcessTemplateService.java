@@ -26,7 +26,7 @@ public class ProcessTemplateService {
             ProcessTemplate t1 = ProcessTemplate.builder()
                     .templateCode("STANDARD_5")
                     .templateName("표준 5단계 공정")
-                    .description("일반적인 쥬얼리 제작 공정 (접수-CAD-주물-세공-완성)")
+                    .description("일반적인 쥬얼리 제작 공정 (접수-CAD-주물-세공-완료)")
                     .isDefault(true)
                     .build();
             t1 = createTemplate(t1);
@@ -36,7 +36,7 @@ public class ProcessTemplateService {
                     ProcessTemplateStep.builder().stageName("CAD").stepOrder(2).template(t1).build(),
                     ProcessTemplateStep.builder().stageName("주물").stepOrder(3).template(t1).build(),
                     ProcessTemplateStep.builder().stageName("세공").stepOrder(4).template(t1).build(),
-                    ProcessTemplateStep.builder().stageName("완성").stepOrder(5).template(t1).build()
+                    ProcessTemplateStep.builder().stageName("완료").stepOrder(5).template(t1).build()
             );
             for (ProcessTemplateStep s : steps) {
                 processTemplateStepRepository.save(s);
