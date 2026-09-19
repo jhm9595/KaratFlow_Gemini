@@ -71,8 +71,8 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                 </div>
             } 
             visible={visible} 
-            style={{ width: '720px', maxWidth: '95vw' }} 
-            contentStyle={{ padding: '1.25rem', overflowY: 'auto' }}
+            style={{ width: '720px', height: '520px', maxWidth: '95vw' }} 
+            contentStyle={{ height: '440px', padding: '1.25rem', overflowY: 'auto' }}
             onHide={onHide}
             dismissableMask
         >
@@ -102,7 +102,7 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                             </span>
                         }
                     >
-                        <div className="pt-3 flex flex-column gap-4">
+                        <div className="pt-3 flex flex-column justify-content-between" style={{ minHeight: '300px' }}>
                             <div className="p-fluid grid">
                                 <div className="col-12 md:col-4">
                                     <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
@@ -127,7 +127,7 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                                 </div>
                             </div>
 
-                            <div className="surface-50 border-1 border-200 border-round p-4 text-center shadow-1">
+                            <div className="surface-50 border-1 border-200 border-round p-4 text-center shadow-1 mt-3">
                                 <div className="text-600 font-bold mb-1 text-sm">실시간 예상 총 가치</div>
                                 <div className="text-3xl font-bold text-primary font-mono mb-1">₩{Math.round(estimatedValue).toLocaleString()}</div>
                                 <div className="text-500 text-xs">(환산 중량: {weightInGrams.toFixed(2)}g)</div>
@@ -143,7 +143,7 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                             </span>
                         }
                     >
-                        <div className="pt-3 flex flex-column gap-4">
+                        <div className="pt-3 flex flex-column justify-content-between" style={{ minHeight: '300px' }}>
                             <div className="p-fluid grid">
                                 <div className="col-12 md:col-4">
                                     <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
@@ -171,7 +171,7 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                                 </div>
                             </div>
 
-                            <div className="surface-50 border-1 border-200 border-round p-4 text-center shadow-1">
+                            <div className="surface-50 border-1 border-200 border-round p-4 text-center shadow-1 mt-3">
                                 <div className="flex justify-content-center gap-4 text-sm text-600 mb-2">
                                     <span>차감 감모량: <strong className="text-red-500">{(numScrapWeight * (numLossRate / 100)).toFixed(2)}g</strong></span>
                                     <span>인정 실중량: <strong className="text-900">{validScrapWeight.toFixed(2)}g</strong></span>
@@ -190,7 +190,7 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                             </span>
                         }
                     >
-                        <div className="pt-3 flex flex-column gap-4">
+                        <div className="pt-3 flex flex-column justify-content-between" style={{ minHeight: '300px' }}>
                             <div className="p-fluid grid">
                                 <div className="col-12 md:col-6">
                                     <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
@@ -208,7 +208,7 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                                 </div>
                             </div>
 
-                            <div className="grid">
+                            <div className="grid mt-3">
                                 <div className="col-6">
                                     <div className="p-3 surface-50 border-round border-1 border-yellow-400 text-center shadow-1">
                                         <div className="text-700 font-bold text-xs mb-1">필요 순금 (24K)</div>
