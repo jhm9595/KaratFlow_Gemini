@@ -113,6 +113,13 @@ function App() {
     const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
     const [allProducts, setAllProducts] = useState<any[]>([]);
     const [pipelineStages, setPipelineStages] = useState<string[]>(['접수', 'CAD', '주물', '세공', '완료']);
+    const [pipelineSteps, setPipelineSteps] = useState<any[]>([
+        { stageName: '접수', colorHex: '#64748B', colorGradient: 'linear-gradient(135deg, #475569 0%, #1e293b 100%)' },
+        { stageName: 'CAD', colorHex: '#3B82F6', colorGradient: 'linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)' },
+        { stageName: '주물', colorHex: '#F59E0B', colorGradient: 'linear-gradient(135deg, #d97706 0%, #ea580c 100%)' },
+        { stageName: '세공', colorHex: '#EC4899', colorGradient: 'linear-gradient(135deg, #e11d48 0%, #d946ef 100%)' },
+        { stageName: '완료', colorHex: '#10B981', colorGradient: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)' }
+    ]);
 
     const fetchPipelineStages = () => {
         fetch('http://localhost:8888/api/process-templates', { headers: getAuthHeaders() })
@@ -121,6 +128,7 @@ function App() {
                 if (Array.isArray(templates) && templates.length > 0) {
                     const defaultTpl = templates.find(t => t.isDefault) || templates[0];
                     if (defaultTpl && defaultTpl.steps && defaultTpl.steps.length > 0) {
+                        setPipelineSteps(defaultTpl.steps);
                         const stages = defaultTpl.steps.map((s: any) => s.stageName);
                         setPipelineStages(stages);
                     }
@@ -709,12 +717,22 @@ function App() {
                         
                         {/* Pipeline Visualizer */}
                         <div className="surface-0 p-3 border-round shadow-1">
-                            <h4 className="m-0 mb-4 text-600 font-medium">실시간 공정 현황 (Pipeline)</h4>
+                            <div className="flex justify-content-between align-items-center mb-3">
+                                <h4 className="m-0 text-600 font-medium">실시간 공정 현황 (Pipeline)</h4>
+                                <Button 
+                                    icon="pi pi-palette" 
+                                    className="p-button-rounded p-button-text p-button-sm p-button-help" 
+                                    onClick={() => setProcessManagerVisible(true)} 
+                                    tooltip="공정 고유 색상 & 템플릿 커스터마이징" 
+                                    tooltipOptions={{ position: 'left' }} 
+                                />
+                            </div>
                             <div className="flex justify-content-between align-items-center px-4 relative">
                                 {/* Connecting Line */}
                                 <div className="absolute w-full z-0" style={{ height: '4px', backgroundColor: '#e5e7eb', top: '30px', left: '0' }}></div>
                                 
-                                {pipelineStages.map((stage, idx) => {
+                                {pipelineSteps.map((stepObj: any, idx: number) => {
+                                    const stage = stepObj.stageName;
                                     const count = orders.filter(o => {
                                         let s = o.stage || '접수';
                                         if (s === 'PENDING') s = '접수';
@@ -728,33 +746,23 @@ function App() {
                                         return s === stage;
                                     }).length;
 
-                                    const predefinedColors: Record<string, { bgHex: string, borderHex: string }> = {
-                                        '접수': { bgHex: '#64748B', borderHex: '#475569' },
-                                        'CAD': { bgHex: '#3B82F6', borderHex: '#2563EB' },
-                                        '주물': { bgHex: '#F59E0B', borderHex: '#D97706' },
-                                        '제작': { bgHex: '#F59E0B', borderHex: '#D97706' },
-                                        '세공': { bgHex: '#EF4444', borderHex: '#DC2626' },
-                                        '완성': { bgHex: '#22C55E', borderHex: '#16A34A' },
-                                        '완료': { bgHex: '#22C55E', borderHex: '#16A34A' }
-                                    };
-
-                                    const palette = [
-                                        { bgHex: '#64748B', borderHex: '#475569' },
-                                        { bgHex: '#3B82F6', borderHex: '#2563EB' },
-                                        { bgHex: '#F59E0B', borderHex: '#D97706' },
-                                        { bgHex: '#EF4444', borderHex: '#DC2626' },
-                                        { bgHex: '#8B5CF6', borderHex: '#7C3AED' },
-                                        { bgHex: '#22C55E', borderHex: '#16A34A' },
-                                    ];
-
-                                    const color = predefinedColors[stage] || palette[idx % palette.length];
+                                    const bg = stepObj.colorGradient || stepObj.colorHex || 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
 
                                     return (
                                         <div key={stage} className="flex flex-column align-items-center z-1 relative bg-white" style={{ borderRadius: '50%' }}>
-                                            <div className="flex align-items-center justify-content-center border-circle border-2 mb-2 shadow-1" style={{ width: '60px', height: '60px', backgroundColor: color.bgHex, borderColor: color.borderHex }}>
-                                                <span className="text-2xl font-bold text-white">{count}</span>
+                                            <div 
+                                                className="flex align-items-center justify-content-center border-circle mb-2 transition-transform transform hover:scale-110" 
+                                                style={{ 
+                                                    width: '60px', 
+                                                    height: '60px', 
+                                                    background: bg,
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+                                                    border: '2px solid #ffffff'
+                                                }}
+                                            >
+                                                <span className="text-2xl font-bold text-white drop-shadow">{count}</span>
                                             </div>
-                                            <span className="text-700 font-medium bg-white px-2">{stage}</span>
+                                            <span className="text-800 font-bold bg-white px-2 border-round text-xs shadow-1" style={{ color: stepObj.colorHex || '#333' }}>{stage}</span>
                                         </div>
                                     );
                                 })}
