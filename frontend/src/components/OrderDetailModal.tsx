@@ -20,7 +20,7 @@ interface OrderDetailModalProps {
 }
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ 
-    visible, onHide, order, orderDetailData, pipelineStages = ['접수', 'CAD', '주물', '세공', '완성'], advanceStage, openSubcontractModal, 
+    visible, onHide, order, orderDetailData, pipelineStages = ['접수', 'CAD', '주물', '세공', '완료'], advanceStage, openSubcontractModal, 
     openChangeModal, openCancelModal, handlePrint, statusBodyTemplate 
 }) => {
     if (!order) return null;
@@ -28,7 +28,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
     // Current order stage
     const currentStage = orderDetailData?.workOrders?.[0]?.stage || rowData.stage || '접수';
-    const stagesList = pipelineStages && pipelineStages.length > 0 ? pipelineStages : ['접수', 'CAD', '주물', '세공', '완성'];
+    const stagesList = pipelineStages && pipelineStages.length > 0 ? pipelineStages : ['접수', 'CAD', '주물', '세공', '완료'];
     const currentStageIdx = stagesList.indexOf(currentStage) >= 0 ? stagesList.indexOf(currentStage) : 0;
 
     // Determine timeline events (from orderDetailData or dynamic fallback)
