@@ -19,6 +19,8 @@ import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
 import { Client } from '@stomp/stompjs';
 import i18n from './i18n';
+import { PetroleumChart } from './components/charts/PetroleumChart';
+import { KospiChart } from './components/charts/KospiChart';
 
 
 const formatElapsed = (start: string | null, end: string | null) => {
@@ -596,7 +598,7 @@ function App() {
                 {/* APM Main Content */}
                 <div className="flex-1 flex overflow-hidden p-3 gap-3">
                     {/* Left Panel: Metrics & Charts */}
-                    <div className="flex flex-column gap-3" style={{ width: '450px' }}>
+                    <div className="flex flex-column gap-3 overflow-y-auto" style={{ width: '450px', maxHeight: '100%' }}>
                         <div className="surface-0 p-3 border-round shadow-1">
                             <h4 className="m-0 mb-3 text-600 font-medium">실시간 핵심 지표</h4>
                             <div className="flex justify-content-between align-items-end mb-3">
@@ -608,31 +610,11 @@ function App() {
                                 <span className="text-3xl font-bold text-green-400">{orders.filter(o => o.status === 'COMPLETED').length} <small className="text-sm font-normal text-gray-500">건</small></span>
                             </div>
                         </div>
-                        
-                        
-                        {/* Advanced Chart 1: 병목 분석 */}
-                        <div className="surface-0 p-3 border-round shadow-1 flex-1 flex flex-column">
-                            <h4 className="m-0 mb-3 text-600 font-medium">작업장 공정 트렌드 현황 (주간)</h4>
-                            <div className="flex-1 w-full" style={{ minHeight: '180px' }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={dailyProcessData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                                        <XAxis dataKey="date" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-                                        <YAxis tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-                                        <RechartsTooltip contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', color: '#333' }} />
-                                        <Legend wrapperStyle={{ fontSize: '12px' }} />
-                                        <Bar dataKey="CAD" stackId="a" fill="#8884d8" name="CAD" />
-                                        <Bar dataKey="주물" stackId="a" fill="#82ca9d" name="주물" />
-                                        <Bar dataKey="세공" stackId="a" fill="#ffc658" name="세공" />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
 
-                        {/* Advanced Chart 2: 실시간 금 시세 */}
-                        <div className="surface-0 p-3 border-round shadow-1 flex-1 flex flex-column">
+                        {/* 1. 오늘의 금 시세 */}
+                        <div className="surface-0 p-3 border-round shadow-1 flex flex-column">
                             <div className="flex justify-content-between align-items-center mb-3">
-                                <h4 className="m-0 text-600 font-medium">오늘의 금 시세 (3.75g 기준)</h4>
+                                <h4 className="m-0 text-600 font-medium">1. 오늘의 금 시세 (3.75g 기준)</h4>
                             </div>
                             <div className="flex gap-2 mb-3">
                                 <div className="flex-1 surface-50 p-2 border-round text-center border-1 border-300">
@@ -652,7 +634,7 @@ function App() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 w-full" style={{ minHeight: '180px' }}>
+                            <div className="w-full" style={{ height: '180px' }}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={goldPriceData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
                                         <defs>
@@ -680,9 +662,34 @@ function App() {
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </div>
-                                <div className="flex justify-content-end mt-2">
-                                    <Button label="✨ 금 시세 심층 도구 및 계산기" className="p-button-outlined p-button-sm p-button-warning" icon="pi pi-calculator" onClick={() => setGoldToolsVisible(true)} />
-                                </div>
+                            <div className="flex justify-content-end mt-2">
+                                <Button label="✨ 금 시세 심층 도구 및 계산기" className="p-button-outlined p-button-sm p-button-warning" icon="pi pi-calculator" onClick={() => setGoldToolsVisible(true)} />
+                            </div>
+                        </div>
+
+                        {/* 2. 석유 시세 */}
+                        <PetroleumChart />
+
+                        {/* 3. 코스피 지수 */}
+                        <KospiChart />
+
+                        {/* 4. 작업장 공정 트렌드 현황 */}
+                        <div className="surface-0 p-3 border-round shadow-1 flex flex-column">
+                            <h4 className="m-0 mb-3 text-600 font-medium">작업장 공정 트렌드 현황 (주간)</h4>
+                            <div className="w-full" style={{ height: '180px' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={dailyProcessData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                                        <XAxis dataKey="date" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
+                                        <YAxis tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
+                                        <RechartsTooltip contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', color: '#333' }} />
+                                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                                        <Bar dataKey="CAD" stackId="a" fill="#8884d8" name="CAD" />
+                                        <Bar dataKey="주물" stackId="a" fill="#82ca9d" name="주물" />
+                                        <Bar dataKey="세공" stackId="a" fill="#ffc658" name="세공" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
                     </div>
 
