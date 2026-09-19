@@ -1,15 +1,33 @@
-﻿import React from 'react';
+import React from 'react';
 import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
 
 export const Login: React.FC = () => {
 
   const handleKakaoLogin = () => {
-    window.location.href = 'http://localhost:8888/oauth2/authorization/kakao';
+    const kakaoAuthUrl = 'http://localhost:8888/oauth2/authorization/kakao';
+    try {
+      if (window.top && window.top !== window) {
+        window.top.location.href = kakaoAuthUrl;
+      } else {
+        window.location.href = kakaoAuthUrl;
+      }
+    } catch (_e) {
+      window.open(kakaoAuthUrl, '_self');
+    }
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:8888/oauth2/authorization/google';
+    const googleAuthUrl = 'http://localhost:8888/oauth2/authorization/google';
+    try {
+      if (window.top && window.top !== window) {
+        window.top.location.href = googleAuthUrl;
+      } else {
+        window.location.href = googleAuthUrl;
+      }
+    } catch (_e) {
+      window.open(googleAuthUrl, '_self');
+    }
   };
 
   return (
