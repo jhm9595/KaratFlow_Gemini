@@ -605,10 +605,10 @@ function App() {
                             </div>
                         </div>
 
-                        {/* 1. 오늘의 금 시세 */}
+                        {/* 금 시세 (한돈 기준) */}
                         <div className="surface-0 p-3 border-round shadow-1 flex flex-column">
                             <div className="flex justify-content-between align-items-center mb-3">
-                                <h4 className="m-0 text-600 font-medium">1. 오늘의 금 시세 (3.75g 기준)</h4>
+                                <h4 className="m-0 text-600 font-medium">금 시세 (한돈 기준)</h4>
                                 <Button 
                                     icon="pi pi-calculator" 
                                     className="p-button-rounded p-button-outlined p-button-warning p-button-sm" 
@@ -655,7 +655,11 @@ function App() {
                                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                                         <XAxis dataKey="date" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
                                         <YAxis domain={['auto', 'auto']} tickFormatter={(val) => (val/10000) + '만'} tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-                                        <RechartsTooltip formatter={(value) => ['₩' + (value || 0).toLocaleString(), '']} contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', color: '#333' }} />
+                                        <RechartsTooltip 
+                                            itemSorter={(item: any) => item.dataKey === 'price24k' ? -3 : item.dataKey === 'price18k' ? -2 : -1}
+                                            formatter={(value) => ['₩' + (value || 0).toLocaleString(), '']} 
+                                            contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', color: '#333' }} 
+                                        />
                                         <Legend wrapperStyle={{ fontSize: '12px' }} />
                                         <Area type="monotone" dataKey="price24k" name="24K (순금)" stroke="#eab308" fillOpacity={1} fill="url(#color24k)" />
                                         <Area type="monotone" dataKey="price18k" name="18K" stroke="#f97316" fillOpacity={1} fill="url(#color18k)" />
