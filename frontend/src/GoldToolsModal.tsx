@@ -71,26 +71,28 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                 </div>
             } 
             visible={visible} 
-            style={{ width: '680px', maxWidth: '95vw' }} 
-            contentStyle={{ height: '480px', padding: '1rem', overflowY: 'hidden' }}
+            style={{ width: '720px', maxWidth: '95vw' }} 
+            contentStyle={{ padding: '1.25rem', overflowY: 'auto' }}
             onHide={onHide}
             dismissableMask
         >
             {/* Top Market Bar */}
-            <div className="surface-100 border-1 border-200 border-round p-3 mb-3 flex justify-content-between align-items-center shadow-1">
-                <span className="text-700 font-bold text-sm flex align-items-center gap-1">
-                    <i className="pi pi-chart-line text-yellow-600"></i> 라이브 시세 <span className="text-500 font-normal">(3.75g 한돈 기준)</span>
-                </span>
-                <div className="flex gap-4 text-sm font-medium">
-                    <div>24K: <span className="text-yellow-700 font-bold">₩{todayGold.price24k?.toLocaleString()}</span></div>
-                    <div>18K: <span className="text-orange-600 font-bold">₩{todayGold.price18k?.toLocaleString()}</span></div>
-                    <div>14K: <span className="text-purple-600 font-bold">₩{todayGold.price14k?.toLocaleString()}</span></div>
+            <div className="surface-100 border-1 border-200 border-round p-3 mb-3 flex flex-wrap justify-content-between align-items-center gap-3 shadow-1">
+                <div className="text-700 font-bold text-sm flex align-items-center gap-1" style={{ whiteSpace: 'nowrap' }}>
+                    <i className="pi pi-chart-line text-yellow-600"></i>
+                    <span>라이브 금 시세</span>
+                    <span className="text-500 font-normal ml-1">(한돈 3.75g 기준)</span>
+                </div>
+                <div className="flex align-items-center gap-4 text-sm font-medium" style={{ whiteSpace: 'nowrap' }}>
+                    <div>24K: <span className="text-yellow-700 font-bold ml-1">₩{todayGold.price24k?.toLocaleString()}</span></div>
+                    <div>18K: <span className="text-orange-600 font-bold ml-1">₩{todayGold.price18k?.toLocaleString()}</span></div>
+                    <div>14K: <span className="text-purple-600 font-bold ml-1">₩{todayGold.price14k?.toLocaleString()}</span></div>
                 </div>
             </div>
 
-            {/* Custom Tab Container with Fixed Inner Height */}
-            <div className="surface-0 border-1 border-300 border-round p-2 h-full flex flex-column">
-                <TabView className="custom-gold-tabs flex-1">
+            {/* Custom Tab Container */}
+            <div className="surface-0 border-1 border-200 border-round p-3 shadow-1">
+                <TabView className="custom-gold-tabs">
                     
                     {/* Tab 1 */}
                     <TabPanel 
@@ -100,24 +102,24 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                             </span>
                         }
                     >
-                        <div className="flex flex-column justify-content-between h-full pt-3 px-2" style={{ height: '320px' }}>
+                        <div className="pt-3 flex flex-column gap-4">
                             <div className="p-fluid grid">
                                 <div className="col-12 md:col-4">
-                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
                                         품위 선택
                                         <i className="pi pi-question-circle text-400 text-xs ml-1" title="계산할 금 순도(24K, 18K, 14K)를 선택합니다."></i>
                                     </label>
                                     <Dropdown value={calcPurity} options={purityOptions} optionLabel="label" optionValue="name" onChange={(e) => setCalcPurity(e.value)} />
                                 </div>
                                 <div className="col-12 md:col-4">
-                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
                                         단위 선택
                                         <i className="pi pi-question-circle text-400 text-xs ml-1" title="그램(g) 또는 돈(3.75g) 단위를 선택합니다."></i>
                                     </label>
                                     <Dropdown value={weightUnit} options={[{label: '그램 (g)', value: 'g'}, {label: '돈 (3.75g)', value: 'don'}]} onChange={(e) => setWeightUnit(e.value)} />
                                 </div>
                                 <div className="col-12 md:col-4">
-                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
                                         중량 입력
                                         <i className="pi pi-question-circle text-400 text-xs ml-1" title="계산 대상 중량을 수치로 입력합니다."></i>
                                     </label>
@@ -125,10 +127,10 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                                 </div>
                             </div>
 
-                            <div className="surface-50 border-1 border-200 border-round p-4 text-center mt-4 shadow-1">
+                            <div className="surface-50 border-1 border-200 border-round p-4 text-center shadow-1">
                                 <div className="text-600 font-bold mb-1 text-sm">실시간 예상 총 가치</div>
-                                <div className="text-3xl font-bold text-primary font-mono">₩{Math.round(estimatedValue).toLocaleString()}</div>
-                                <div className="text-500 text-xs mt-1">(환산 중량: {weightInGrams.toFixed(2)}g)</div>
+                                <div className="text-3xl font-bold text-primary font-mono mb-1">₩{Math.round(estimatedValue).toLocaleString()}</div>
+                                <div className="text-500 text-xs">(환산 중량: {weightInGrams.toFixed(2)}g)</div>
                             </div>
                         </div>
                     </TabPanel>
@@ -141,24 +143,24 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                             </span>
                         }
                     >
-                        <div className="flex flex-column justify-content-between h-full pt-3 px-2" style={{ height: '320px' }}>
+                        <div className="pt-3 flex flex-column gap-4">
                             <div className="p-fluid grid">
                                 <div className="col-12 md:col-4">
-                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
                                         매입 품위
                                         <i className="pi pi-question-circle text-400 text-xs ml-1" title="매입할 고금(Scrap)의 순도를 선택합니다."></i>
                                     </label>
                                     <Dropdown value={scrapPurity} options={purityOptions} optionLabel="label" optionValue="name" onChange={(e) => setScrapPurity(e.value)} />
                                 </div>
                                 <div className="col-12 md:col-4">
-                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
                                         실측 중량 (g)
                                         <i className="pi pi-question-circle text-400 text-xs ml-1" title="저울로 측정한 고금의 실제 무게(g)입니다."></i>
                                     </label>
                                     <InputText type="number" value={scrapWeight.toString()} onChange={(e) => setScrapWeight(e.target.value)} step="0.01" />
                                 </div>
                                 <div className="col-12 md:col-4">
-                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
                                         해리율 (%)
                                         <i className="pi pi-question-circle text-400 text-xs ml-1" title="정제 손실 및 불순물 차감 비율(%)(기본 10%)"></i>
                                     </label>
@@ -169,12 +171,12 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                                 </div>
                             </div>
 
-                            <div className="surface-50 border-1 border-200 border-round p-4 text-center mt-4 shadow-1">
+                            <div className="surface-50 border-1 border-200 border-round p-4 text-center shadow-1">
                                 <div className="flex justify-content-center gap-4 text-sm text-600 mb-2">
                                     <span>차감 감모량: <strong className="text-red-500">{(numScrapWeight * (numLossRate / 100)).toFixed(2)}g</strong></span>
                                     <span>인정 실중량: <strong className="text-900">{validScrapWeight.toFixed(2)}g</strong></span>
                                 </div>
-                                <div className="text-sm font-bold text-green-700">최종 매입 정산가</div>
+                                <div className="text-sm font-bold text-green-700 mb-1">최종 매입 정산가</div>
                                 <div className="text-3xl font-bold text-green-600 font-mono">₩{Math.round(scrapValue).toLocaleString()}</div>
                             </div>
                         </div>
@@ -188,17 +190,17 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                             </span>
                         }
                     >
-                        <div className="flex flex-column justify-content-between h-full pt-3 px-2" style={{ height: '320px' }}>
+                        <div className="pt-3 flex flex-column gap-4">
                             <div className="p-fluid grid">
                                 <div className="col-12 md:col-6">
-                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
                                         목표 품위
                                         <i className="pi pi-question-circle text-400 text-xs ml-1" title="주물(캐스팅) 제작 목표 순도(18K: 75%, 14K: 58.5%)"></i>
                                     </label>
                                     <Dropdown value={alloyPurity} options={purityOptions.filter(o => o.name !== '24K')} optionLabel="label" optionValue="name" onChange={(e) => setAlloyPurity(e.value)} />
                                 </div>
                                 <div className="col-12 md:col-6">
-                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
                                         목표 총중량 (g)
                                         <i className="pi pi-question-circle text-400 text-xs ml-1" title="합금 후 완성하려는 총 중량(g)입니다."></i>
                                     </label>
@@ -206,7 +208,7 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                                 </div>
                             </div>
 
-                            <div className="grid mt-4">
+                            <div className="grid">
                                 <div className="col-6">
                                     <div className="p-3 surface-50 border-round border-1 border-yellow-400 text-center shadow-1">
                                         <div className="text-700 font-bold text-xs mb-1">필요 순금 (24K)</div>
