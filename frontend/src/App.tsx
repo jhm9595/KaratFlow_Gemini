@@ -609,6 +609,13 @@ function App() {
                         <div className="surface-0 p-3 border-round shadow-1 flex flex-column">
                             <div className="flex justify-content-between align-items-center mb-3">
                                 <h4 className="m-0 text-600 font-medium">1. 오늘의 금 시세 (3.75g 기준)</h4>
+                                <Button 
+                                    icon="pi pi-calculator" 
+                                    className="p-button-rounded p-button-outlined p-button-warning p-button-sm" 
+                                    tooltip="금 시세 심층 도구 및 계산기" 
+                                    tooltipOptions={{ position: 'bottom' }} 
+                                    onClick={() => setGoldToolsVisible(true)} 
+                                />
                             </div>
                             <div className="flex gap-2 mb-3">
                                 <div className="flex-1 surface-50 p-2 border-round text-center border-1 border-300">
@@ -655,9 +662,6 @@ function App() {
                                         <Area type="monotone" dataKey="price14k" name="14K" stroke="#8b5cf6" fillOpacity={1} fill="url(#color14k)" />
                                     </AreaChart>
                                 </ResponsiveContainer>
-                            </div>
-                            <div className="flex justify-content-end mt-2">
-                                <Button label="✨ 금 시세 심층 도구 및 계산기" className="p-button-outlined p-button-sm p-button-warning" icon="pi pi-calculator" onClick={() => setGoldToolsVisible(true)} />
                             </div>
                         </div>
 
