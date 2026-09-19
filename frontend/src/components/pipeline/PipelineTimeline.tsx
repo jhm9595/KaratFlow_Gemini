@@ -1,7 +1,6 @@
 import React from 'react';
 import { Timeline } from 'primereact/timeline';
-import { formatDistanceToNow, differenceInMinutes, parseISO } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { differenceInMinutes, parseISO } from 'date-fns';
 
 interface PipelineTimelineProps {
     events: any[];

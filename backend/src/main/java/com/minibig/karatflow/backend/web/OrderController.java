@@ -49,6 +49,11 @@ public class OrderController {
         return ResponseEntity.ok(invoiceCalculationService.calculateInvoice(orderId));
     }
 
+    @GetMapping("/{orderId}/details")
+    public ResponseEntity<com.minibig.karatflow.backend.domain.OrderDetailDTO> getOrderDetails(@PathVariable Long orderId) {
+        return ResponseEntity.ok(orderService.getOrderDetails(orderId));
+    }
+
     @PostMapping("/{orderId}/hold")
     public ResponseEntity<Map<String, Object>> putOrderOnHold(@PathVariable Long orderId) {
         orderService.setOrderHoldStatus(orderId, true);

@@ -32,6 +32,40 @@ public class GlobalMetricsController {
     private final DailyKospiPriceRepository kospiRepo;
 
 
+
+    @GetMapping("/petroleum/history")
+    public ResponseEntity<List<com.minibig.karatflow.backend.domain.DailyPetroleumPrice>> getPetroleumHistory() {
+                List<com.minibig.karatflow.backend.domain.DailyPetroleumPrice> all = petroleumRepo.findAllByOrderByDateAsc();
+        double lastGas = 0, lastDie = 0, lastKer = 0;
+        for (com.minibig.karatflow.backend.domain.DailyPetroleumPrice p : all) {
+            if (p.getGasolinePrice() != null && p.getGasolinePrice() > 0) lastGas = p.getGasolinePrice();
+            else p.setGasolinePrice(lastGas);
+            
+            if (p.getDieselPrice() != null && p.getDieselPrice() > 0) lastDie = p.getDieselPrice();
+            else p.setDieselPrice(lastDie);
+            
+            if (p.getKerosenePrice() != null && p.getKerosenePrice() > 0) lastKer = p.getKerosenePrice();
+            else p.setKerosenePrice(lastKer);
+        }
+        List<com.minibig.karatflow.backend.domain.DailyPetroleumPrice> recent = all.size() > 7 ? all.subList(all.size() - 7, all.size()) : all;
+        return ResponseEntity.ok(recent);
+    }
+
+    @GetMapping("/kospi/history")
+    public ResponseEntity<List<com.minibig.karatflow.backend.domain.DailyKospiPrice>> getKospiHistory() {
+                List<com.minibig.karatflow.backend.domain.DailyKospiPrice> all = kospiRepo.findAllByOrderByDateAsc();
+        double lastKospi = 0, lastKospi200 = 0;
+        for (com.minibig.karatflow.backend.domain.DailyKospiPrice k : all) {
+            if (k.getKospiIndex() != null && k.getKospiIndex() > 0) lastKospi = k.getKospiIndex();
+            else k.setKospiIndex(lastKospi);
+            
+            if (k.getKospi200Index() != null && k.getKospi200Index() > 0) lastKospi200 = k.getKospi200Index();
+            else k.setKospi200Index(lastKospi200);
+        }
+        List<com.minibig.karatflow.backend.domain.DailyKospiPrice> recent = all.size() > 7 ? all.subList(all.size() - 7, all.size()) : all;
+        return ResponseEntity.ok(recent);
+    }
+
     @GetMapping
     public ResponseEntity<Map<String, Object>> getGlobalMetrics() {
         Map<String, Object> result = new HashMap<>();

@@ -23,4 +23,8 @@ public class ProcessTemplate {
     @OneToMany(mappedBy = "template", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @OrderBy("stepOrder ASC")
     private List<ProcessTemplateStep> steps;
+
+    @Column(name = "is_default")
+    @Builder.Default
+    private Boolean isDefault = false;
 }

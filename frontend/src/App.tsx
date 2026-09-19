@@ -103,6 +103,22 @@ function App() {
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
     const [allProducts, setAllProducts] = useState<any[]>([]);
+    const [pipelineStages, setPipelineStages] = useState<string[]>(['접수', 'CAD', '주물', '세공', '완성']);
+
+    const fetchPipelineStages = () => {
+        fetch('http://localhost:8888/api/process-templates', { headers: getAuthHeaders() })
+            .then(res => res.json())
+            .then((templates: any[]) => {
+                if (Array.isArray(templates) && templates.length > 0) {
+                    const defaultTpl = templates.find(t => t.isDefault) || templates[0];
+                    if (defaultTpl && defaultTpl.steps && defaultTpl.steps.length > 0) {
+                        const stages = defaultTpl.steps.map((s: any) => s.stageName);
+                        setPipelineStages(stages);
+                    }
+                }
+            })
+            .catch(err => console.error('Failed to fetch pipeline stages:', err));
+    };
 
     // Load all products once for AutoComplete suggestions
     const loadAllProducts = () => {
@@ -395,6 +411,7 @@ function App() {
 
     useEffect(() => {
         fetchOrders();
+        fetchPipelineStages();
         
         fetch('http://localhost:8888/api/metal-prices/recent', { headers: getAuthHeaders() })
             .then(res => res.json())
@@ -460,30 +477,34 @@ function App() {
             );
         }
         
-        const stageMap: Record<string, { label: string, severity: 'success' | 'info' | 'warning' | 'danger' | null }> = {
-            '접수': { label: '접수', severity: null },
-            'CAD': { label: 'CAD', severity: 'info' },
-            '주물': { label: '주물', severity: 'warning' },
-            '세공': { label: '세공', severity: 'danger' },
-            '완성': { label: '완성', severity: 'success' }
+        let rawStage = rowData.stage || '접수';
+        if (rawStage === 'PENDING') rawStage = '접수';
+        else if (rawStage === 'CASTING') rawStage = '주물';
+        else if (rawStage === 'POLISHING') rawStage = '세공';
+        else if (rawStage === 'COMPLETED' || rawStage === 'DONE' || rowData.status === 'COMPLETED') rawStage = '완성';
+        
+        const stageSeverities: Record<string, 'success' | 'info' | 'warning' | 'danger' | null> = {
+            '접수': null,
+            'CAD': 'info',
+            '주물': 'warning',
+            '제작': 'warning',
+            '세공': 'danger',
+            '완성': 'success',
+            '완료': 'success'
         };
-        
-        let s = rowData.stage;
-        if (s) s = s.toUpperCase();
-        
-        if (!stageMap[s]) {
-            if (s === 'PENDING') s = '접수';
-            else if (s === 'CAD') s = 'CAD';
-            else if (s === 'CASTING' || s === '주물') s = '주물';
-            else if (s === 'POLISHING' || s === '세공') s = '세공';
-            else if (s === 'PLATING/INSPECTION' || s === 'COMPLETED' || s === 'DONE' || rowData.status === 'COMPLETED') s = '완성';
-            else s = '접수';
+
+        let severity = stageSeverities[rawStage];
+        if (severity === undefined && pipelineStages.length > 0) {
+            const idx = pipelineStages.indexOf(rawStage);
+            if (idx === 0) severity = null;
+            else if (idx === pipelineStages.length - 1) severity = 'success';
+            else if (idx % 3 === 1) severity = 'info';
+            else if (idx % 3 === 2) severity = 'warning';
+            else severity = 'danger';
         }
         
-        const mapped = stageMap[s] || { label: s, severity: null };
-        
         return (
-            <Tag severity={mapped.severity} value={mapped.label} rounded></Tag>
+            <Tag severity={severity || null} value={rawStage} rounded></Tag>
         );
     };
 
@@ -675,25 +696,43 @@ function App() {
                                 {/* Connecting Line */}
                                 <div className="absolute w-full z-0" style={{ height: '4px', backgroundColor: '#e5e7eb', top: '30px', left: '0' }}></div>
                                 
-                                {['접수', 'CAD', '주물', '세공', '완성'].map(stage => ({
-                                    name: stage,
-                                    count: orders.filter(o => o.stage === stage).length
-                                })).map((s) => {
-                                    const stageColors: Record<string, {bg: string, border: string, text: string, bgHex: string, borderHex: string}> = {
-                                          '접수': { bg: '', border: '', text: 'text-white', bgHex: '#64748B', borderHex: '#475569' },
-                                          'CAD': { bg: '', border: '', text: 'text-white', bgHex: '#3B82F6', borderHex: '#2563EB' },
-                                          '주물': { bg: '', border: '', text: 'text-white', bgHex: '#F59E0B', borderHex: '#D97706' },
-                                          '세공': { bg: '', border: '', text: 'text-white', bgHex: '#EF4444', borderHex: '#DC2626' },
-                                          '완성': { bg: '', border: '', text: 'text-white', bgHex: '#22C55E', borderHex: '#16A34A' }
-                                      };
-                                    const color = stageColors[s.name] || stageColors['접수'];
-                                    
+                                {pipelineStages.map((stage, idx) => {
+                                    const count = orders.filter(o => {
+                                        let s = o.stage || '접수';
+                                        if (s === 'PENDING') s = '접수';
+                                        else if (s === 'CASTING') s = '주물';
+                                        else if (s === 'POLISHING') s = '세공';
+                                        else if (s === 'COMPLETED' || s === 'DONE' || o.status === 'COMPLETED') s = '완성';
+                                        return s === stage;
+                                    }).length;
+
+                                    const predefinedColors: Record<string, { bgHex: string, borderHex: string }> = {
+                                        '접수': { bgHex: '#64748B', borderHex: '#475569' },
+                                        'CAD': { bgHex: '#3B82F6', borderHex: '#2563EB' },
+                                        '주물': { bgHex: '#F59E0B', borderHex: '#D97706' },
+                                        '제작': { bgHex: '#F59E0B', borderHex: '#D97706' },
+                                        '세공': { bgHex: '#EF4444', borderHex: '#DC2626' },
+                                        '완성': { bgHex: '#22C55E', borderHex: '#16A34A' },
+                                        '완료': { bgHex: '#22C55E', borderHex: '#16A34A' }
+                                    };
+
+                                    const palette = [
+                                        { bgHex: '#64748B', borderHex: '#475569' },
+                                        { bgHex: '#3B82F6', borderHex: '#2563EB' },
+                                        { bgHex: '#F59E0B', borderHex: '#D97706' },
+                                        { bgHex: '#EF4444', borderHex: '#DC2626' },
+                                        { bgHex: '#8B5CF6', borderHex: '#7C3AED' },
+                                        { bgHex: '#22C55E', borderHex: '#16A34A' },
+                                    ];
+
+                                    const color = predefinedColors[stage] || palette[idx % palette.length];
+
                                     return (
-                                        <div key={s.name} className="flex flex-column align-items-center z-1 relative bg-white" style={{ borderRadius: '50%' }}>
-                                            <div className={`flex align-items-center justify-content-center border-circle border-2 mb-2 shadow-1`} style={{ width: '60px', height: '60px', backgroundColor: color.bgHex, borderColor: color.borderHex }}>
-                                                <span className={`text-2xl font-bold ${color.text}`}>{s.count}</span>
+                                        <div key={stage} className="flex flex-column align-items-center z-1 relative bg-white" style={{ borderRadius: '50%' }}>
+                                            <div className="flex align-items-center justify-content-center border-circle border-2 mb-2 shadow-1" style={{ width: '60px', height: '60px', backgroundColor: color.bgHex, borderColor: color.borderHex }}>
+                                                <span className="text-2xl font-bold text-white">{count}</span>
                                             </div>
-                                            <span className="text-700 font-medium bg-white px-2">{s.name}</span>
+                                            <span className="text-700 font-medium bg-white px-2">{stage}</span>
                                         </div>
                                     );
                                 })}

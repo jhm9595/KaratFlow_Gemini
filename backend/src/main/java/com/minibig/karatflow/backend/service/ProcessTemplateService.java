@@ -27,6 +27,7 @@ public class ProcessTemplateService {
                     .templateCode("STANDARD_5")
                     .templateName("표준 5단계 공정")
                     .description("일반적인 쥬얼리 제작 공정 (접수-CAD-주물-세공-완성)")
+                    .isDefault(true)
                     .build();
             t1 = createTemplate(t1);
 
@@ -99,5 +100,22 @@ public class ProcessTemplateService {
     @Transactional
     public void deleteTemplate(Long id) {
         processTemplateRepository.deleteById(id);
+    }
+
+    @Transactional
+    public ProcessTemplate setDefaultTemplate(Long id) {
+        List<ProcessTemplate> all = processTemplateRepository.findAll();
+        ProcessTemplate target = null;
+        for (ProcessTemplate t : all) {
+            if (t.getId().equals(id)) {
+                t.setIsDefault(true);
+                target = t;
+            } else {
+                t.setIsDefault(false);
+            }
+            processTemplateRepository.save(t);
+        }
+        if (target == null) throw new RuntimeException("Template not found");
+        return target;
     }
 }

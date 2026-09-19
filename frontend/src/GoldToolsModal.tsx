@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { TabView, TabPanel } from 'primereact/tabview';
-import { InputNumber } from 'primereact/inputnumber';
+import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { Message } from 'primereact/message';
 
@@ -17,19 +17,19 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
         ? recentPrices[recentPrices.length - 1] 
         : { price24k: 0, price18k: 0, price14k: 0 };
 
-    // --- Tab 1: 실시간 시세 / 중량 계산 ---
-    const [calcWeight, setCalcWeight] = useState<number>(3.75);
+    // --- Tab 1: 시세 상세 / 중량 계산 ---
+    const [calcWeight, setCalcWeight] = useState<number | string>(3.75);
     const [calcPurity, setCalcPurity] = useState<string>('24K');
     const [weightUnit, setWeightUnit] = useState<string>('g'); // 'g' or 'don'
     
     // --- Tab 2: 고금 매입 계산기 ---
-    const [scrapWeight, setScrapWeight] = useState<number>(3.75);
+    const [scrapWeight, setScrapWeight] = useState<number | string>(3.75);
     const [scrapPurity, setScrapPurity] = useState<string>('18K');
-    const [lossRate, setLossRate] = useState<number>(10); // 기본 해리 10%
+    const [lossRate, setLossRate] = useState<number | string>(10); // 기본 해리 10%
     
     // --- Tab 3: 주물/합금 비율 계산 ---
     const [alloyPurity, setAlloyPurity] = useState<string>('18K');
-    const [targetWeight, setTargetWeight] = useState<number>(10);
+    const [targetWeight, setTargetWeight] = useState<number | string>(10);
 
     const purityOptions = [
         { name: '24K', label: '24K (순금)' },
@@ -46,22 +46,26 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
 
     // Calculate real-time value
     const currentPricePerG = getPricePerGram(calcPurity);
-    const weightInGrams = weightUnit === 'g' ? calcWeight : calcWeight * 3.75;
+    const numCalcWeight = Number(calcWeight) || 0;
+    const weightInGrams = weightUnit === 'g' ? numCalcWeight : numCalcWeight * 3.75;
     const estimatedValue = currentPricePerG * weightInGrams;
 
     // Calculate Scrap Value
     const scrapPricePerG = getPricePerGram(scrapPurity);
-    const validScrapWeight = scrapWeight - (scrapWeight * (lossRate / 100));
+    const numScrapWeight = Number(scrapWeight) || 0;
+    const numLossRate = Number(lossRate) || 0;
+    const validScrapWeight = numScrapWeight - (numScrapWeight * (numLossRate / 100));
     const scrapValue = scrapPricePerG * validScrapWeight;
 
     // Calculate Alloy Mix
     // 18K = 75% pure gold, 25% alloy. 14K = 58.5% pure gold, 41.5% alloy.
+    const numTargetWeight = Number(targetWeight) || 0;
     const pureGoldRatio = alloyPurity === '18K' ? 0.75 : 0.585;
-    const requiredPureGold = targetWeight * pureGoldRatio;
-    const requiredAlloy = targetWeight - requiredPureGold;
+    const requiredPureGold = numTargetWeight * pureGoldRatio;
+    const requiredAlloy = numTargetWeight - requiredPureGold;
 
     return (
-        <Dialog header="금 시세 심층 도구 및 계산기" visible={visible} style={{ width: '50vw' }} onHide={onHide}>
+        <Dialog header="금 시세 심층 도구 및 계산기" visible={visible} style={{ width: '50vw' }} contentStyle={{ minHeight: '450px' }} onHide={onHide}>
             
             <div className="mb-4 p-3 surface-100 border-round">
                 <p className="m-0 font-bold text-700">현재 시스템 기준 시세 (3.75g 기준)</p>
@@ -77,7 +81,7 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                     <div className="p-fluid grid">
                         <div className="col-12 md:col-4">
                             <label className="block mb-2 font-medium">품위 선택</label>
-                            <Dropdown value={calcPurity} options={purityOptions} optionLabel="label" onChange={(e) => setCalcPurity(e.value)} />
+                            <Dropdown value={calcPurity} options={purityOptions} optionLabel="label" optionValue="name" onChange={(e) => setCalcPurity(e.value)} />
                         </div>
                         <div className="col-12 md:col-4">
                             <label className="block mb-2 font-medium">단위</label>
@@ -85,7 +89,7 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                         </div>
                         <div className="col-12 md:col-4">
                             <label className="block mb-2 font-medium">중량 입력</label>
-                            <InputNumber value={calcWeight} onValueChange={(e) => setCalcWeight(e.value || 0)} minFractionDigits={2} maxFractionDigits={3} />
+                            <InputText type="number" value={calcWeight.toString()} onChange={(e) => setCalcWeight(e.target.value)} step="0.01" />
                         </div>
                     </div>
                     
@@ -101,15 +105,18 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                     <div className="p-fluid grid">
                         <div className="col-12 md:col-4">
                             <label className="block mb-2 font-medium">매입 품위</label>
-                            <Dropdown value={scrapPurity} options={purityOptions} optionLabel="label" onChange={(e) => setScrapPurity(e.value)} />
+                            <Dropdown value={scrapPurity} options={purityOptions} optionLabel="label" optionValue="name" onChange={(e) => setScrapPurity(e.value)} />
                         </div>
                         <div className="col-12 md:col-4">
                             <label className="block mb-2 font-medium">중량 (g)</label>
-                            <InputNumber value={scrapWeight} onValueChange={(e) => setScrapWeight(e.value || 0)} minFractionDigits={2} />
+                            <InputText type="number" value={scrapWeight.toString()} onChange={(e) => setScrapWeight(e.target.value)} step="0.01" />
                         </div>
                         <div className="col-12 md:col-4">
                             <label className="block mb-2 font-medium">해리(%) 차감</label>
-                            <InputNumber value={lossRate} onValueChange={(e) => setLossRate(e.value || 0)} suffix="%" />
+                            <div className="p-inputgroup">
+                                <InputText type="number" value={lossRate.toString()} onChange={(e) => setLossRate(e.target.value)} />
+                                <span className="p-inputgroup-addon">%</span>
+                            </div>
                         </div>
                     </div>
 
@@ -126,11 +133,11 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                     <div className="p-fluid grid">
                         <div className="col-12 md:col-6">
                             <label className="block mb-2 font-medium">목표 품위 (캐스팅용)</label>
-                            <Dropdown value={alloyPurity} options={purityOptions.filter(o => o.name !== '24K')} optionLabel="label" onChange={(e) => setAlloyPurity(e.value)} />
+                            <Dropdown value={alloyPurity} options={purityOptions.filter(o => o.name !== '24K')} optionLabel="label" optionValue="name" onChange={(e) => setAlloyPurity(e.value)} />
                         </div>
                         <div className="col-12 md:col-6">
                             <label className="block mb-2 font-medium">필요 총 중량 (g)</label>
-                            <InputNumber value={targetWeight} onValueChange={(e) => setTargetWeight(e.value || 0)} minFractionDigits={2} />
+                            <InputText type="number" value={targetWeight.toString()} onChange={(e) => setTargetWeight(e.target.value)} step="0.01" />
                         </div>
                     </div>
 

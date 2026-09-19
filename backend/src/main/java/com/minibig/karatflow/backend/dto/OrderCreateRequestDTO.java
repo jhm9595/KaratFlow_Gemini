@@ -16,4 +16,5 @@ public class OrderCreateRequestDTO {
     private String engravingLocation;
     private String surfaceFinish;
     private Double finalConsumerPrice;
+    private Long processTemplateId;
 }

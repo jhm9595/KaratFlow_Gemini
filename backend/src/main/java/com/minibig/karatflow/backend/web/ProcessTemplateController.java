@@ -30,6 +30,11 @@ public class ProcessTemplateController {
         return ResponseEntity.ok(processTemplateService.updateTemplate(id, template));
     }
 
+    @PutMapping("/{id}/set-default")
+    public ResponseEntity<ProcessTemplate> setDefault(@PathVariable Long id) {
+        return ResponseEntity.ok(processTemplateService.setDefaultTemplate(id));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         processTemplateService.deleteTemplate(id);

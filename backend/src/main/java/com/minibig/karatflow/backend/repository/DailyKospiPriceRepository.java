@@ -7,4 +7,5 @@ import java.util.List;
 public interface DailyKospiPriceRepository extends JpaRepository<DailyKospiPrice, Long> {
     Optional<DailyKospiPrice> findByDate(LocalDate date);
     List<DailyKospiPrice> findAllByOrderByDateAsc();
+    List<DailyKospiPrice> findTop7ByOrderByDateDesc();
 }

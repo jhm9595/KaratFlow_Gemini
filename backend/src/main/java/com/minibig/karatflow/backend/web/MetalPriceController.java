@@ -24,10 +24,22 @@ public class MetalPriceController {
     @GetMapping("/recent")
     public ResponseEntity<List<Map<String, Object>>> getRecentPrices() {
         // Fetch the 7 most recent prices, order by date desc, then reverse to asc for the chart
-        List<DailyMetalPrice> recent = dailyMetalPriceRepository.findTop7ByMetalTypeOrderByPriceDateDesc("GOLD_24K");
+                List<DailyMetalPrice> all = dailyMetalPriceRepository.findAllByMetalTypeOrderByPriceDateAsc("GOLD_24K");
+        double lastPrice = 0, lastVol = 0, lastVal = 0;
+        for (DailyMetalPrice p : all) {
+            if (p.getPricePer375g() != null && p.getPricePer375g() > 0) lastPrice = p.getPricePer375g();
+            else p.setPricePer375g(lastPrice);
+            
+            if (p.getTradingVolume() != null && p.getTradingVolume() > 0) lastVol = p.getTradingVolume();
+            else p.setTradingVolume(lastVol);
+            
+            if (p.getTradingValue() != null && p.getTradingValue() > 0) lastVal = p.getTradingValue();
+            else p.setTradingValue(lastVal);
+        }
+        List<DailyMetalPrice> recent = all.size() > 7 ? all.subList(all.size() - 7, all.size()) : all;
         
         List<Map<String, Object>> response = recent.stream()
-                .sorted((a, b) -> a.getPriceDate().compareTo(b.getPriceDate())) // Ascending order
+                
                 .map(price -> {
                     Map<String, Object> map = new HashMap<>();
                     map.put("date", price.getPriceDate().format(DateTimeFormatter.ofPattern("MM/dd")));
