@@ -393,14 +393,10 @@ function App() {
                 return JSON.parse(text);
             })
             .then(data => {
-                const mappedData = data.map((o: any) => {
-                    let s = o.stage;
-                    if (s === 'PENDING') s = '접수';
-                    else if (s === 'CASTING') s = '주물';
-                    else if (s === 'POLISHING') s = '세공';
-                    else if (s === 'COMPLETED' || s === 'DONE' || o.status === 'COMPLETED') s = '완성';
-                    return { ...o, stage: s || '접수' };
-                });
+                const mappedData = data.map((o: any) => ({
+                    ...o,
+                    stage: o.stage || '접수'
+                }));
                 setOrders(mappedData);
             })
             .catch((_err) => console.error('Error fetching orders:', _err));
