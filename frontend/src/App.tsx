@@ -672,25 +672,6 @@ function App() {
 
                         {/* 3. 코스피 지수 */}
                         <KospiChart />
-
-                        {/* 4. 작업장 공정 트렌드 현황 */}
-                        <div className="surface-0 p-3 border-round shadow-1 flex flex-column">
-                            <h4 className="m-0 mb-3 text-600 font-medium">작업장 공정 트렌드 현황 (주간)</h4>
-                            <div className="w-full" style={{ height: '180px' }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={dailyProcessData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                                        <XAxis dataKey="date" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-                                        <YAxis tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-                                        <RechartsTooltip contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', color: '#333' }} />
-                                        <Legend wrapperStyle={{ fontSize: '12px' }} />
-                                        <Bar dataKey="CAD" stackId="a" fill="#8884d8" name="CAD" />
-                                        <Bar dataKey="주물" stackId="a" fill="#82ca9d" name="주물" />
-                                        <Bar dataKey="세공" stackId="a" fill="#ffc658" name="세공" />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Right Panel: Pipeline & Data Table */}
