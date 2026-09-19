@@ -715,7 +715,11 @@ function App() {
                                         if (s === 'PENDING') s = '접수';
                                         else if (s === 'CASTING') s = '주물';
                                         else if (s === 'POLISHING') s = '세공';
-                                        else if (s === 'COMPLETED' || s === 'DONE' || o.status === 'COMPLETED') s = '완성';
+                                        
+                                        const isDone = (st: string) => st === '완성' || st === '완료' || st === 'COMPLETED' || st === 'DONE';
+                                        if ((isDone(s) || o.status === 'COMPLETED') && isDone(stage)) {
+                                            return true;
+                                        }
                                         return s === stage;
                                     }).length;
 
