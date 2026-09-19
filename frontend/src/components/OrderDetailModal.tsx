@@ -11,6 +11,7 @@ interface OrderDetailModalProps {
     order: any;
     orderDetailData: any;
     pipelineStages?: string[];
+    pipelineSteps?: any[];
     advanceStage: (id: number) => void;
     openSubcontractModal: (id: number) => void;
     openChangeModal: () => void;
@@ -20,7 +21,7 @@ interface OrderDetailModalProps {
 }
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ 
-    visible, onHide, order, orderDetailData, pipelineStages = ['접수', 'CAD', '주물', '세공', '완료'], advanceStage, openSubcontractModal, 
+    visible, onHide, order, orderDetailData, pipelineStages = ['접수', 'CAD', '주물', '세공', '완료'], pipelineSteps = [], advanceStage, openSubcontractModal, 
     openChangeModal, openCancelModal, handlePrint, statusBodyTemplate 
 }) => {
     if (!order) return null;
@@ -53,6 +54,18 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             stage: currentStage,
             createdAt: rowData.createdAt || rowData.date
         }];
+
+    const getStepBgColor = (stageName: string) => {
+        if (!pipelineSteps || pipelineSteps.length === 0) return null;
+        const matched = pipelineSteps.find((step: any) => {
+            const stName = step.stageName;
+            if (stName === stageName) return true;
+            if ((stName === '주물' || stName === 'CASTING') && (stageName === '제작' || stageName === '주물')) return true;
+            if ((stName === '완료' || stName === 'COMPLETED') && (stageName === '완성' || stageName === '완료')) return true;
+            return false;
+        });
+        return matched ? (matched.colorGradient || matched.colorHex) : null;
+    };
 
     return (
         <Dialog 
@@ -175,32 +188,37 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     </h3>
                     
                     <div className="flex flex-wrap align-items-center justify-content-between gap-3 px-2 py-2 surface-50 border-round border-1 border-200">
-                        {timelineEvents.map((ev: any, idx: number) => (
-                            <React.Fragment key={idx}>
-                                <div className="flex flex-column align-items-center p-2 text-center" style={{ minWidth: '100px' }}>
-                                    <div 
-                                        className="w-3rem h-3rem border-circle flex align-items-center justify-content-center text-white shadow-2 mb-2"
-                                        style={{ backgroundColor: ev.color || '#64748B' }}
-                                    >
-                                        <i className={`${ev.icon || 'pi pi-check'} text-lg`}></i>
+                        {timelineEvents.map((ev: any, idx: number) => {
+                            const isCompleted = idx <= currentStageIdx;
+                            const stepBg = getStepBgColor(ev.stage) || (isCompleted ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#e2e8f0');
+
+                            return (
+                                <React.Fragment key={idx}>
+                                    <div className="flex flex-column align-items-center p-2 text-center" style={{ minWidth: '100px' }}>
+                                        <div 
+                                            className="w-3rem h-3rem border-circle flex align-items-center justify-content-center shadow-2 mb-2 transition-transform transform hover:scale-110"
+                                            style={{ background: isCompleted ? stepBg : '#e2e8f0' }}
+                                        >
+                                            <i className={`${isCompleted ? (ev.icon || 'pi pi-check') : 'pi pi-circle'} text-lg ${isCompleted ? 'text-white font-bold' : 'text-400'}`}></i>
+                                        </div>
+                                        <div className={`font-bold text-sm ${isCompleted ? 'text-900' : 'text-500'}`}>{ev.stage}</div>
+                                        <div className="text-xs text-500 mt-1">
+                                            {ev.date ? new Date(ev.date).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                                        </div>
+                                        {ev.elapsed && (
+                                            <span className="bg-pink-100 text-pink-700 px-2 py-1 border-round font-bold text-xs mt-1">
+                                                {ev.elapsed}
+                                            </span>
+                                        )}
                                     </div>
-                                    <div className="font-bold text-800 text-sm">{ev.stage}</div>
-                                    <div className="text-xs text-500 mt-1">
-                                        {ev.date ? new Date(ev.date).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
-                                    </div>
-                                    {ev.elapsed && (
-                                        <span className="bg-pink-100 text-pink-700 px-2 py-1 border-round font-bold text-xs mt-1">
-                                            {ev.elapsed}
-                                        </span>
+                                    {idx < timelineEvents.length - 1 && (
+                                        <div className="flex-1 flex align-items-center justify-content-center" style={{ minWidth: '30px' }}>
+                                            <i className="pi pi-chevron-right text-400 text-lg"></i>
+                                        </div>
                                     )}
-                                </div>
-                                {idx < timelineEvents.length - 1 && (
-                                    <div className="flex-1 flex align-items-center justify-content-center" style={{ minWidth: '30px' }}>
-                                        <i className="pi pi-chevron-right text-400 text-lg"></i>
-                                    </div>
-                                )}
-                            </React.Fragment>
-                        ))}
+                                </React.Fragment>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -232,14 +250,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         <Column 
                             field="stage" 
                             header="현재 공정 상태" 
-                            body={(r: any) => {
-                                const st = r.stageName || r.stage || '접수';
-                                return (
-                                    <span className="px-3 py-1 border-round text-xs font-bold bg-blue-100 text-blue-800 border-1 border-blue-200">
-                                        {st}
-                                    </span>
-                                );
-                            }}
+                            body={(r: any) => statusBodyTemplate(r)}
                         />
                         <Column 
                             field="createdAt" 

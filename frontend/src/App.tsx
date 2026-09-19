@@ -495,7 +495,7 @@ function App() {
             );
         }
         
-        let rawStage = rowData.stage || '접수';
+        let rawStage = rowData.stage || rowData.stageName || '접수';
         if (rawStage === 'PENDING') rawStage = '접수';
         else if (rawStage === 'CASTING') rawStage = '주물';
         else if (rawStage === 'POLISHING') rawStage = '세공';
@@ -503,29 +503,24 @@ function App() {
             const lastStage = (pipelineStages && pipelineStages.length > 0) ? pipelineStages[pipelineStages.length - 1] : '완료';
             rawStage = (rowData.stage && rowData.stage !== 'COMPLETED' && rowData.stage !== 'DONE') ? rowData.stage : lastStage;
         }
-        
-        const stageSeverities: Record<string, 'success' | 'info' | 'warning' | 'danger' | null> = {
-            '접수': null,
-            'CAD': 'info',
-            '주물': 'warning',
-            '제작': 'warning',
-            '세공': 'danger',
-            '완성': 'success',
-            '완료': 'success'
-        };
 
-        let severity = stageSeverities[rawStage];
-        if (severity === undefined && pipelineStages.length > 0) {
-            const idx = pipelineStages.indexOf(rawStage);
-            if (idx === 0) severity = null;
-            else if (idx === pipelineStages.length - 1) severity = 'success';
-            else if (idx % 3 === 1) severity = 'info';
-            else if (idx % 3 === 2) severity = 'warning';
-            else severity = 'danger';
-        }
-        
+        const matchedStep = (pipelineSteps && pipelineSteps.length > 0) ? pipelineSteps.find((step: any) => {
+            const stName = step.stageName;
+            if (stName === rawStage) return true;
+            if ((stName === '주물' || stName === 'CASTING') && (rawStage === '제작' || rawStage === '주물')) return true;
+            if ((stName === '완료' || stName === 'COMPLETED') && (rawStage === '완성' || rawStage === '완료')) return true;
+            return false;
+        }) : null;
+
+        const bg = matchedStep ? (matchedStep.colorGradient || matchedStep.colorHex) : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
+
         return (
-            <Tag severity={severity || null} value={rawStage} rounded></Tag>
+            <span 
+                className="px-3 py-1 text-white font-bold border-round text-xs shadow-1 inline-block"
+                style={{ background: bg }}
+            >
+                {rawStage}
+            </span>
         );
     };
 
@@ -878,6 +873,7 @@ function App() {
                     order={orders.find(o => o.id === selectedOrderId)}
                     orderDetailData={orderDetailData}
                     pipelineStages={pipelineStages}
+                    pipelineSteps={pipelineSteps}
                     advanceStage={advanceStage}
                     openSubcontractModal={(id) => { setOrderDetailVisible(false); openSubcontractModal(id); }}
                     openChangeModal={() => { setOrderDetailVisible(false); setChangeModalVisible(true); }}
