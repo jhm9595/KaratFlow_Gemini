@@ -193,7 +193,7 @@ public class OrderService {
         ProcessTemplate template = getEffectiveTemplate(firstWo);
 
         if (template == null || template.getSteps() == null || template.getSteps().isEmpty()) {
-            throw new IllegalStateException("DB에 등록된 프로세스 템플릿(ProcessTemplate)이 존재하지 않습니다.");
+            throw new IllegalStateException("등록된 공정 템플릿이 없습니다. [공정 관리]에서 새로운 공정 템플릿을 추가해 주세요.");
         }
 
         List<OrderDetailDTO.TimelineEventDTO> timeline = new ArrayList<>();
@@ -469,7 +469,7 @@ public class OrderService {
     private String nextStage(WorkOrder wo) {
         ProcessTemplate template = getEffectiveTemplate(wo);
         if (template == null || template.getSteps() == null || template.getSteps().isEmpty()) {
-            throw new IllegalStateException("DB에 등록된 프로세스 템플릿(ProcessTemplate)이 존재하지 않습니다.");
+            throw new IllegalStateException("등록된 공정 템플릿이 없습니다. [공정 관리]에서 새로운 공정 템플릿을 추가해 주세요.");
         }
 
         List<ProcessTemplateStep> steps = template.getSteps();

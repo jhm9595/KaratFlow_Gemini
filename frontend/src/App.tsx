@@ -352,15 +352,27 @@ function App() {
         fetch(`http://localhost:8888/api/orders/${orderId}/advance-stage`, { method: 'POST', headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'error') {
-                    toast.current?.show({ severity: 'error', summary: '오류', detail: data.message, life: 3000 });
+                if (data.status === 'error' || (data.message && data.message.includes('템플릿'))) {
+                    toast.current?.show({ 
+                        severity: 'warn', 
+                        summary: '공정 템플릿 추가 안내', 
+                        detail: '공정 진행을 위해 템플릿 등록이 필요합니다. [공정 관리] 모달을 엽니다.', 
+                        life: 4000 
+                    });
+                    setProcessManagerVisible(true);
                 } else {
                     fetchOrders();
                     openOrderDetail(orderId);
                 }
             })
             .catch((_err) => {
-                toast.current?.show({ severity: 'error', summary: '오류', detail: '공정 단계 이동 중 오류가 발생했습니다.', life: 3000 });
+                toast.current?.show({ 
+                    severity: 'warn', 
+                    summary: '공정 템플릿 추가 안내', 
+                    detail: '유효한 공정 템플릿을 찾을 수 없습니다. [공정 관리]에서 새로운 템플릿을 추가해 주세요.', 
+                    life: 4000 
+                });
+                setProcessManagerVisible(true);
             });
     };
 
@@ -1047,6 +1059,15 @@ function App() {
                     statusBodyTemplate={statusBodyTemplate}
                 />
             )}
+
+            <ProcessManager 
+                visible={processManagerVisible} 
+                onHide={() => {
+                    setProcessManagerVisible(false);
+                    fetchOrders();
+                    fetchPipelineStages();
+                }} 
+            />
 
             {/* Print Views */}
             {printOrder && printMode === 'label' && (
