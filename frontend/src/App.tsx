@@ -22,6 +22,12 @@ import i18n from './i18n';
 import { PetroleumChart } from './components/charts/PetroleumChart';
 import { KospiChart } from './components/charts/KospiChart';
 import { OrderDetailModal } from './components/OrderDetailModal';
+import { CreateOrderModal } from './components/CreateOrderModal';
+import { ChangeRequestModal } from './components/ChangeRequestModal';
+import { CancelOrderModal } from './components/CancelOrderModal';
+import { PartnerHandshakeModal } from './components/PartnerHandshakeModal';
+import { SubcontractModal } from './components/SubcontractModal';
+
 
 
 const formatElapsed = (start: string | null, end: string | null) => {
@@ -798,250 +804,60 @@ function App() {
                     </div>
                 </div>
 
-                {/* @ts-ignore */}
-                <Dialog header="새 주문 생성" visible={createOrderModalVisible} style={{ width: '60vw' }} breakpoints={{ '960px': '85vw', '641px': '100vw' }} onHide={() => setCreateOrderModalVisible(false)} className="p-fluid">
-                    <div className="formgrid grid mt-2">
-                        {(!selectedProduct || typeof selectedProduct === 'string') && (
-                        <div className="field col-12 md:col-6">
-                            <label className="font-bold">브랜드 (옵션)</label>
-                            <InputText value={createOrderForm.unmappedBrandName} onChange={(e) => setCreateOrderForm({...createOrderForm, unmappedBrandName: e.target.value})} placeholder="신규 브랜드명" />
-                        </div>
-                        )}
-                        <div className="field col-12 md:col-6">
-                            <label className="font-bold">제품 검색 (또는 직접 입력) <span className="text-red-500">*</span></label>
-                            <AutoComplete value={selectedProduct} suggestions={filteredProducts} completeMethod={searchProduct} field="name" 
-                                onChange={(e) => {
-                                    setSelectedProduct(e.value);
-                                    if (typeof e.value === 'object' && e.value !== null) {
-                                        // Registered product selected
-                                        setCreateOrderForm({...createOrderForm, designId: e.value.id, unmappedProductName: '', unmappedBrandName: ''});
-                                    } else if (typeof e.value === 'string') {
-                                        setCreateOrderForm({...createOrderForm, designId: 0, unmappedProductName: e.value});
-                                    }
-                                }} 
-                                itemTemplate={(item: any) => (
-                                    <div className="flex align-items-center gap-2">
-                                        {item.imageUrl && <img src={`http://localhost:8888${item.imageUrl}`} alt={item.name} style={{width: '28px', height: '28px', objectFit: 'cover', borderRadius: '4px'}} />}
-                                        <div>
-                                            <div className="font-bold text-sm">{item.brand} - {item.name}</div>
-                                            <div className="text-xs text-500">{item.designCode}</div>
-                                        </div>
-                                    </div>
-                                )}
-                                placeholder="검색 또는 입력" />
-                        </div>
-                        
-                        <div className="field col-12 md:col-6">
-                            <label className="font-bold">제품 이미지</label>
-                            <div className="flex align-items-center gap-2">
-                                <input type="file" onChange={handleFileUpload} accept="image/*" className="p-inputtext p-component flex-1" style={{padding: '0.5rem'}} />
-                                {createOrderForm.imageUrl && <img src={`http://localhost:8888${createOrderForm.imageUrl}`} alt="preview" className="shadow-2 border-round" style={{width: '40px', height: '40px', objectFit: 'cover'}} />}
-                            </div>
-                        </div>
+                <CreateOrderModal
+                    visible={createOrderModalVisible}
+                    onHide={() => setCreateOrderModalVisible(false)}
+                    createOrderForm={createOrderForm}
+                    setCreateOrderForm={setCreateOrderForm}
+                    selectedProduct={selectedProduct}
+                    setSelectedProduct={setSelectedProduct}
+                    filteredProducts={filteredProducts}
+                    searchProduct={searchProduct}
+                    handleFileUpload={handleFileUpload}
+                    submitCreateOrder={submitCreateOrder}
+                />
 
-                        <div className="field col-12 md:col-6">
-                            <label className="font-bold">수량</label>
-                            <InputNumber value={createOrderForm.quantity} onValueChange={(e) => setCreateOrderForm({...createOrderForm, quantity: (e.value === null || e.value === undefined) ? 1 : e.value})} min={1} showButtons />
-                        </div>
+                <ChangeRequestModal
+                    visible={changeModalVisible}
+                    onHide={() => setChangeModalVisible(false)}
+                    submitChangeRequest={submitChangeRequest}
+                />
 
-                        <div className="field col-12 md:col-4">
-                            <label className="font-bold">주문 구분</label>
-                            <InputText value={createOrderForm.orderType} onChange={(e) => setCreateOrderForm({...createOrderForm, orderType: e.target.value})} placeholder="B2C, B2B" />
-                        </div>
-                        
-                        <div className="field col-12 md:col-4">
-                            <label className="font-bold">고객명</label>
-                            <InputText value={createOrderForm.customerName} onChange={(e) => setCreateOrderForm({...createOrderForm, customerName: e.target.value})} placeholder="고객 이름" />
-                        </div>
+                <CancelOrderModal
+                    visible={cancelModalVisible}
+                    onHide={() => setCancelModalVisible(false)}
+                    cancelEstimate={cancelEstimate}
+                    submitCancelOrder={submitCancelOrder}
+                />
 
-                        <div className="field col-12 md:col-4">
-                            <label className="font-bold">연락처</label>
-                            <InputText value={createOrderForm.customerPhone} onChange={(e) => setCreateOrderForm({...createOrderForm, customerPhone: e.target.value})} placeholder="010-0000-0000" />
-                        </div>
+                <PartnerHandshakeModal
+                    visible={partnerModalVisible}
+                    onHide={() => setPartnerModalVisible(false)}
+                    handshakes={handshakes}
+                    handshakePin={handshakePin}
+                    setHandshakePin={setHandshakePin}
+                    generatedPin={generatedPin}
+                    requestHandshake={requestHandshake}
+                    verifyHandshake={verifyHandshake}
+                    businessNumber={businessNumber}
+                    setBusinessNumber={setBusinessNumber}
+                    verifyBusiness={verifyBusiness}
+                    businessResult={businessResult}
+                />
 
-                        <div className="field col-12 md:col-4">
-                            <label className="font-bold">표면 처리</label>
-                            <InputText value={createOrderForm.surfaceFinish} onChange={(e) => setCreateOrderForm({...createOrderForm, surfaceFinish: e.target.value})} placeholder="유광/무광 등" />
-                        </div>
-
-                        <div className="field col-12 md:col-4">
-                            <label className="font-bold">각인 문구</label>
-                            <InputText value={createOrderForm.engravingText} onChange={(e) => setCreateOrderForm({...createOrderForm, engravingText: e.target.value})} placeholder="각인 텍스트" />
-                        </div>
-
-                        <div className="field col-12 md:col-4">
-                            <label className="font-bold">각인 위치</label>
-                            <InputText value={createOrderForm.engravingLocation} onChange={(e) => setCreateOrderForm({...createOrderForm, engravingLocation: e.target.value})} placeholder="반지 안쪽 등" />
-                        </div>
-
-                        <div className="field col-12">
-                            <label className="font-bold">소비자가 (₩)</label>
-                            <InputNumber value={createOrderForm.finalConsumerPrice} onValueChange={(e) => setCreateOrderForm({...createOrderForm, finalConsumerPrice: e.value || 0})} mode="currency" currency="KRW" locale="ko-KR" />
-                        </div>
-                    </div>
-                    <div className="flex justify-content-end mt-4 pt-3 border-top-1 surface-border">
-                        <Button label="취소" icon="pi pi-times" onClick={() => setCreateOrderModalVisible(false)} className="p-button-text p-button-secondary mr-2" style={{width: 'auto'}} />
-                        <Button label="주문 등록" icon="pi pi-check" onClick={submitCreateOrder} className="p-button-primary" style={{width: 'auto'}} autoFocus />
-                    </div>
-                </Dialog>
-
-                {/* @ts-ignore */}
-                <Dialog header={t('change_request')} visible={changeModalVisible} style={{ width: '50vw' }} onHide={() => setChangeModalVisible(false)}>
-                    <p className="m-0" dangerouslySetInnerHTML={{ __html: t('change_desc') }}></p>
-                    <div className="flex justify-content-end mt-4">
-                        <Button label={t('cancel')} icon="pi pi-times" onClick={() => setChangeModalVisible(false)} className="p-button-text" />
-                        <Button label={t('submit')} icon="pi pi-check" onClick={submitChangeRequest} autoFocus />
-                    </div>
-                </Dialog>
-
-                {/* @ts-ignore */}
-                <Dialog header="주문 취소 및 위약금 확인" visible={cancelModalVisible} style={{ width: '70vw' }} breakpoints={{ '960px': '90vw', '641px': '100vw' }} onHide={() => setCancelModalVisible(false)}>
-                    <div className="flex flex-column align-items-center justify-content-center text-center p-4">
-                        <i className="pi pi-exclamation-triangle text-red-500" style={{ fontSize: '3rem' }}></i>
-                        <h2 className="mt-3">주문을 정말 취소하시겠습니까?</h2>
-                        <p className="m-0 mb-4 text-600">
-                            현재 공정 진행 상태에 따라 위약금이 부과됩니다.<br/>
-                            한 번 취소된 주문은 복구할 수 없습니다.
-                        </p>
-                        
-                        <div className="surface-100 p-4 border-round w-full">
-                            <h3 className="m-0 mb-2">예상 위약금 (취소 수수료)</h3>
-                            <h2 className="m-0 text-red-500">₩{cancelEstimate?.toLocaleString()}</h2>
-                        </div>
-                    </div>
-                    <div className="flex justify-content-end mt-4">
-                        <Button label="돌아가기" icon="pi pi-times" onClick={() => setCancelModalVisible(false)} className="p-button-text p-button-secondary" />
-                        <Button label="주문 취소 확정" icon="pi pi-trash" onClick={submitCancelOrder} className="p-button-danger" autoFocus />
-                    </div>
-                </Dialog>
-
-                {/* @ts-ignore */}
-                <Dialog header={t('handshake')} visible={partnerModalVisible} style={{ width: '50vw' }} onHide={() => setPartnerModalVisible(false)}>
-                    <p className="m-0 mb-3">{t('handshake_desc')}</p>
-                    
-                    <div className="grid">
-                        <div className="col-12 md:col-6">
-                            <div className="surface-100 p-4 border-round h-full flex flex-column align-items-center justify-content-center">
-                                <h3 className="m-0 mb-2">파트너사 연동 요청 (핀번호 발급)</h3>
-                                <p className="text-sm text-600 mb-4 text-center">제조업체에게 전달할 1회용 6자리 핀번호를 발급받습니다.</p>
-                                {generatedPin ? (
-                                    <div className="text-center">
-                                        <h1 className="text-primary m-0" style={{ fontSize: '3rem', letterSpacing: '0.5rem' }}>{generatedPin}</h1>
-                                        <small className="text-500">이 핀번호를 제조업체에게 알려주세요.</small>
-                                    </div>
-                                ) : (
-                                    <Button label="핀번호 발급받기" icon="pi pi-key" onClick={requestHandshake} />
-                                )}
-                            </div>
-                        </div>
-                        <div className="col-12 md:col-6">
-                            <div className="surface-100 p-4 border-round h-full flex flex-column align-items-center justify-content-center">
-                                <h3 className="m-0 mb-2">파트너사 인증 (핀번호 입력)</h3>
-                                <p className="text-sm text-600 mb-4 text-center">소매업체로부터 전달받은 6자리 핀번호를 입력하여 연동을 승인합니다.</p>
-                                <div className="p-inputgroup">
-                                    <InputText placeholder="6자리 PIN 입력" value={handshakePin} onChange={(e) => setHandshakePin(e.target.value)} maxLength={6} className="text-center text-xl font-bold" />
-                                    <Button label="인증" icon="pi pi-check" severity="success" onClick={verifyHandshake} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <h3 className="mt-5 mb-3">사업자 진위 검증</h3>
-                    <div className="surface-100 p-4 border-round mb-4">
-                        <p className="text-sm text-600 mb-3">파트너사의 사업자등록번호(10자리)를 입력하여 국세청 휴/폐업 상태를 조회합니다.</p>
-                        <div className="p-inputgroup mb-3" style={{ maxWidth: '400px' }}>
-                            <InputText placeholder="사업자번호 (숫자만)" value={businessNumber} onChange={(e) => setBusinessNumber(e.target.value)} />
-                            <Button label="검증하기" icon="pi pi-search" onClick={verifyBusiness} />
-                        </div>
-                        {businessResult && (
-                            <div className={`p-3 border-round ${businessResult.statusCode === '01' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                <i className={`pi ${businessResult.statusCode === '01' ? 'pi-check-circle' : 'pi-times-circle'} mr-2`}></i>
-                                <strong>[{businessResult.businessNumber}]</strong> {businessResult.statusName} ({businessResult.taxType})
-                            </div>
-                        )}
-                    </div>
-
-                    <h3 className="mt-5 mb-3">내 파트너십 목록</h3>
-                    <div className="surface-border border-top-1 pt-3">
-                        {handshakes.length === 0 ? (
-                            <p className="text-500 text-center py-4">연동된 파트너사가 없습니다.</p>
-                        ) : (
-                            <div className="flex flex-column gap-2">
-                                {handshakes.map(h => (
-                                    <div key={h.id} className="flex justify-content-between align-items-center surface-50 p-3 border-round">
-                                        <div>
-                                            <div className="font-bold">{h.targetCompanyName} <i className="pi pi-arrows-h mx-2 text-400"></i> {h.requesterCompanyName}</div>
-                                            <small className="text-500">요청일: {new Date(h.createdAt).toLocaleString()}</small>
-                                        </div>
-                                        <div>
-                                            <span className={`p-badge ${h.status === 'APPROVED' ? 'p-badge-success' : 'p-badge-warning'}`}>{h.status}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </Dialog>
-
-                {/* @ts-ignore */}
-                <Dialog header="외주 공정 관리 및 금 감모 추적" visible={subcontractModalVisible} style={{ width: '60vw' }} onHide={() => setSubcontractModalVisible(false)}>
-                    <div className="flex flex-column gap-4">
-                        <div className="surface-100 p-3 border-round">
-                            <h3>신규 외주 반출 기록</h3>
-                            <div className="grid">
-                                <div className="col-3">
-                                    <label>작업명 (예: 도금)</label>
-                                    <InputText className="w-full mt-1" value={scForm.taskName} onChange={(e) => setScForm({...scForm, taskName: e.target.value})} />
-                                </div>
-                                <div className="col-12 md:col-6 lg:col-3 flex flex-column gap-2">
-                                    <label>외주업체명</label>
-                                    <InputText className="w-full" value={scForm.subcontractorName} onChange={(e) => setScForm({...scForm, subcontractorName: e.target.value})} />
-                                </div>
-                                <div className="col-12 md:col-6 lg:col-3 flex flex-column gap-2">
-                                    <label>반출 실측 중량 (g)</label>
-                                    <InputNumber className="w-full" value={scForm.dispatchedWeightG} onValueChange={(e) => setScForm({...scForm, dispatchedWeightG: e.value || 0})} mode="decimal" minFractionDigits={2} />
-                                </div>
-                                <div className="col-12 md:col-6 lg:col-3 flex flex-column gap-2">
-                                    <label>합의 외주공임 (원)</label>
-                                    <InputNumber className="w-full" value={scForm.agreedLaborFee} onValueChange={(e) => setScForm({...scForm, agreedLaborFee: e.value || 0})} />
-                                </div>
-                            </div>
-                            <Button label="반출 등록 (Dispatch)" icon="pi pi-upload" onClick={handleDispatchSubcontract} className="mt-3 p-button-success" />
-                        </div>
-
-                        <div>
-                            <h3>외주 내역</h3>
-                            {/* @ts-ignore */}
-                            <DataTable value={subcontracts} responsiveLayout="scroll">
-                                <Column field="taskName" header="작업명"></Column>
-                                <Column field="subcontractorName" header="외주업체"></Column>
-                                <Column field="status" header="상태" body={(r) => {
-                                      const isReceived = r.status === 'RECEIVED';
-                                      return <Tag severity={isReceived ? 'success' : 'warning'} value={isReceived ? '반입완료' : '반출됨'} rounded></Tag>;
-                                  }}></Column>
-                                <Column field="dispatchedWeightG" header="반출(g)"></Column>
-                                <Column header="반입(g)" body={(r) => {
-                                    if (r.status === 'RECEIVED') return <span>{r.receivedWeightG}</span>;
-                                    
-
-    return (
-                                        <div className="flex gap-2 align-items-center">
-                                            <InputNumber value={receiveForm[r.id]} onValueChange={(e) => setReceiveForm({...receiveForm, [r.id]: e.value || 0})} className="w-5rem" mode="decimal" minFractionDigits={2} />
-                                            <Button icon="pi pi-download" onClick={() => handleReceiveSubcontract(r.id)} className="p-button-sm" tooltip="반입 확인" />
-                                        </div>
-                                    );
-                                }}></Column>
-                                <Column header="감모량(g)" body={(r) => {
-                                    if (r.lossWeightG === null || r.lossWeightG === undefined) return '-';
-                                    const percent = ((r.lossWeightG / r.dispatchedWeightG) * 100).toFixed(1);
-                                    return <span className={r.lossWeightG > 0 ? "text-red-500 font-bold" : ""}>{r.lossWeightG.toFixed(2)} ({percent}%)</span>;
-                                }}></Column>
-                                <Column field="agreedLaborFee" header="공임비(원)" body={(r) => <span>₩{r.agreedLaborFee?.toLocaleString()}</span>}></Column>
-                            </DataTable>
-                        </div>
-                    </div>
-                </Dialog>
+                <SubcontractModal
+                    visible={subcontractModalVisible}
+                    onHide={() => setSubcontractModalVisible(false)}
+                    subcontracts={subcontracts}
+                    scForm={scForm}
+                    setScForm={setScForm}
+                    receiveForm={receiveForm}
+                    setReceiveForm={setReceiveForm}
+                    handleDispatchSubcontract={handleDispatchSubcontract}
+                    handleReceiveSubcontract={handleReceiveSubcontract}
+                />
             </div>
+
 
 
             {selectedOrderId && orders.find(o => o.id === selectedOrderId) && (
