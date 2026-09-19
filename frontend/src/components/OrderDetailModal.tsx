@@ -10,6 +10,7 @@ interface OrderDetailModalProps {
     onHide: () => void;
     order: any;
     orderDetailData: any;
+    pipelineStages?: string[];
     advanceStage: (id: number) => void;
     openSubcontractModal: (id: number) => void;
     openChangeModal: () => void;
@@ -19,14 +20,39 @@ interface OrderDetailModalProps {
 }
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ 
-    visible, onHide, order, orderDetailData, advanceStage, openSubcontractModal, 
+    visible, onHide, order, orderDetailData, pipelineStages = ['접수', 'CAD', '주물', '세공', '완성'], advanceStage, openSubcontractModal, 
     openChangeModal, openCancelModal, handlePrint, statusBodyTemplate 
 }) => {
     if (!order) return null;
     const rowData = order;
 
-    // Determine timeline events (from orderDetailData or fallback)
-    const timelineEvents = orderDetailData?.timelineEvents || [];
+    // Current order stage
+    const currentStage = orderDetailData?.workOrders?.[0]?.stage || rowData.stage || '접수';
+    const stagesList = pipelineStages && pipelineStages.length > 0 ? pipelineStages : ['접수', 'CAD', '주물', '세공', '완성'];
+    const currentStageIdx = stagesList.indexOf(currentStage) >= 0 ? stagesList.indexOf(currentStage) : 0;
+
+    // Determine timeline events (from orderDetailData or dynamic fallback)
+    const timelineEvents = (orderDetailData?.timelineEvents && orderDetailData.timelineEvents.length > 0)
+        ? orderDetailData.timelineEvents
+        : stagesList.map((st: string, idx: number) => {
+            const isCompleted = idx <= currentStageIdx;
+            return {
+                stage: st,
+                date: isCompleted ? (rowData.createdAt || rowData.date) : null,
+                icon: isCompleted ? "pi pi-check" : "pi pi-circle",
+                color: isCompleted ? "#22C55E" : "#9E9E9E"
+            };
+        });
+
+    // Determine work orders (from orderDetailData or dynamic fallback)
+    const workOrders = (orderDetailData?.workOrders && orderDetailData.workOrders.length > 0)
+        ? orderDetailData.workOrders
+        : [{
+            id: rowData.id,
+            workOrderNo: rowData.orderNo || `WO-${rowData.id}`,
+            stage: currentStage,
+            createdAt: rowData.createdAt || rowData.date
+        }];
 
     return (
         <Dialog 
@@ -43,13 +69,13 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         <Button 
                             icon="pi pi-print" 
                             label="라벨 인쇄" 
-                            onClick={() => handlePrint(order, 'label')} 
+                            onClick={() => handlePrint({ ...rowData, ...orderDetailData }, 'label')} 
                             className="p-button-outlined p-button-secondary p-button-sm" 
                         />
                         <Button 
                             icon="pi pi-file-pdf" 
                             label="명세서 인쇄" 
-                            onClick={() => handlePrint(order, 'invoice')} 
+                            onClick={() => handlePrint({ ...rowData, ...orderDetailData }, 'invoice')} 
                             className="p-button-outlined p-button-info p-button-sm" 
                         />
                     </div>
@@ -148,42 +174,34 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         <i className="pi pi-sliders-h text-purple-500"></i> 공정 진행 타임라인
                     </h3>
                     
-                    {!orderDetailData ? (
-                        <div className="text-500 text-center py-4 flex align-items-center justify-content-center gap-2">
-                            <i className="pi pi-spin pi-spinner text-xl"></i> 타임라인 데이터를 불러오는 중...
-                        </div>
-                    ) : timelineEvents.length > 0 ? (
-                        <div className="flex flex-wrap align-items-center justify-content-between gap-3 px-2 py-2 surface-50 border-round border-1 border-200">
-                            {timelineEvents.map((ev: any, idx: number) => (
-                                <React.Fragment key={idx}>
-                                    <div className="flex flex-column align-items-center p-2 text-center" style={{ minWidth: '100px' }}>
-                                        <div 
-                                            className="w-3rem h-3rem border-circle flex align-items-center justify-content-center text-white shadow-2 mb-2"
-                                            style={{ backgroundColor: ev.color || '#64748B' }}
-                                        >
-                                            <i className={`${ev.icon || 'pi pi-check'} text-lg`}></i>
-                                        </div>
-                                        <div className="font-bold text-800 text-sm">{ev.stage}</div>
-                                        <div className="text-xs text-500 mt-1">
-                                            {ev.date ? new Date(ev.date).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
-                                        </div>
-                                        {ev.elapsed && (
-                                            <span className="bg-pink-100 text-pink-700 px-2 py-1 border-round font-bold text-xs mt-1">
-                                                {ev.elapsed}
-                                            </span>
-                                        )}
+                    <div className="flex flex-wrap align-items-center justify-content-between gap-3 px-2 py-2 surface-50 border-round border-1 border-200">
+                        {timelineEvents.map((ev: any, idx: number) => (
+                            <React.Fragment key={idx}>
+                                <div className="flex flex-column align-items-center p-2 text-center" style={{ minWidth: '100px' }}>
+                                    <div 
+                                        className="w-3rem h-3rem border-circle flex align-items-center justify-content-center text-white shadow-2 mb-2"
+                                        style={{ backgroundColor: ev.color || '#64748B' }}
+                                    >
+                                        <i className={`${ev.icon || 'pi pi-check'} text-lg`}></i>
                                     </div>
-                                    {idx < timelineEvents.length - 1 && (
-                                        <div className="flex-1 flex align-items-center justify-content-center" style={{ minWidth: '30px' }}>
-                                            <i className="pi pi-chevron-right text-400 text-lg"></i>
-                                        </div>
+                                    <div className="font-bold text-800 text-sm">{ev.stage}</div>
+                                    <div className="text-xs text-500 mt-1">
+                                        {ev.date ? new Date(ev.date).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                                    </div>
+                                    {ev.elapsed && (
+                                        <span className="bg-pink-100 text-pink-700 px-2 py-1 border-round font-bold text-xs mt-1">
+                                            {ev.elapsed}
+                                        </span>
                                     )}
-                                </React.Fragment>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-500 text-center py-4">공정 타임라인 기록이 없습니다.</div>
-                    )}
+                                </div>
+                                {idx < timelineEvents.length - 1 && (
+                                    <div className="flex-1 flex align-items-center justify-content-center" style={{ minWidth: '30px' }}>
+                                        <i className="pi pi-chevron-right text-400 text-lg"></i>
+                                    </div>
+                                )}
+                            </React.Fragment>
+                        ))}
+                    </div>
                 </div>
 
                 {/* 3. Items Tracking Section */}
@@ -191,50 +209,44 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <h3 className="m-0 mb-3 text-800 text-base font-bold flex align-items-center gap-2">
                         <i className="pi pi-list text-blue-500"></i> 개별 물건 트래킹 
                         <span className="text-500 text-xs font-normal">
-                            (총 {orderDetailData?.workOrders?.length || 0}개 작업지시서)
+                            (총 {workOrders.length}개 작업지시서)
                         </span>
                     </h3>
                     
-                    {!orderDetailData ? (
-                        <div className="text-500 text-center py-3">데이터를 불러오는 중...</div>
-                    ) : orderDetailData.workOrders && orderDetailData.workOrders.length > 0 ? (
-                        <DataTable 
-                            value={orderDetailData.workOrders} 
-                            size="small" 
-                            stripedRows 
-                            responsiveLayout="scroll" 
-                            className="p-datatable-sm"
-                        >
-                            <Column 
-                                field="id" 
-                                header="바코드 / 작업지시서 ID" 
-                                body={(r: any) => (
-                                    <div className="flex align-items-center gap-2 font-mono font-bold text-primary">
-                                        <i className="pi pi-barcode"></i> #{r.id} ({r.workOrderNo || `WO-${r.id}`})
-                                    </div>
-                                )}
-                            />
-                            <Column 
-                                field="stage" 
-                                header="현재 공정 상태" 
-                                body={(r: any) => {
-                                    const st = r.stageName || r.stage || '접수';
-                                    return (
-                                        <span className="px-3 py-1 border-round text-xs font-bold bg-blue-100 text-blue-800 border-1 border-blue-200">
-                                            {st}
-                                        </span>
-                                    );
-                                }}
-                            />
-                            <Column 
-                                field="createdAt" 
-                                header="공정 투입 일시" 
-                                body={(r: any) => r.createdAt ? new Date(r.createdAt).toLocaleString('ko-KR') : '-'}
-                            />
-                        </DataTable>
-                    ) : (
-                        <div className="text-500 text-center py-3 surface-50 border-round">등록된 개별 물건 작업지시서가 없습니다.</div>
-                    )}
+                    <DataTable 
+                        value={workOrders} 
+                        size="small" 
+                        stripedRows 
+                        responsiveLayout="scroll" 
+                        className="p-datatable-sm"
+                    >
+                        <Column 
+                            field="id" 
+                            header="바코드 / 작업지시서 ID" 
+                            body={(r: any) => (
+                                <div className="flex align-items-center gap-2 font-mono font-bold text-primary">
+                                    <i className="pi pi-barcode"></i> #{r.id} ({r.workOrderNo || `WO-${r.id}`})
+                                </div>
+                            )}
+                        />
+                        <Column 
+                            field="stage" 
+                            header="현재 공정 상태" 
+                            body={(r: any) => {
+                                const st = r.stageName || r.stage || '접수';
+                                return (
+                                    <span className="px-3 py-1 border-round text-xs font-bold bg-blue-100 text-blue-800 border-1 border-blue-200">
+                                        {st}
+                                    </span>
+                                );
+                            }}
+                        />
+                        <Column 
+                            field="createdAt" 
+                            header="공정 투입 일시" 
+                            body={(r: any) => r.createdAt ? new Date(r.createdAt).toLocaleString('ko-KR') : '-'}
+                        />
+                    </DataTable>
                 </div>
 
                 {/* 4. Bottom Action Bar */}
