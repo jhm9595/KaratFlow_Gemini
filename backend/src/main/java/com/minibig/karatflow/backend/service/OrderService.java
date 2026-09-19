@@ -192,60 +192,41 @@ public class OrderService {
         WorkOrder firstWo = !wos.isEmpty() ? wos.get(0) : null;
         ProcessTemplate template = getEffectiveTemplate(firstWo);
 
+        if (template == null || template.getSteps() == null || template.getSteps().isEmpty()) {
+            throw new IllegalStateException("DB에 등록된 프로세스 템플릿(ProcessTemplate)이 존재하지 않습니다.");
+        }
+
         List<OrderDetailDTO.TimelineEventDTO> timeline = new ArrayList<>();
-        String currentStageName = firstWo != null && firstWo.getCurrentStage() != null ? firstWo.getCurrentStage() : "접수";
-
-        if (template != null && template.getSteps() != null && !template.getSteps().isEmpty()) {
-            Map<String, String> historyMap = new HashMap<>();
-            if (firstWo != null) {
-                List<WorkOrderHistory> histories = historyRepository.findByWorkOrderIdOrderByStepOrderAsc(firstWo.getId());
-                for (WorkOrderHistory h : histories) {
-                    if (h.getStepName() != null && h.getCompletedAt() != null) {
-                        historyMap.put(h.getStepName(), h.getCompletedAt().toString());
-                    }
+        Map<String, String> historyMap = new HashMap<>();
+        if (firstWo != null) {
+            List<WorkOrderHistory> histories = historyRepository.findByWorkOrderIdOrderByStepOrderAsc(firstWo.getId());
+            for (WorkOrderHistory h : histories) {
+                if (h.getStepName() != null && h.getCompletedAt() != null) {
+                    historyMap.put(h.getStepName(), h.getCompletedAt().toString());
                 }
             }
+        }
 
-            List<ProcessTemplateStep> steps = template.getSteps();
-            ProcessTemplateStep currStep = getCurrentStep(firstWo);
-            int currentStepIdx = currStep != null ? steps.indexOf(currStep) : 0;
+        List<ProcessTemplateStep> steps = template.getSteps();
+        ProcessTemplateStep currStep = getCurrentStep(firstWo);
+        int currentStepIdx = currStep != null ? steps.indexOf(currStep) : 0;
 
-            for (int i = 0; i < steps.size(); i++) {
-                ProcessTemplateStep step = steps.get(i);
-                String name = step.getStageName() != null ? step.getStageName() : step.getStageCode();
-                String date = historyMap.get(name) != null ? historyMap.get(name) : historyMap.get(step.getStageCode());
-                
-                boolean isCompleted = (date != null) || (currentStepIdx >= 0 && i <= currentStepIdx);
-                if (date == null && isCompleted) {
-                    date = order.getCreatedAt() != null ? order.getCreatedAt().toString() : LocalDateTime.now().toString();
-                }
+        for (int i = 0; i < steps.size(); i++) {
+            ProcessTemplateStep step = steps.get(i);
+            String name = step.getStageName() != null ? step.getStageName() : step.getStageCode();
+            String date = historyMap.get(name) != null ? historyMap.get(name) : historyMap.get(step.getStageCode());
+            
+            boolean isCompleted = (date != null) || (currentStepIdx >= 0 && i <= currentStepIdx);
+            if (date == null && isCompleted) {
+                date = order.getCreatedAt() != null ? order.getCreatedAt().toString() : LocalDateTime.now().toString();
+            }
 
-                timeline.add(OrderDetailDTO.TimelineEventDTO.builder()
-                    .stage(name)
-                    .date(isCompleted ? date : null)
-                    .icon(isCompleted ? "pi pi-check" : "pi pi-circle")
-                    .color(isCompleted ? "#22C55E" : "#9E9E9E")
-                    .build());
-            }
-        } else {
-            // Fallback default stages
-            String[] defaultStages = new String[]{"접수", "CAD", "주물", "세공", "완성"};
-            int currentIdx = 0;
-            for (int i = 0; i < defaultStages.length; i++) {
-                if (defaultStages[i].equalsIgnoreCase(currentStageName)) {
-                    currentIdx = i;
-                    break;
-                }
-            }
-            for (int i = 0; i < defaultStages.length; i++) {
-                boolean completed = i <= currentIdx;
-                timeline.add(OrderDetailDTO.TimelineEventDTO.builder()
-                    .stage(defaultStages[i])
-                    .date(completed ? (order.getCreatedAt() != null ? order.getCreatedAt().toString() : null) : null)
-                    .icon(completed ? "pi pi-check" : "pi pi-circle")
-                    .color(completed ? "#22C55E" : "#9E9E9E")
-                    .build());
-            }
+            timeline.add(OrderDetailDTO.TimelineEventDTO.builder()
+                .stage(name)
+                .date(isCompleted ? date : null)
+                .icon(isCompleted ? "pi pi-check" : "pi pi-circle")
+                .color(isCompleted ? "#22C55E" : "#9E9E9E")
+                .build());
         }
 
         List<OrderDetailDTO.WorkOrderDTO> woDTOs = new ArrayList<>();
@@ -263,7 +244,7 @@ public class OrderService {
             woDTOs.add(OrderDetailDTO.WorkOrderDTO.builder()
                     .id(order.getId())
                     .workOrderNo(order.getOrderNo() != null ? order.getOrderNo() : "WO-" + order.getId())
-                    .stage(currentStageName)
+                    .stage(currStep != null ? (currStep.getStageName() != null ? currStep.getStageName() : currStep.getStageCode()) : "접수")
                     .isHold(false)
                     .createdAt(order.getCreatedAt() != null ? order.getCreatedAt().toString() : null)
                     .build());
@@ -447,13 +428,19 @@ public class OrderService {
         if (wo != null && wo.getTemplate() != null && wo.getTemplate().getSteps() != null && !wo.getTemplate().getSteps().isEmpty()) {
             return wo.getTemplate();
         }
-        return templateRepository.findAll().stream()
+        ProcessTemplate def = templateRepository.findAll().stream()
                 .filter(t -> Boolean.TRUE.equals(t.getIsDefault()))
                 .findFirst()
                 .orElseGet(() -> {
                     List<ProcessTemplate> all = templateRepository.findAll();
                     return all.isEmpty() ? null : all.get(0);
                 });
+
+        if (wo != null && def != null) {
+            wo.setTemplate(def);
+            workOrderRepository.save(wo);
+        }
+        return def;
     }
 
     private ProcessTemplateStep getCurrentStep(WorkOrder wo) {
@@ -470,44 +457,23 @@ public class OrderService {
             }
         }
 
-        int fallbackIdx = -1;
-        if ("접수".equalsIgnoreCase(currentStage) || "PENDING".equalsIgnoreCase(currentStage)) fallbackIdx = 0;
-        else if ("CAD".equalsIgnoreCase(currentStage)) fallbackIdx = Math.min(1, steps.size() - 1);
-        else if ("주물".equalsIgnoreCase(currentStage) || "CASTING".equalsIgnoreCase(currentStage) || "제작".equalsIgnoreCase(currentStage)) fallbackIdx = Math.min(2, steps.size() - 1);
-        else if ("세공".equalsIgnoreCase(currentStage) || "POLISHING".equalsIgnoreCase(currentStage)) fallbackIdx = Math.min(3, steps.size() - 1);
-        else if ("완성".equalsIgnoreCase(currentStage) || "완료".equalsIgnoreCase(currentStage) || "COMPLETED".equalsIgnoreCase(currentStage)) fallbackIdx = steps.size() - 1;
-
-        if (fallbackIdx >= 0 && fallbackIdx < steps.size()) {
-            return steps.get(fallbackIdx);
+        ProcessTemplateStep firstStep = steps.get(0);
+        if (wo != null) {
+            String firstStageName = firstStep.getStageName() != null ? firstStep.getStageName() : firstStep.getStageCode();
+            wo.setCurrentStage(firstStageName);
+            workOrderRepository.save(wo);
         }
-
-        return null;
+        return firstStep;
     }
 
     private String nextStage(WorkOrder wo) {
         ProcessTemplate template = getEffectiveTemplate(wo);
         if (template == null || template.getSteps() == null || template.getSteps().isEmpty()) {
-            String curr = wo != null && wo.getCurrentStage() != null ? wo.getCurrentStage() : "";
-            return switch (curr) {
-                case "접수" -> "CAD";
-                case "CAD" -> "주물";
-                case "주물" -> "세공";
-                case "세공" -> "완성";
-                default -> "완성";
-            };
+            throw new IllegalStateException("DB에 등록된 프로세스 템플릿(ProcessTemplate)이 존재하지 않습니다.");
         }
 
-        ProcessTemplateStep current = getCurrentStep(wo);
         List<ProcessTemplateStep> steps = template.getSteps();
-        
-        if (current == null) {
-            if (steps.size() > 1) {
-                ProcessTemplateStep s2 = steps.get(1);
-                return s2.getStageName() != null ? s2.getStageName() : s2.getStageCode();
-            }
-            ProcessTemplateStep first = steps.get(0);
-            return first.getStageName() != null ? first.getStageName() : first.getStageCode();
-        }
+        ProcessTemplateStep current = getCurrentStep(wo);
 
         Optional<ProcessTemplateStep> nextOpt = steps.stream()
                 .filter(s -> s.getStepOrder() > current.getStepOrder())
