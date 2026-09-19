@@ -355,8 +355,8 @@ function App() {
                 if (data.status === 'error') {
                     toast.current?.show({ severity: 'error', summary: '오류', detail: data.message, life: 3000 });
                 } else {
-                    toast.current?.show({ severity: 'info', summary: '공정 이동', detail: `주문 #${orderId} 공정이 [${data.newStage}] 단계로 이동했습니다.`, life: 3000 });
                     fetchOrders();
+                    openOrderDetail(orderId);
                 }
             })
             .catch((_err) => {
@@ -383,13 +383,11 @@ function App() {
             .then(data => {
                 const mappedData = data.map((o: any) => {
                     let s = o.stage;
-                    if (s) s = s.toUpperCase();
                     if (s === 'PENDING') s = '접수';
-                    else if (s === 'CAD') s = 'CAD';
-                    else if (s === 'CASTING' || s === '주물') s = '주물';
-                    else if (s === 'POLISHING' || s === '세공') s = '세공';
-                    else if (s === 'PLATING/INSPECTION' || s === 'COMPLETED' || s === 'DONE' || o.status === 'COMPLETED') s = '완성';
-                    return { ...o, stage: s };
+                    else if (s === 'CASTING') s = '주물';
+                    else if (s === 'POLISHING') s = '세공';
+                    else if (s === 'COMPLETED' || s === 'DONE' || o.status === 'COMPLETED') s = '완성';
+                    return { ...o, stage: s || '접수' };
                 });
                 setOrders(mappedData);
             })
@@ -430,9 +428,9 @@ function App() {
                         const payload = JSON.parse(message.body);
                         toast.current?.show({ 
                             severity: 'info', 
-                            summary: 'Live Event', 
+                            summary: '실시간 공정 알림', 
                             detail: payload.message, 
-                            life: 5000 
+                            life: 4000 
                         });
                         _setLiveEvents(prev => [{
                             id: Date.now(), 
