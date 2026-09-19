@@ -3,7 +3,6 @@ import { Dialog } from 'primereact/dialog';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
-import { Message } from 'primereact/message';
 
 interface GoldToolsProps {
     visible: boolean;
@@ -17,30 +16,30 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
         ? recentPrices[recentPrices.length - 1] 
         : { price24k: 0, price18k: 0, price14k: 0 };
 
-    // --- Tab 1: 시세 상세 / 중량 계산 ---
+    // --- Tab 1: 중량별 시세 계산 ---
     const [calcWeight, setCalcWeight] = useState<number | string>(3.75);
     const [calcPurity, setCalcPurity] = useState<string>('24K');
-    const [weightUnit, setWeightUnit] = useState<string>('g'); // 'g' or 'don'
-    
-    // --- Tab 2: 고금 매입 계산기 ---
+    const [weightUnit, setWeightUnit] = useState<string>('g');
+
+    // --- Tab 2: 고금 매입 계산 ---
     const [scrapWeight, setScrapWeight] = useState<number | string>(3.75);
     const [scrapPurity, setScrapPurity] = useState<string>('18K');
-    const [lossRate, setLossRate] = useState<number | string>(10); // 기본 해리 10%
-    
-    // --- Tab 3: 주물/합금 비율 계산 ---
+    const [lossRate, setLossRate] = useState<number | string>(10);
+
+    // --- Tab 3: 합금(Alloy) 비율 계산 ---
     const [alloyPurity, setAlloyPurity] = useState<string>('18K');
     const [targetWeight, setTargetWeight] = useState<number | string>(10);
 
     const purityOptions = [
         { name: '24K', label: '24K (순금)' },
-        { name: '18K', label: '18K' },
-        { name: '14K', label: '14K' }
+        { name: '18K', label: '18K (75.0%)' },
+        { name: '14K', label: '14K (58.5%)' }
     ];
 
     const getPricePerGram = (purity: string) => {
-        if (purity === '24K') return todayGold.price24k / 3.75;
-        if (purity === '18K') return todayGold.price18k / 3.75;
-        if (purity === '14K') return todayGold.price14k / 3.75;
+        if (purity === '24K') return (todayGold.price24k || 0) / 3.75;
+        if (purity === '18K') return (todayGold.price18k || 0) / 3.75;
+        if (purity === '14K') return (todayGold.price14k || 0) / 3.75;
         return 0;
     };
 
@@ -58,102 +57,174 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
     const scrapValue = scrapPricePerG * validScrapWeight;
 
     // Calculate Alloy Mix
-    // 18K = 75% pure gold, 25% alloy. 14K = 58.5% pure gold, 41.5% alloy.
     const numTargetWeight = Number(targetWeight) || 0;
     const pureGoldRatio = alloyPurity === '18K' ? 0.75 : 0.585;
     const requiredPureGold = numTargetWeight * pureGoldRatio;
     const requiredAlloy = numTargetWeight - requiredPureGold;
 
     return (
-        <Dialog header="금 시세 심층 도구 및 계산기" visible={visible} style={{ width: '50vw' }} contentStyle={{ minHeight: '450px' }} onHide={onHide}>
-            
-            <div className="mb-4 p-3 surface-100 border-round">
-                <p className="m-0 font-bold text-700">현재 시스템 기준 시세 (3.75g 기준)</p>
-                <div className="flex gap-4 mt-2">
-                    <div>24K: <span className="text-yellow-600 font-bold">{todayGold.price24k?.toLocaleString()}원</span></div>
-                    <div>18K: <span className="text-orange-500 font-bold">{todayGold.price18k?.toLocaleString()}원</span></div>
-                    <div>14K: <span className="text-purple-500 font-bold">{todayGold.price14k?.toLocaleString()}원</span></div>
+        <Dialog 
+            header={
+                <div className="flex align-items-center gap-2">
+                    <i className="pi pi-calculator text-primary text-xl"></i>
+                    <span className="font-bold text-xl text-900">금 시세 계산 도구</span>
+                </div>
+            } 
+            visible={visible} 
+            style={{ width: '680px', maxWidth: '95vw' }} 
+            contentStyle={{ height: '480px', padding: '1rem', overflowY: 'hidden' }}
+            onHide={onHide}
+            dismissableMask
+        >
+            {/* Top Market Bar */}
+            <div className="surface-100 border-1 border-200 border-round p-3 mb-3 flex justify-content-between align-items-center shadow-1">
+                <span className="text-700 font-bold text-sm flex align-items-center gap-1">
+                    <i className="pi pi-chart-line text-yellow-600"></i> 라이브 시세 <span className="text-500 font-normal">(3.75g 한돈 기준)</span>
+                </span>
+                <div className="flex gap-4 text-sm font-medium">
+                    <div>24K: <span className="text-yellow-700 font-bold">₩{todayGold.price24k?.toLocaleString()}</span></div>
+                    <div>18K: <span className="text-orange-600 font-bold">₩{todayGold.price18k?.toLocaleString()}</span></div>
+                    <div>14K: <span className="text-purple-600 font-bold">₩{todayGold.price14k?.toLocaleString()}</span></div>
                 </div>
             </div>
 
-            <TabView>
-                <TabPanel header="중량별 시세 계산">
-                    <div className="p-fluid grid">
-                        <div className="col-12 md:col-4">
-                            <label className="block mb-2 font-medium">품위 선택</label>
-                            <Dropdown value={calcPurity} options={purityOptions} optionLabel="label" optionValue="name" onChange={(e) => setCalcPurity(e.value)} />
-                        </div>
-                        <div className="col-12 md:col-4">
-                            <label className="block mb-2 font-medium">단위</label>
-                            <Dropdown value={weightUnit} options={[{label: '그램 (g)', value: 'g'}, {label: '돈 (3.75g)', value: 'don'}]} onChange={(e) => setWeightUnit(e.value)} />
-                        </div>
-                        <div className="col-12 md:col-4">
-                            <label className="block mb-2 font-medium">중량 입력</label>
-                            <InputText type="number" value={calcWeight.toString()} onChange={(e) => setCalcWeight(e.target.value)} step="0.01" />
-                        </div>
-                    </div>
+            {/* Custom Tab Container with Fixed Inner Height */}
+            <div className="surface-0 border-1 border-300 border-round p-2 h-full flex flex-column">
+                <TabView className="custom-gold-tabs flex-1">
                     
-                    <div className="mt-4 p-4 surface-50 border-round text-center">
-                        <span className="text-xl">예상 가치: </span>
-                        <span className="text-3xl font-bold text-primary">{Math.round(estimatedValue).toLocaleString()}원</span>
-                    </div>
-                </TabPanel>
-                
-                <TabPanel header="고금(Scrap) 매입 계산">
-                    <Message severity="info" text="해리(정제 손실)율을 적용하여 실제 매입 가치를 계산합니다." className="w-full mb-3" />
-                    
-                    <div className="p-fluid grid">
-                        <div className="col-12 md:col-4">
-                            <label className="block mb-2 font-medium">매입 품위</label>
-                            <Dropdown value={scrapPurity} options={purityOptions} optionLabel="label" optionValue="name" onChange={(e) => setScrapPurity(e.value)} />
-                        </div>
-                        <div className="col-12 md:col-4">
-                            <label className="block mb-2 font-medium">중량 (g)</label>
-                            <InputText type="number" value={scrapWeight.toString()} onChange={(e) => setScrapWeight(e.target.value)} step="0.01" />
-                        </div>
-                        <div className="col-12 md:col-4">
-                            <label className="block mb-2 font-medium">해리(%) 차감</label>
-                            <div className="p-inputgroup">
-                                <InputText type="number" value={lossRate.toString()} onChange={(e) => setLossRate(e.target.value)} />
-                                <span className="p-inputgroup-addon">%</span>
+                    {/* Tab 1 */}
+                    <TabPanel 
+                        header={
+                            <span className="flex align-items-center gap-2 font-bold px-2 py-1">
+                                <i className="pi pi-dollar"></i> 중량별 시세 계산
+                            </span>
+                        }
+                    >
+                        <div className="flex flex-column justify-content-between h-full pt-3 px-2" style={{ height: '320px' }}>
+                            <div className="p-fluid grid">
+                                <div className="col-12 md:col-4">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                        품위 선택
+                                        <i className="pi pi-question-circle text-400 text-xs ml-1" title="계산할 금 순도(24K, 18K, 14K)를 선택합니다."></i>
+                                    </label>
+                                    <Dropdown value={calcPurity} options={purityOptions} optionLabel="label" optionValue="name" onChange={(e) => setCalcPurity(e.value)} />
+                                </div>
+                                <div className="col-12 md:col-4">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                        단위 선택
+                                        <i className="pi pi-question-circle text-400 text-xs ml-1" title="그램(g) 또는 돈(3.75g) 단위를 선택합니다."></i>
+                                    </label>
+                                    <Dropdown value={weightUnit} options={[{label: '그램 (g)', value: 'g'}, {label: '돈 (3.75g)', value: 'don'}]} onChange={(e) => setWeightUnit(e.value)} />
+                                </div>
+                                <div className="col-12 md:col-4">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                        중량 입력
+                                        <i className="pi pi-question-circle text-400 text-xs ml-1" title="계산 대상 중량을 수치로 입력합니다."></i>
+                                    </label>
+                                    <InputText type="number" value={calcWeight.toString()} onChange={(e) => setCalcWeight(e.target.value)} step="0.01" />
+                                </div>
+                            </div>
+
+                            <div className="surface-50 border-1 border-200 border-round p-4 text-center mt-4 shadow-1">
+                                <div className="text-600 font-bold mb-1 text-sm">실시간 예상 총 가치</div>
+                                <div className="text-3xl font-bold text-primary font-mono">₩{Math.round(estimatedValue).toLocaleString()}</div>
+                                <div className="text-500 text-xs mt-1">(환산 중량: {weightInGrams.toFixed(2)}g)</div>
                             </div>
                         </div>
-                    </div>
+                    </TabPanel>
 
-                    <div className="mt-4 p-4 surface-50 border-round text-center">
-                        <p className="m-0 mb-2 text-600">인정 중량: {validScrapWeight.toFixed(2)}g</p>
-                        <span className="text-xl">매입 정산가: </span>
-                        <span className="text-3xl font-bold text-green-600">{Math.round(scrapValue).toLocaleString()}원</span>
-                    </div>
-                </TabPanel>
+                    {/* Tab 2 */}
+                    <TabPanel 
+                        header={
+                            <span className="flex align-items-center gap-2 font-bold px-2 py-1">
+                                <i className="pi pi-refresh"></i> 고금 매입 계산
+                            </span>
+                        }
+                    >
+                        <div className="flex flex-column justify-content-between h-full pt-3 px-2" style={{ height: '320px' }}>
+                            <div className="p-fluid grid">
+                                <div className="col-12 md:col-4">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                        매입 품위
+                                        <i className="pi pi-question-circle text-400 text-xs ml-1" title="매입할 고금(Scrap)의 순도를 선택합니다."></i>
+                                    </label>
+                                    <Dropdown value={scrapPurity} options={purityOptions} optionLabel="label" optionValue="name" onChange={(e) => setScrapPurity(e.value)} />
+                                </div>
+                                <div className="col-12 md:col-4">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                        실측 중량 (g)
+                                        <i className="pi pi-question-circle text-400 text-xs ml-1" title="저울로 측정한 고금의 실제 무게(g)입니다."></i>
+                                    </label>
+                                    <InputText type="number" value={scrapWeight.toString()} onChange={(e) => setScrapWeight(e.target.value)} step="0.01" />
+                                </div>
+                                <div className="col-12 md:col-4">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                        해리율 (%)
+                                        <i className="pi pi-question-circle text-400 text-xs ml-1" title="정제 손실 및 불순물 차감 비율(%)(기본 10%)"></i>
+                                    </label>
+                                    <div className="p-inputgroup">
+                                        <InputText type="number" value={lossRate.toString()} onChange={(e) => setLossRate(e.target.value)} />
+                                        <span className="p-inputgroup-addon">%</span>
+                                    </div>
+                                </div>
+                            </div>
 
-                <TabPanel header="합금(Alloy) 비율 계산">
-                    <Message severity="warn" text="순금(24K)을 사용하여 18K 또는 14K 주물을 만들 때 필요한 알로이 비율입니다." className="w-full mb-3" />
-                    
-                    <div className="p-fluid grid">
-                        <div className="col-12 md:col-6">
-                            <label className="block mb-2 font-medium">목표 품위 (캐스팅용)</label>
-                            <Dropdown value={alloyPurity} options={purityOptions.filter(o => o.name !== '24K')} optionLabel="label" optionValue="name" onChange={(e) => setAlloyPurity(e.value)} />
+                            <div className="surface-50 border-1 border-200 border-round p-4 text-center mt-4 shadow-1">
+                                <div className="flex justify-content-center gap-4 text-sm text-600 mb-2">
+                                    <span>차감 감모량: <strong className="text-red-500">{(numScrapWeight * (numLossRate / 100)).toFixed(2)}g</strong></span>
+                                    <span>인정 실중량: <strong className="text-900">{validScrapWeight.toFixed(2)}g</strong></span>
+                                </div>
+                                <div className="text-sm font-bold text-green-700">최종 매입 정산가</div>
+                                <div className="text-3xl font-bold text-green-600 font-mono">₩{Math.round(scrapValue).toLocaleString()}</div>
+                            </div>
                         </div>
-                        <div className="col-12 md:col-6">
-                            <label className="block mb-2 font-medium">필요 총 중량 (g)</label>
-                            <InputText type="number" value={targetWeight.toString()} onChange={(e) => setTargetWeight(e.target.value)} step="0.01" />
-                        </div>
-                    </div>
+                    </TabPanel>
 
-                    <div className="mt-4 flex gap-3">
-                        <div className="flex-1 p-4 surface-50 border-round text-center border-1 border-yellow-300">
-                            <div className="text-600 mb-2">필요 순금 (24K)</div>
-                            <div className="text-2xl font-bold text-yellow-600">{requiredPureGold.toFixed(3)} g</div>
-                        </div>
-                        <div className="flex-1 p-4 surface-50 border-round text-center border-1 border-300">
-                            <div className="text-600 mb-2">필요 알로이 (Alloy)</div>
-                            <div className="text-2xl font-bold text-600">{requiredAlloy.toFixed(3)} g</div>
-                        </div>
-                    </div>
-                </TabPanel>
-            </TabView>
+                    {/* Tab 3 */}
+                    <TabPanel 
+                        header={
+                            <span className="flex align-items-center gap-2 font-bold px-2 py-1">
+                                <i className="pi pi-sliders-h"></i> 합금(Alloy) 비율
+                            </span>
+                        }
+                    >
+                        <div className="flex flex-column justify-content-between h-full pt-3 px-2" style={{ height: '320px' }}>
+                            <div className="p-fluid grid">
+                                <div className="col-12 md:col-6">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                        목표 품위
+                                        <i className="pi pi-question-circle text-400 text-xs ml-1" title="주물(캐스팅) 제작 목표 순도(18K: 75%, 14K: 58.5%)"></i>
+                                    </label>
+                                    <Dropdown value={alloyPurity} options={purityOptions.filter(o => o.name !== '24K')} optionLabel="label" optionValue="name" onChange={(e) => setAlloyPurity(e.value)} />
+                                </div>
+                                <div className="col-12 md:col-6">
+                                    <label className="block mb-2 font-bold text-700 text-sm flex align-items-center">
+                                        목표 총중량 (g)
+                                        <i className="pi pi-question-circle text-400 text-xs ml-1" title="합금 후 완성하려는 총 중량(g)입니다."></i>
+                                    </label>
+                                    <InputText type="number" value={targetWeight.toString()} onChange={(e) => setTargetWeight(e.target.value)} step="0.01" />
+                                </div>
+                            </div>
 
+                            <div className="grid mt-4">
+                                <div className="col-6">
+                                    <div className="p-3 surface-50 border-round border-1 border-yellow-400 text-center shadow-1">
+                                        <div className="text-700 font-bold text-xs mb-1">필요 순금 (24K)</div>
+                                        <div className="text-2xl font-bold text-yellow-700 font-mono">{requiredPureGold.toFixed(3)} g</div>
+                                    </div>
+                                </div>
+                                <div className="col-6">
+                                    <div className="p-3 surface-50 border-round border-1 border-300 text-center shadow-1">
+                                        <div className="text-700 font-bold text-xs mb-1">필요 알로이 (Alloy)</div>
+                                        <div className="text-2xl font-bold text-700 font-mono">{requiredAlloy.toFixed(3)} g</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </TabPanel>
+
+                </TabView>
+            </div>
         </Dialog>
     );
 };
