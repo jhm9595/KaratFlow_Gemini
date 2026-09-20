@@ -22,6 +22,7 @@ import i18n from './i18n';
 import { PetroleumChart } from './components/charts/PetroleumChart';
 import { KospiChart } from './components/charts/KospiChart';
 import { OrderDetailModal } from './components/OrderDetailModal';
+import { MultiOrderDetailModal } from './components/MultiOrderDetailModal';
 import { CreateOrderModal } from './components/CreateOrderModal';
 import { ChangeRequestModal } from './components/ChangeRequestModal';
 import { CancelOrderModal } from './components/CancelOrderModal';
@@ -872,22 +873,45 @@ function App() {
 
 
 
-            {selectedOrderId && orders.find(o => o.id === selectedOrderId) && (
-                <OrderDetailModal
-                    visible={orderDetailVisible}
-                    onHide={() => setOrderDetailVisible(false)}
-                    order={orders.find(o => o.id === selectedOrderId)}
-                    orderDetailData={orderDetailData}
-                    pipelineStages={pipelineStages}
-                    pipelineSteps={pipelineSteps}
-                    advanceStage={advanceStage}
-                    openSubcontractModal={(id) => { setOrderDetailVisible(false); openSubcontractModal(id); }}
-                    openChangeModal={() => { setOrderDetailVisible(false); setChangeModalVisible(true); }}
-                    openCancelModal={(id) => { setOrderDetailVisible(false); openCancelModal(id); }}
-                    handlePrint={handlePrint}
-                    statusBodyTemplate={statusBodyTemplate}
-                />
-            )}
+            {selectedOrderId && orders.find(o => o.id === selectedOrderId) && (() => {
+                const currentOrder = orders.find(o => o.id === selectedOrderId);
+                const isMultiItem = Boolean(
+                    (currentOrder?.quantity && currentOrder.quantity > 1) || 
+                    (orderDetailData?.workOrders && orderDetailData.workOrders.length > 1)
+                );
+
+                return isMultiItem ? (
+                    <MultiOrderDetailModal
+                        visible={orderDetailVisible}
+                        onHide={() => setOrderDetailVisible(false)}
+                        order={currentOrder}
+                        orderDetailData={orderDetailData}
+                        pipelineStages={pipelineStages}
+                        pipelineSteps={pipelineSteps}
+                        advanceStage={advanceStage}
+                        openSubcontractModal={(id) => { setOrderDetailVisible(false); openSubcontractModal(id); }}
+                        openChangeModal={() => { setOrderDetailVisible(false); setChangeModalVisible(true); }}
+                        openCancelModal={(id) => { setOrderDetailVisible(false); openCancelModal(id); }}
+                        handlePrint={handlePrint}
+                        statusBodyTemplate={statusBodyTemplate}
+                    />
+                ) : (
+                    <OrderDetailModal
+                        visible={orderDetailVisible}
+                        onHide={() => setOrderDetailVisible(false)}
+                        order={currentOrder}
+                        orderDetailData={orderDetailData}
+                        pipelineStages={pipelineStages}
+                        pipelineSteps={pipelineSteps}
+                        advanceStage={advanceStage}
+                        openSubcontractModal={(id) => { setOrderDetailVisible(false); openSubcontractModal(id); }}
+                        openChangeModal={() => { setOrderDetailVisible(false); setChangeModalVisible(true); }}
+                        openCancelModal={(id) => { setOrderDetailVisible(false); openCancelModal(id); }}
+                        handlePrint={handlePrint}
+                        statusBodyTemplate={statusBodyTemplate}
+                    />
+                );
+            })()}
 
             <ProcessManager 
                 visible={processManagerVisible} 
