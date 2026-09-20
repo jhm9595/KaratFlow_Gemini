@@ -18,14 +18,14 @@ interface StageItem {
 }
 
 const COLOR_PRESETS = [
-    { name: 'Slate Gray', hex: '#64748B', gradient: 'linear-gradient(135deg, #475569 0%, #1e293b 100%)' },
-    { name: 'Ocean Blue', hex: '#3B82F6', gradient: 'linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)' },
-    { name: 'Amber Gold', hex: '#F59E0B', gradient: 'linear-gradient(135deg, #d97706 0%, #ea580c 100%)' },
-    { name: 'Rose Pink', hex: '#EC4899', gradient: 'linear-gradient(135deg, #e11d48 0%, #d946ef 100%)' },
-    { name: 'Emerald Green', hex: '#10B981', gradient: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)' },
-    { name: 'Violet Purple', hex: '#7C3AED', gradient: 'linear-gradient(135deg, #7c3aed 0%, #c084fc 100%)' },
-    { name: 'Royal Blue', hex: '#0284C7', gradient: 'linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)' },
-    { name: 'Crimson Red', hex: '#DC2626', gradient: 'linear-gradient(135deg, #dc2626 0%, #f97316 100%)' },
+    { name: '파스텔 스카이블루', hex: '#38BDF8', gradient: 'linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%)' },
+    { name: '파스텔 라벤더', hex: '#C084FC', gradient: 'linear-gradient(135deg, #e879f9 0%, #c084fc 100%)' },
+    { name: '파스텔 웜피치', hex: '#FB923C', gradient: 'linear-gradient(135deg, #fde047 0%, #fb923c 100%)' },
+    { name: '파스텔 소프트로즈', hex: '#F472B6', gradient: 'linear-gradient(135deg, #f472b6 0%, #fb7185 100%)' },
+    { name: '파스텔 민트그린', hex: '#34D399', gradient: 'linear-gradient(135deg, #6ee7b7 0%, #34d399 100%)' },
+    { name: '파스텔 레몬옐로우', hex: '#FACC15', gradient: 'linear-gradient(135deg, #fef08a 0%, #facc15 100%)' },
+    { name: '파스텔 페리윙클', hex: '#818CF8', gradient: 'linear-gradient(135deg, #a5b4fc 0%, #818cf8 100%)' },
+    { name: '파스텔 아쿠아', hex: '#2DD4BF', gradient: 'linear-gradient(135deg, #99f6e4 0%, #2dd4bf 100%)' },
 ];
 
 export const ProcessManager: React.FC<ProcessManagerProps> = ({ visible, onHide }) => {

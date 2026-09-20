@@ -19,27 +19,26 @@ public class ProcessTemplateService {
     private final ProcessTemplateRepository processTemplateRepository;
     private final ProcessTemplateStepRepository processTemplateStepRepository;
 
-    private static final String[][] PRESET_GRADIENTS = {
-        {"#64748B", "linear-gradient(135deg, #475569 0%, #1e293b 100%)"},
-        {"#3B82F6", "linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)"},
-        {"#F59E0B", "linear-gradient(135deg, #d97706 0%, #ea580c 100%)"},
-        {"#EC4899", "linear-gradient(135deg, #e11d48 0%, #d946ef 100%)"},
-        {"#10B981", "linear-gradient(135deg, #059669 0%, #0d9488 100%)"},
-        {"#7C3AED", "linear-gradient(135deg, #7c3aed 0%, #c084fc 100%)"},
-        {"#0284C7", "linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)"},
-        {"#DC2626", "linear-gradient(135deg, #dc2626 0%, #f97316 100%)"}
+    private static final String[][] PASTEL_PRESET_GRADIENTS = {
+        {"#38BDF8", "linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%)"}, // Pastel Sky Blue
+        {"#C084FC", "linear-gradient(135deg, #e879f9 0%, #c084fc 100%)"}, // Pastel Lavender
+        {"#FB923C", "linear-gradient(135deg, #fde047 0%, #fb923c 100%)"}, // Pastel Warm Peach
+        {"#F472B6", "linear-gradient(135deg, #f472b6 0%, #fb7185 100%)"}, // Pastel Soft Rose
+        {"#34D399", "linear-gradient(135deg, #6ee7b7 0%, #34d399 100%)"}, // Pastel Mint Green
+        {"#FACC15", "linear-gradient(135deg, #fef08a 0%, #facc15 100%)"}, // Pastel Sun Yellow
+        {"#818CF8", "linear-gradient(135deg, #a5b4fc 0%, #818cf8 100%)"}, // Pastel Periwinkle
+        {"#2DD4BF", "linear-gradient(135deg, #99f6e4 0%, #2dd4bf 100%)"}  // Pastel Aqua
     };
 
     private void applyDefaultColorsIfNeeded(ProcessTemplateStep step, int idx) {
-        if (step.getColorHex() == null || step.getColorHex().trim().isEmpty()) {
-            step.setColorHex(PRESET_GRADIENTS[idx % PRESET_GRADIENTS.length][0]);
+        if (step.getColorHex() == null || step.getColorHex().trim().isEmpty() || step.getColorHex().equals("#64748B")) {
+            step.setColorHex(PASTEL_PRESET_GRADIENTS[idx % PASTEL_PRESET_GRADIENTS.length][0]);
         }
-        if (step.getColorGradient() == null || step.getColorGradient().trim().isEmpty()) {
-            // Generate a gradient if colorHex was custom specified
-            if (step.getColorHex() != null && !step.getColorHex().startsWith("linear-gradient")) {
-                step.setColorGradient("linear-gradient(135deg, " + step.getColorHex() + " 0%, #1e293b 100%)");
+        if (step.getColorGradient() == null || step.getColorGradient().trim().isEmpty() || step.getColorGradient().contains("1e293b") || step.getColorGradient().contains("475569")) {
+            if (step.getColorHex() != null && !step.getColorHex().startsWith("linear-gradient") && !step.getColorHex().equals("#64748B")) {
+                step.setColorGradient("linear-gradient(135deg, " + step.getColorHex() + " 0%, #38bdf8 100%)");
             } else {
-                step.setColorGradient(PRESET_GRADIENTS[idx % PRESET_GRADIENTS.length][1]);
+                step.setColorGradient(PASTEL_PRESET_GRADIENTS[idx % PASTEL_PRESET_GRADIENTS.length][1]);
             }
         }
     }
@@ -57,11 +56,11 @@ public class ProcessTemplateService {
             t1 = processTemplateRepository.save(t1);
 
             List<ProcessTemplateStep> steps = List.of(
-                    ProcessTemplateStep.builder().stageName("접수").stepOrder(1).colorHex("#64748B").colorGradient("linear-gradient(135deg, #475569 0%, #1e293b 100%)").template(t1).build(),
-                    ProcessTemplateStep.builder().stageName("CAD").stepOrder(2).colorHex("#3B82F6").colorGradient("linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)").template(t1).build(),
-                    ProcessTemplateStep.builder().stageName("주물").stepOrder(3).colorHex("#F59E0B").colorGradient("linear-gradient(135deg, #d97706 0%, #ea580c 100%)").template(t1).build(),
-                    ProcessTemplateStep.builder().stageName("세공").stepOrder(4).colorHex("#EC4899").colorGradient("linear-gradient(135deg, #e11d48 0%, #d946ef 100%)").template(t1).build(),
-                    ProcessTemplateStep.builder().stageName("완료").stepOrder(5).colorHex("#10B981").colorGradient("linear-gradient(135deg, #059669 0%, #0d9488 100%)").template(t1).build()
+                    ProcessTemplateStep.builder().stageName("접수").stepOrder(1).colorHex("#38BDF8").colorGradient("linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%)").template(t1).build(),
+                    ProcessTemplateStep.builder().stageName("CAD").stepOrder(2).colorHex("#C084FC").colorGradient("linear-gradient(135deg, #e879f9 0%, #c084fc 100%)").template(t1).build(),
+                    ProcessTemplateStep.builder().stageName("주물").stepOrder(3).colorHex("#FB923C").colorGradient("linear-gradient(135deg, #fde047 0%, #fb923c 100%)").template(t1).build(),
+                    ProcessTemplateStep.builder().stageName("세공").stepOrder(4).colorHex("#F472B6").colorGradient("linear-gradient(135deg, #f472b6 0%, #fb7185 100%)").template(t1).build(),
+                    ProcessTemplateStep.builder().stageName("완료").stepOrder(5).colorHex("#34D399").colorGradient("linear-gradient(135deg, #6ee7b7 0%, #34d399 100%)").template(t1).build()
             );
             for (ProcessTemplateStep s : steps) {
                 processTemplateStepRepository.save(s);
@@ -75,19 +74,33 @@ public class ProcessTemplateService {
             t2 = processTemplateRepository.save(t2);
 
             List<ProcessTemplateStep> steps2 = List.of(
-                    ProcessTemplateStep.builder().stageName("접수").stepOrder(1).colorHex("#64748B").colorGradient("linear-gradient(135deg, #475569 0%, #1e293b 100%)").template(t2).build(),
-                    ProcessTemplateStep.builder().stageName("진행중").stepOrder(2).colorHex("#3B82F6").colorGradient("linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)").template(t2).build(),
-                    ProcessTemplateStep.builder().stageName("완료").stepOrder(3).colorHex("#10B981").colorGradient("linear-gradient(135deg, #059669 0%, #0d9488 100%)").template(t2).build()
+                    ProcessTemplateStep.builder().stageName("접수").stepOrder(1).colorHex("#38BDF8").colorGradient("linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%)").template(t2).build(),
+                    ProcessTemplateStep.builder().stageName("진행중").stepOrder(2).colorHex("#C084FC").colorGradient("linear-gradient(135deg, #e879f9 0%, #c084fc 100%)").template(t2).build(),
+                    ProcessTemplateStep.builder().stageName("완료").stepOrder(3).colorHex("#34D399").colorGradient("linear-gradient(135deg, #6ee7b7 0%, #34d399 100%)").template(t2).build()
             );
             for (ProcessTemplateStep s : steps2) {
                 processTemplateStepRepository.save(s);
+            }
+        } else {
+            // Automatically upgrade existing steps to bright pastel gradients
+            List<ProcessTemplate> all = processTemplateRepository.findAll();
+            for (ProcessTemplate t : all) {
+                if (t.getSteps() != null) {
+                    for (int i = 0; i < t.getSteps().size(); i++) {
+                        ProcessTemplateStep s = t.getSteps().get(i);
+                        if (s.getColorGradient() == null || s.getColorGradient().contains("1e293b") || s.getColorGradient().contains("475569") || s.getColorHex().equals("#64748B")) {
+                            s.setColorHex(PASTEL_PRESET_GRADIENTS[i % PASTEL_PRESET_GRADIENTS.length][0]);
+                            s.setColorGradient(PASTEL_PRESET_GRADIENTS[i % PASTEL_PRESET_GRADIENTS.length][1]);
+                            processTemplateStepRepository.save(s);
+                        }
+                    }
+                }
             }
         }
     }
 
     public List<ProcessTemplate> getAllTemplates() {
         List<ProcessTemplate> list = processTemplateRepository.findAll();
-        // Ensure steps have colors initialized
         for (ProcessTemplate t : list) {
             if (t.getSteps() != null) {
                 for (int i = 0; i < t.getSteps().size(); i++) {

@@ -114,11 +114,11 @@ function App() {
     const [allProducts, setAllProducts] = useState<any[]>([]);
     const [pipelineStages, setPipelineStages] = useState<string[]>(['접수', 'CAD', '주물', '세공', '완료']);
     const [pipelineSteps, setPipelineSteps] = useState<any[]>([
-        { stageName: '접수', colorHex: '#64748B', colorGradient: 'linear-gradient(135deg, #475569 0%, #1e293b 100%)' },
-        { stageName: 'CAD', colorHex: '#3B82F6', colorGradient: 'linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)' },
-        { stageName: '주물', colorHex: '#F59E0B', colorGradient: 'linear-gradient(135deg, #d97706 0%, #ea580c 100%)' },
-        { stageName: '세공', colorHex: '#EC4899', colorGradient: 'linear-gradient(135deg, #e11d48 0%, #d946ef 100%)' },
-        { stageName: '완료', colorHex: '#10B981', colorGradient: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)' }
+        { stageName: '접수', colorHex: '#38BDF8', colorGradient: 'linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%)' },
+        { stageName: 'CAD', colorHex: '#C084FC', colorGradient: 'linear-gradient(135deg, #e879f9 0%, #c084fc 100%)' },
+        { stageName: '주물', colorHex: '#FB923C', colorGradient: 'linear-gradient(135deg, #fde047 0%, #fb923c 100%)' },
+        { stageName: '세공', colorHex: '#F472B6', colorGradient: 'linear-gradient(135deg, #f472b6 0%, #fb7185 100%)' },
+        { stageName: '완료', colorHex: '#34D399', colorGradient: 'linear-gradient(135deg, #6ee7b7 0%, #34d399 100%)' }
     ]);
 
     const fetchPipelineStages = () => {
