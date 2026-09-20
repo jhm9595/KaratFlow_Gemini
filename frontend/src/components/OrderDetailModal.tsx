@@ -147,7 +147,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                                     <h3 className="m-0 text-800 text-base font-bold flex align-items-center gap-2">
                                         <i className="pi pi-tag text-orange-500"></i> 제품 정보
                                     </h3>
-                                    <Tag severity="info" value={`${orderDetailData?.quantity || rowData.quantity || 1}개`} rounded />
+                                    <span className="font-bold text-700">{orderDetailData?.quantity || rowData.quantity || 1}개</span>
                                 </div>
                                 <div className="flex gap-4 align-items-start">
                                     {(orderDetailData?.imageUrl || rowData.imageUrl) && (

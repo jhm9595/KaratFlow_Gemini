@@ -774,7 +774,7 @@ function App() {
                                     <Image src={`http://localhost:8888${row.imageUrl}`} alt="" width="36" height="36" preview style={{objectFit:'cover', borderRadius:'6px'}} />
                                 ) : <span className="pi pi-image text-300" />} />
                                     <Column header="주문 번호" body={(r) => <span className="font-bold text-primary">#{r.orderNo || r.id}</span>} style={{ minWidth: '120px' }} />
-                                    <Column header="수량" style={{width:'72px'}} body={(row: any) => <Badge value={`${row.quantity ?? 1}건`} severity="info" />} />
+                                    <Column header="수량" style={{width:'72px'}} body={(row: any) => <span className="font-bold text-700">{row.quantity ?? 1}건</span>} />
                                     <Column field="design" header="Design" />
                                     <Column field="customerName" header="고객명" />
                                     <Column field="stage" header="공정 상태" body={statusBodyTemplate}></Column>
