@@ -71,8 +71,8 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                 </div>
             } 
             visible={visible} 
-            style={{ width: '720px', height: '520px', maxWidth: '95vw' }} 
-            contentStyle={{ height: '440px', padding: '1.25rem', overflowY: 'auto' }}
+            style={{ width: '880px', height: '620px', maxWidth: '95vw' }} 
+            contentStyle={{ height: '540px', padding: '1.25rem', overflow: 'hidden' }}
             onHide={onHide}
             dismissableMask
         >
@@ -102,7 +102,7 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                             </span>
                         }
                     >
-                        <div className="pt-3 flex flex-column justify-content-between" style={{ minHeight: '300px' }}>
+                        <div className="pt-2 flex flex-column justify-content-between" style={{ height: '360px' }}>
                             <div className="p-fluid grid">
                                 <div className="col-12 md:col-4">
                                     <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
@@ -127,7 +127,7 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                                 </div>
                             </div>
 
-                            <div className="surface-50 border-1 border-200 border-round p-4 text-center shadow-1 mt-3">
+                            <div className="surface-50 border-1 border-200 border-round p-4 text-center shadow-1 mt-auto">
                                 <div className="text-600 font-bold mb-1 text-sm">실시간 예상 총 가치</div>
                                 <div className="text-3xl font-bold text-primary font-mono mb-1">₩{Math.round(estimatedValue).toLocaleString()}</div>
                                 <div className="text-500 text-xs">(환산 중량: {weightInGrams.toFixed(2)}g)</div>
@@ -143,7 +143,7 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                             </span>
                         }
                     >
-                        <div className="pt-3 flex flex-column justify-content-between" style={{ minHeight: '300px' }}>
+                        <div className="pt-2 flex flex-column justify-content-between" style={{ height: '360px' }}>
                             <div className="p-fluid grid">
                                 <div className="col-12 md:col-4">
                                     <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
@@ -171,7 +171,7 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                                 </div>
                             </div>
 
-                            <div className="surface-50 border-1 border-200 border-round p-4 text-center shadow-1 mt-3">
+                            <div className="surface-50 border-1 border-200 border-round p-4 text-center shadow-1 mt-auto">
                                 <div className="flex justify-content-center gap-4 text-sm text-600 mb-2">
                                     <span>차감 감모량: <strong className="text-red-500">{(numScrapWeight * (numLossRate / 100)).toFixed(2)}g</strong></span>
                                     <span>인정 실중량: <strong className="text-900">{validScrapWeight.toFixed(2)}g</strong></span>
@@ -186,11 +186,11 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                     <TabPanel 
                         header={
                             <span className="flex align-items-center gap-2 font-bold px-2 py-1">
-                                <i className="pi pi-sliders-h"></i> 합금(Alloy) 비율
+                                <i className="pi pi-sliders-h"></i> 합금(Alloy) 비율 계산
                             </span>
                         }
                     >
-                        <div className="pt-3 flex flex-column justify-content-between" style={{ minHeight: '300px' }}>
+                        <div className="pt-2 flex flex-column justify-content-between" style={{ height: '360px' }}>
                             <div className="p-fluid grid">
                                 <div className="col-12 md:col-6">
                                     <label className="block mb-2 font-bold text-700 text-sm flex align-items-center" style={{ whiteSpace: 'nowrap' }}>
@@ -208,17 +208,17 @@ export const GoldToolsModal: React.FC<GoldToolsProps> = ({ visible, onHide, rece
                                 </div>
                             </div>
 
-                            <div className="grid mt-3">
+                            <div className="grid mt-auto">
                                 <div className="col-6">
-                                    <div className="p-3 surface-50 border-round border-1 border-yellow-400 text-center shadow-1">
-                                        <div className="text-700 font-bold text-xs mb-1">필요 순금 (24K)</div>
-                                        <div className="text-2xl font-bold text-yellow-700 font-mono">{requiredPureGold.toFixed(3)} g</div>
+                                    <div className="p-4 surface-50 border-round border-1 border-yellow-400 text-center shadow-1">
+                                        <div className="text-700 font-bold text-sm mb-1">필요 순금 (24K)</div>
+                                        <div className="text-3xl font-bold text-yellow-700 font-mono">{requiredPureGold.toFixed(3)} g</div>
                                     </div>
                                 </div>
                                 <div className="col-6">
-                                    <div className="p-3 surface-50 border-round border-1 border-300 text-center shadow-1">
-                                        <div className="text-700 font-bold text-xs mb-1">필요 알로이 (Alloy)</div>
-                                        <div className="text-2xl font-bold text-700 font-mono">{requiredAlloy.toFixed(3)} g</div>
+                                    <div className="p-4 surface-50 border-round border-1 border-300 text-center shadow-1">
+                                        <div className="text-700 font-bold text-sm mb-1">필요 알로이 (Alloy)</div>
+                                        <div className="text-3xl font-bold text-700 font-mono">{requiredAlloy.toFixed(3)} g</div>
                                     </div>
                                 </div>
                             </div>
