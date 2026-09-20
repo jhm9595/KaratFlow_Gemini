@@ -240,7 +240,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <h3 className="m-0 mb-3 text-800 text-base font-bold flex align-items-center gap-2">
                         <i className="pi pi-list text-blue-500"></i> 개별 물건 트래킹 
                         <span className="text-500 text-xs font-normal">
-                            (총 {workOrders.length}개 작업지시서)
+                            (총 {workOrders.length}개 물건)
                         </span>
                     </h3>
                     
@@ -253,7 +253,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     >
                         <Column 
                             field="workOrderNo" 
-                            header="작업지시서 번호" 
+                            header="물건 ID" 
                             body={(r: any) => (
                                 <div className="flex align-items-center gap-2 font-mono font-bold text-primary">
                                     <i className="pi pi-file"></i> {r.workOrderNo || `WO-${r.id}`}
