@@ -252,11 +252,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         className="p-datatable-sm"
                     >
                         <Column 
-                            field="id" 
-                            header="바코드 / 작업지시서 ID" 
+                            field="workOrderNo" 
+                            header="작업지시서 번호" 
                             body={(r: any) => (
                                 <div className="flex align-items-center gap-2 font-mono font-bold text-primary">
-                                    <i className="pi pi-barcode"></i> #{r.id} ({r.workOrderNo || `WO-${r.id}`})
+                                    <i className="pi pi-file"></i> {r.workOrderNo || `WO-${r.id}`}
                                 </div>
                             )}
                         />
