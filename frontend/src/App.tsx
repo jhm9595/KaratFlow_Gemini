@@ -504,13 +504,19 @@ function App() {
             rawStage = (rowData.stage && rowData.stage !== 'COMPLETED' && rowData.stage !== 'DONE') ? rowData.stage : lastStage;
         }
 
-        const matchedStep = (pipelineSteps && pipelineSteps.length > 0) ? pipelineSteps.find((step: any) => {
-            const stName = step.stageName;
-            if (stName === rawStage) return true;
-            if ((stName === '주물' || stName === 'CASTING') && (rawStage === '제작' || rawStage === '주물')) return true;
-            if ((stName === '완료' || stName === 'COMPLETED') && (rawStage === '완성' || rawStage === '완료')) return true;
-            return false;
-        }) : null;
+        let matchedStep = (pipelineSteps && pipelineSteps.length > 0) ? pipelineSteps.find((step: any) => step.stageName === rawStage) : null;
+        if (!matchedStep && pipelineSteps && pipelineSteps.length > 0) {
+            matchedStep = pipelineSteps.find((step: any) => 
+                step.stageName && step.stageName.trim().toLowerCase() === rawStage.trim().toLowerCase()
+            );
+        }
+        if (!matchedStep && pipelineSteps && pipelineSteps.length > 0) {
+            if (rawStage === 'COMPLETED' || rawStage === 'DONE' || rawStage === '완성') {
+                matchedStep = pipelineSteps.find((step: any) => step.stageName === '완료' || step.stageName === 'COMPLETED');
+            } else if (rawStage === 'PENDING') {
+                matchedStep = pipelineSteps.find((step: any) => step.stageName === '접수' || step.stageName === 'PENDING');
+            }
+        }
 
         const bg = matchedStep ? (matchedStep.colorGradient || matchedStep.colorHex) : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
 

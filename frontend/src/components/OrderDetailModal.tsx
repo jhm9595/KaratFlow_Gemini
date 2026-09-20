@@ -57,13 +57,26 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
     const getStepBgColor = (stageName: string) => {
         if (!pipelineSteps || pipelineSteps.length === 0) return null;
-        const matched = pipelineSteps.find((step: any) => {
-            const stName = step.stageName;
-            if (stName === stageName) return true;
-            if ((stName === '주물' || stName === 'CASTING') && (stageName === '제작' || stageName === '주물')) return true;
-            if ((stName === '완료' || stName === 'COMPLETED') && (stageName === '완성' || stageName === '완료')) return true;
-            return false;
-        });
+        
+        // 1. Exact match by stageName
+        let matched = pipelineSteps.find((step: any) => step.stageName === stageName);
+        
+        // 2. Case insensitive / trim match
+        if (!matched) {
+            matched = pipelineSteps.find((step: any) => 
+                step.stageName && step.stageName.trim().toLowerCase() === stageName.trim().toLowerCase()
+            );
+        }
+
+        // 3. Fallback alias match only if no exact match
+        if (!matched) {
+            if (stageName === 'COMPLETED' || stageName === 'DONE' || stageName === '완성') {
+                matched = pipelineSteps.find((step: any) => step.stageName === '완료' || step.stageName === 'COMPLETED');
+            } else if (stageName === 'PENDING') {
+                matched = pipelineSteps.find((step: any) => step.stageName === '접수' || step.stageName === 'PENDING');
+            }
+        }
+
         return matched ? (matched.colorGradient || matched.colorHex) : null;
     };
 
