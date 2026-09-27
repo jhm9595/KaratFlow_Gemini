@@ -733,13 +733,6 @@ function App() {
                         <div className="surface-0 p-3 border-round shadow-1">
                             <div className="flex justify-content-between align-items-center mb-3">
                                 <h4 className="m-0 text-600 font-medium">실시간 공정 현황 (Pipeline)</h4>
-                                <Button 
-                                    icon="pi pi-palette" 
-                                    className="p-button-rounded p-button-text p-button-sm p-button-help" 
-                                    onClick={() => setProcessManagerVisible(true)} 
-                                    tooltip="공정 고유 색상 & 템플릿 커스터마이징" 
-                                    tooltipOptions={{ position: 'left' }} 
-                                />
                             </div>
                             <div className="flex justify-content-between align-items-center px-4 relative">
                                 {/* Connecting Line */}
