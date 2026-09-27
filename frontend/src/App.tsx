@@ -869,7 +869,10 @@ function App() {
                                                             {stageInfo.stageName}
                                                         </span>
                                                         {isUnread && (
-                                                            <span className="bg-red-500 text-white font-bold text-xs px-2 py-0.5 border-round-circle inline-block shadow-1" style={{ fontSize: '10px' }}>
+                                                            <span 
+                                                                className="px-2 py-0.5 border-round font-bold text-white shadow-1 flex align-items-center" 
+                                                                style={{ backgroundColor: '#ef4444', color: '#ffffff', fontSize: '10px', lineHeight: 1 }}
+                                                            >
                                                                 NEW
                                                             </span>
                                                         )}
@@ -913,7 +916,10 @@ function App() {
                                                                 {stageInfo.stageName}
                                                             </span>
                                                             {isUnread && (
-                                                                <span className="bg-red-500 text-white font-bold border-circle text-center" style={{ fontSize: '8px', width: '8px', height: '8px', display: 'inline-block' }}></span>
+                                                                <span 
+                                                                    className="border-circle inline-block shadow-1" 
+                                                                    style={{ backgroundColor: '#ef4444', width: '8px', height: '8px' }}
+                                                                ></span>
                                                             )}
                                                         </div>
                                                         <span className="text-500 font-mono font-semibold" style={{ fontSize: '10px' }}>{ev.time}</span>
