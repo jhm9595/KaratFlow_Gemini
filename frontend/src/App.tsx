@@ -631,7 +631,7 @@ function App() {
                 {/* APM Main Content */}
                 <div className="flex-1 flex overflow-hidden p-3 gap-3">
                     {/* Left Panel: Metrics & Charts */}
-                    <div className="flex flex-column gap-3 overflow-y-auto" style={{ width: '450px', maxHeight: '100%' }}>
+                    <div className="flex flex-column gap-3 overflow-y-auto" style={{ width: '450px', maxHeight: '100%', overflowX: 'hidden' }}>
                         <div className="surface-0 p-3 border-round shadow-1">
                             <h4 className="m-0 mb-3 text-600 font-medium">실시간 핵심 지표</h4>
                             <div className="flex justify-content-between align-items-end mb-3">

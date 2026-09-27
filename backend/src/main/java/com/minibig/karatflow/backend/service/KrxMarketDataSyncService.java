@@ -45,16 +45,17 @@ public class KrxMarketDataSyncService {
     public void triggerSyncIfNecessary() {
         LocalDate today = LocalDate.now();
 
+        long goldCount = dailyMetalPriceRepository.count();
         boolean hasGoldToday = dailyMetalPriceRepository.findByPriceDateAndMetalType(today, "GOLD_24K").isPresent();
         boolean hasOilToday = dailyPetroleumPriceRepository.findByDate(today).isPresent();
         boolean hasKospiToday = dailyKospiPriceRepository.findByDate(today).isPresent();
 
-        if (hasGoldToday && hasOilToday && hasKospiToday) {
-            log.info("KRX Sync: All market data up to date for {}. Skipping API calls.", today);
+        if (hasGoldToday && hasOilToday && hasKospiToday && goldCount >= 700) {
+            log.info("KRX Sync: All market data up to date for {} (Count: {}). Skipping API calls.", today, goldCount);
             return;
         }
 
-        log.info("KRX Sync: Missing market data detected for {}. Triggering async catch-up sync.", today);
+        log.info("KRX Sync: Catch-up sync triggered (Today present: {}, Gold Count: {}).", hasGoldToday, goldCount);
         syncMarketDataAsync(today);
     }
 
@@ -76,7 +77,7 @@ public class KrxMarketDataSyncService {
 
     private void syncGold(LocalDate today) {
         Optional<DailyMetalPrice> latestOpt = dailyMetalPriceRepository.findFirstByMetalTypeOrderByPriceDateDesc("GOLD_24K");
-        LocalDate startDate = latestOpt.isPresent() ? latestOpt.get().getPriceDate().plusDays(1) : today.minusDays(7);
+        LocalDate startDate = latestOpt.isPresent() ? latestOpt.get().getPriceDate().plusDays(1) : today.minusDays(1095);
 
         if (startDate.isAfter(today)) return;
 
@@ -85,46 +86,51 @@ public class KrxMarketDataSyncService {
                 continue;
             }
 
-            // Rate-limit defense: 250ms sleep between calls (<4 calls/sec)
-            try { Thread.sleep(250); } catch (InterruptedException ignored) {}
-
-            String basDd = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
             boolean saved = false;
 
-            try {
-                String rawUri = "https://data-dbg.krx.co.kr/svc/apis/gen/gold_bydd_trd?basDd=" + basDd;
-                HttpHeaders headers = new HttpHeaders();
-                headers.set("AUTH_KEY", krxApiKey);
-                HttpEntity<String> entity = new HttpEntity<>(headers);
-                ResponseEntity<Map> response = restTemplate.exchange(new URI(rawUri), HttpMethod.GET, entity, Map.class);
+            // Skip HTTP call on Saturdays and Sundays (KRX market closed)
+            boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
 
-                Map<String, Object> body = response.getBody();
-                if (body != null && body.containsKey("OutBlock_1")) {
-                    List<Map<String, Object>> list = (List<Map<String, Object>>) body.get("OutBlock_1");
-                    if (list != null && !list.isEmpty()) {
-                        for (Map<String, Object> item : list) {
-                            if ("04020000".equals(String.valueOf(item.get("ISU_CD"))) || "금99.99_1kg".equals(String.valueOf(item.get("ISU_NM")))) {
-                                double clpr = Double.parseDouble(String.valueOf(item.get("TDD_CLSPRC")).replace(",", ""));
-                                double vol = Double.parseDouble(String.valueOf(item.get("ACC_TRDVOL")).replace(",", ""));
-                                double val = Double.parseDouble(String.valueOf(item.get("ACC_TRDVAL")).replace(",", ""));
+            if (!isWeekend) {
+                // Rate-limit defense: 200ms sleep between weekday calls (<5 calls/sec)
+                try { Thread.sleep(200); } catch (InterruptedException ignored) {}
 
-                                DailyMetalPrice newPrice = new DailyMetalPrice();
-                                newPrice.setPriceDate(date);
-                                newPrice.setMetalType("GOLD_24K");
-                                newPrice.setPricePerGram(clpr); // raw KRX g-unit price
-                                newPrice.setPricePer375g((double) Math.round(clpr * 3.75));
-                                newPrice.setTradingVolume(vol);
-                                newPrice.setTradingValue(val);
-                                dailyMetalPriceRepository.save(newPrice);
-                                saved = true;
-                                log.info("KRX Gold: Saved raw g-price {} won/g for {}", clpr, date);
-                                break;
+                String basDd = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+                try {
+                    String rawUri = "https://data-dbg.krx.co.kr/svc/apis/gen/gold_bydd_trd?basDd=" + basDd;
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.set("AUTH_KEY", krxApiKey);
+                    HttpEntity<String> entity = new HttpEntity<>(headers);
+                    ResponseEntity<Map> response = restTemplate.exchange(new URI(rawUri), HttpMethod.GET, entity, Map.class);
+
+                    Map<String, Object> body = response.getBody();
+                    if (body != null && body.containsKey("OutBlock_1")) {
+                        List<Map<String, Object>> list = (List<Map<String, Object>>) body.get("OutBlock_1");
+                        if (list != null && !list.isEmpty()) {
+                            for (Map<String, Object> item : list) {
+                                if ("04020000".equals(String.valueOf(item.get("ISU_CD"))) || "금99.99_1kg".equals(String.valueOf(item.get("ISU_NM")))) {
+                                    double clpr = Double.parseDouble(String.valueOf(item.get("TDD_CLSPRC")).replace(",", ""));
+                                    double vol = Double.parseDouble(String.valueOf(item.get("ACC_TRDVOL")).replace(",", ""));
+                                    double val = Double.parseDouble(String.valueOf(item.get("ACC_TRDVAL")).replace(",", ""));
+
+                                    DailyMetalPrice newPrice = new DailyMetalPrice();
+                                    newPrice.setPriceDate(date);
+                                    newPrice.setMetalType("GOLD_24K");
+                                    newPrice.setPricePerGram(clpr); // raw KRX g-unit price
+                                    newPrice.setPricePer375g((double) Math.round(clpr * 3.75));
+                                    newPrice.setTradingVolume(vol);
+                                    newPrice.setTradingValue(val);
+                                    dailyMetalPriceRepository.save(newPrice);
+                                    saved = true;
+                                    log.info("KRX Gold: Saved raw g-price {} won/g for {}", clpr, date);
+                                    break;
+                                }
                             }
                         }
                     }
+                } catch (Exception e) {
+                    log.error("KRX Gold API call failed for {}: {}", date, e.getMessage());
                 }
-            } catch (Exception e) {
-                log.error("KRX Gold API call failed for {}: {}", date, e.getMessage());
             }
 
             // Holiday / No-data handling: Write Carry-Forward price into DB
