@@ -20,6 +20,22 @@ interface OrderDetailModalProps {
     statusBodyTemplate: (rowData: any) => React.ReactNode;
 }
 
+const formatDate = (dateStr: any) => {
+    if (!dateStr) return '-';
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return String(dateStr);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+    } catch (e) {
+        return String(dateStr);
+    }
+};
+
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ 
     visible, onHide, order, orderDetailData, pipelineStages = ['접수', 'CAD', '주물', '세공', '완료'], pipelineSteps = [], advanceStage, openSubcontractModal, 
     openChangeModal, openCancelModal, handlePrint, statusBodyTemplate 
@@ -268,7 +284,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         <Column 
                             field="createdAt" 
                             header="공정 투입 일시" 
-                            body={(r: any) => r.createdAt ? new Date(r.createdAt).toLocaleString('ko-KR') : '-'}
+                            body={(r: any) => formatDate(r.createdAt || rowData.createdAt)}
                         />
                     </DataTable>
                 </div>
