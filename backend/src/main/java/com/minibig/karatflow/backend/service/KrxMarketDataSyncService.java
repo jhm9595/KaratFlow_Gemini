@@ -111,12 +111,13 @@ public class KrxMarketDataSyncService {
                                 DailyMetalPrice newPrice = new DailyMetalPrice();
                                 newPrice.setPriceDate(date);
                                 newPrice.setMetalType("GOLD_24K");
+                                newPrice.setPricePerGram(clpr); // raw KRX g-unit price
                                 newPrice.setPricePer375g((double) Math.round(clpr * 3.75));
                                 newPrice.setTradingVolume(vol);
                                 newPrice.setTradingValue(val);
                                 dailyMetalPriceRepository.save(newPrice);
                                 saved = true;
-                                log.info("KRX Gold: Saved {} for {}", newPrice.getPricePer375g(), date);
+                                log.info("KRX Gold: Saved raw g-price {} won/g for {}", clpr, date);
                                 break;
                             }
                         }
@@ -134,11 +135,12 @@ public class KrxMarketDataSyncService {
                     DailyMetalPrice cfPrice = new DailyMetalPrice();
                     cfPrice.setPriceDate(date);
                     cfPrice.setMetalType("GOLD_24K");
-                    cfPrice.setPricePer375g(prev.getPricePer375g());
+                    cfPrice.setPricePerGram(prev.getEffectiveGramPrice());
+                    cfPrice.setPricePer375g(prev.getEffective375gPrice());
                     cfPrice.setTradingVolume(prev.getTradingVolume());
                     cfPrice.setTradingValue(prev.getTradingValue());
                     dailyMetalPriceRepository.save(cfPrice);
-                    log.info("KRX Gold (Holiday): Saved Carry-Forward price {} for {}", prev.getPricePer375g(), date);
+                    log.info("KRX Gold (Holiday): Saved Carry-Forward g-price {} for {}", prev.getEffectiveGramPrice(), date);
                 }
             }
         }
