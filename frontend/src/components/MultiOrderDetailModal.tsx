@@ -243,18 +243,28 @@ export const MultiOrderDetailModal: React.FC<MultiOrderDetailModalProps> = ({
                         />
                         <Column
                             header="작업"
-                            body={(r: any) => (
-                                <div className="flex gap-1">
-                                    {advanceStage && (
-                                        <Button
-                                            icon="pi pi-forward"
-                                            label="공정 진행"
-                                            className="p-button-xs p-button-outlined p-button-success white-space-nowrap"
-                                            onClick={() => advanceStage(r.id || rowData.id)}
-                                        />
-                                    )}
-                                </div>
-                            )}
+                            body={(r: any) => {
+                                const stage = r.stage || rowData.stage || '접수';
+                                const isDone = (st: string) => 
+                                    st === '완성' || st === '완료' || st === 'COMPLETED' || st === 'DONE' || 
+                                    (stagesList.length > 0 && stagesList.indexOf(st) === stagesList.length - 1);
+                                const isFinal = isDone(stage) || r.status === 'COMPLETED' || rowData.status === 'COMPLETED';
+
+                                return (
+                                    <div className="flex gap-1">
+                                        {isFinal ? (
+                                            <Tag value="공정 완료" severity="success" icon="pi pi-check-circle" className="text-xs" />
+                                        ) : advanceStage ? (
+                                            <Button
+                                                icon="pi pi-forward"
+                                                label="공정 진행"
+                                                className="p-button-xs p-button-outlined p-button-success white-space-nowrap"
+                                                onClick={() => advanceStage(r.id || rowData.id)}
+                                            />
+                                        ) : null}
+                                    </div>
+                                );
+                            }}
                         />
                     </DataTable>
                 </div>

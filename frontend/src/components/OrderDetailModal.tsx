@@ -47,6 +47,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     const currentStage = orderDetailData?.workOrders?.[0]?.stage || rowData.stage || '접수';
     const stagesList = pipelineStages && pipelineStages.length > 0 ? pipelineStages : ['접수', 'CAD', '주물', '세공', '완료'];
     const currentStageIdx = stagesList.indexOf(currentStage) >= 0 ? stagesList.indexOf(currentStage) : 0;
+    const isDone = (st: string) => 
+        st === '완성' || st === '완료' || st === 'COMPLETED' || st === 'DONE' || 
+        (stagesList.length > 0 && stagesList.indexOf(st) === stagesList.length - 1);
+    const isFinalStage = isDone(currentStage) || rowData.status === 'COMPLETED';
 
     // Determine timeline events (from orderDetailData or dynamic fallback)
     const timelineEvents = (orderDetailData?.timelineEvents && orderDetailData.timelineEvents.length > 0)
@@ -313,11 +317,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     </div>
                     
                     <Button 
-                        label="다음 공정으로 진행 ➡️" 
-                        icon="pi pi-forward" 
+                        label={isFinalStage ? "최종 공정 완료 ✅" : "다음 공정으로 진행 ➡️"} 
+                        icon={isFinalStage ? "pi pi-check-circle" : "pi pi-forward"} 
                         onClick={() => advanceStage(rowData.id)} 
-                        disabled={rowData.status === 'COMPLETED'} 
-                        className="p-button-success p-button-raised px-4 py-2 font-bold" 
+                        disabled={isFinalStage} 
+                        className={`p-button-raised px-4 py-2 font-bold ${isFinalStage ? 'p-button-secondary' : 'p-button-success'}`} 
                     />
                 </div>
 
