@@ -121,7 +121,8 @@ export const MultiOrderDetailModal: React.FC<MultiOrderDetailModalProps> = ({
             }
             visible={visible}
             onHide={onHide}
-            style={{ width: '920px', maxWidth: '95vw' }}
+            style={{ width: '920px', maxWidth: '95vw', height: '820px', maxHeight: '92vh' }}
+            contentStyle={{ height: 'calc(100% - 70px)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '1.25rem' }}
             modal
             dismissableMask
         >
@@ -208,11 +209,10 @@ export const MultiOrderDetailModal: React.FC<MultiOrderDetailModalProps> = ({
                         value={filteredWorkOrders}
                         size="small"
                         stripedRows
-                        responsiveLayout="scroll"
+                        scrollable
+                        scrollHeight="200px"
+                        emptyMessage="해당 공정 상태의 물건이 없습니다."
                         className="p-datatable-sm"
-                        paginator={filteredWorkOrders.length > 5}
-                        rows={5}
-                        rowsPerPageOptions={[5, 10, 20]}
                         selectionMode="single"
                         selection={selectedWorkOrder}
                         onSelectionChange={(e) => setSelectedWorkOrder(e.value)}
