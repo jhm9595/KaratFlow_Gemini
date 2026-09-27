@@ -9,6 +9,7 @@ import java.util.List;
 public interface DailyPetroleumPriceRepository extends JpaRepository<DailyPetroleumPrice, Long> {
     Optional<DailyPetroleumPrice> findByDate(LocalDate date);
     Optional<DailyPetroleumPrice> findFirstByOrderByDateDesc();
+    Optional<DailyPetroleumPrice> findFirstByOrderByDateAsc();
     List<DailyPetroleumPrice> findAllByOrderByDateAsc();
     List<DailyPetroleumPrice> findTop7ByOrderByDateDesc();
 }

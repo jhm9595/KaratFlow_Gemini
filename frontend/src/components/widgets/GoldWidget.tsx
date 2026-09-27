@@ -132,7 +132,7 @@ const GoldWidget: React.FC<GoldWidgetProps> = ({
             </div>
 
             {/* 3. Main Trend Chart (AreaChart) */}
-            <div className="w-full flex-1 mb-3" style={{ minHeight: '200px', overflow: 'hidden' }}>
+            <div className="w-full mb-2" style={{ height: '150px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={filteredData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
                         <defs>
@@ -179,7 +179,7 @@ const GoldWidget: React.FC<GoldWidgetProps> = ({
             </div>
 
             {/* 4. Bottom Row: YoY Bar Chart Comparison & Highlight Summary */}
-            <div className="flex align-items-center gap-2 pt-2 border-top-1 border-100" style={{ overflow: 'hidden' }}>
+            <div className="flex align-items-center gap-2 pt-2 border-top-1 border-100 flex-shrink-0" style={{ minHeight: '95px' }}>
                 {/* Left Mini Bar Chart (전년 vs 오늘) */}
                 <div style={{ width: '130px', height: '95px' }} className="flex-shrink-0">
                     <ResponsiveContainer width="100%" height="100%">
