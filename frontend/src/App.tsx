@@ -775,27 +775,37 @@ function App() {
                     </div>
 
                     {/* Right Panel: Live Feed */}
-                    <div className="surface-0 p-3 border-round shadow-1 flex flex-column" style={{ width: '360px' }}>
+                    <div className="surface-0 p-3 border-round shadow-1 flex flex-column" style={{ width: '480px', minWidth: '420px' }}>
                         <div className="flex justify-content-between align-items-center mb-3 border-bottom-1 border-200 pb-2">
                             <div className="flex align-items-center gap-2">
                                 <span className="w-0.5rem h-0.5rem bg-green-500 border-circle inline-block" style={{ animation: 'pulse 2s infinite' }}></span>
-                                <h4 className="m-0 text-700 font-bold text-sm">Live Event Feed</h4>
+                                <h4 className="m-0 text-800 font-bold text-base">Live Event Feed</h4>
                             </div>
-                            <div className="flex align-items-center gap-1 bg-surface-100 p-1 border-round border-1 border-200">
-                                <Button 
-                                    icon="pi pi-list" 
-                                    className={`p-button-xs ${feedViewMode === 'list' ? 'p-button-primary' : 'p-button-text p-button-secondary'}`} 
-                                    onClick={() => setFeedViewMode('list')} 
-                                    tooltip="리스트 뷰 (1줄 1건)" 
-                                    tooltipOptions={{ position: 'bottom' }} 
-                                />
-                                <Button 
-                                    icon="pi pi-th-large" 
-                                    className={`p-button-xs ${feedViewMode === 'card' ? 'p-button-primary' : 'p-button-text p-button-secondary'}`} 
-                                    onClick={() => setFeedViewMode('card')} 
-                                    tooltip="카드 뷰 (공정 색상 카드)" 
-                                    tooltipOptions={{ position: 'bottom' }} 
-                                />
+                            <div className="flex align-items-center surface-100 p-1 border-round-xl gap-1">
+                                <button 
+                                    type="button"
+                                    onClick={() => setFeedViewMode('list')}
+                                    className={`px-2.5 py-1 text-xs border-none border-round-lg cursor-pointer transition-all transition-duration-150 flex align-items-center gap-1.5 ${
+                                        feedViewMode === 'list' 
+                                            ? 'bg-white text-primary font-bold shadow-1' 
+                                            : 'bg-transparent text-600 hover:text-900'
+                                    }`}
+                                >
+                                    <i className="pi pi-list text-xs"></i>
+                                    <span>리스트</span>
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={() => setFeedViewMode('card')}
+                                    className={`px-2.5 py-1 text-xs border-none border-round-lg cursor-pointer transition-all transition-duration-150 flex align-items-center gap-1.5 ${
+                                        feedViewMode === 'card' 
+                                            ? 'bg-white text-primary font-bold shadow-1' 
+                                            : 'bg-transparent text-600 hover:text-900'
+                                    }`}
+                                >
+                                    <i className="pi pi-th-large text-xs"></i>
+                                    <span>카드 (3열)</span>
+                                </button>
                             </div>
                         </div>
 
@@ -803,25 +813,29 @@ function App() {
                             {_liveEvents.length === 0 ? (
                                 <div className="text-center text-gray-400 py-5 text-sm">최근 발생한 이벤트가 없습니다.</div>
                             ) : feedViewMode === 'list' ? (
-                                <div className="flex flex-column gap-2">
+                                <div className="flex flex-column gap-3">
                                     {_liveEvents.map(ev => {
                                         const stageInfo = getEventStageInfo(ev.message);
                                         return (
                                             <div 
                                                 key={ev.id} 
-                                                className="surface-50 p-2.5 border-round border-left-3 shadow-1 fadein animation-duration-300" 
+                                                className="surface-50 p-3 border-round border-left-4 shadow-1 fadein animation-duration-300 transition-all hover:surface-100" 
                                                 style={{ borderLeftColor: stageInfo.colorHex }}
                                             >
-                                                <div className="flex justify-content-between align-items-center mb-1">
+                                                <div className="flex justify-content-between align-items-center mb-2">
                                                     <span 
-                                                        className="text-white px-2 py-0 border-round font-bold" 
-                                                        style={{ background: stageInfo.colorGradient || stageInfo.colorHex, fontSize: '10px' }}
+                                                        className="text-white px-2.5 py-1 border-round-md font-bold text-xs shadow-1" 
+                                                        style={{ background: stageInfo.colorGradient || stageInfo.colorHex }}
                                                     >
                                                         {stageInfo.stageName}
                                                     </span>
-                                                    <span className="text-xs text-500 font-mono"><i className="pi pi-clock mr-1"></i>{ev.time}</span>
+                                                    <span className="text-xs text-500 font-mono flex align-items-center gap-1">
+                                                        <i className="pi pi-clock text-xs text-400"></i> {ev.time}
+                                                    </span>
                                                 </div>
-                                                <div className="text-xs text-900 line-height-2">{ev.message}</div>
+                                                <div className="text-sm text-900 line-height-3 font-medium px-1">
+                                                    {ev.message}
+                                                </div>
                                             </div>
                                         );
                                     })}
@@ -831,25 +845,25 @@ function App() {
                                     {_liveEvents.map(ev => {
                                         const stageInfo = getEventStageInfo(ev.message);
                                         return (
-                                            <div key={ev.id} className="col-6">
+                                            <div key={ev.id} className="col-4">
                                                 <div 
-                                                    className="p-2 border-round shadow-1 fadein animation-duration-300 flex flex-column justify-content-between h-full border-top-3"
+                                                    className="p-2 border-round shadow-1 fadein animation-duration-300 flex flex-column justify-content-between h-full border-top-3 cursor-pointer hover:shadow-2 transition-all"
                                                     style={{ 
                                                         backgroundColor: stageInfo.bgColor, 
                                                         borderTopColor: stageInfo.colorHex,
-                                                        minHeight: '82px' 
+                                                        minHeight: '85px' 
                                                     }}
                                                 >
-                                                    <div className="flex justify-content-between align-items-center mb-1">
+                                                    <div className="flex justify-content-between align-items-center mb-1.5">
                                                         <span 
-                                                            className="text-white px-2 py-0 border-round font-bold" 
-                                                            style={{ background: stageInfo.colorGradient || stageInfo.colorHex, fontSize: '10px' }}
+                                                            className="text-white px-1.5 py-0.5 border-round font-bold" 
+                                                            style={{ background: stageInfo.colorGradient || stageInfo.colorHex, fontSize: '9px' }}
                                                         >
                                                             {stageInfo.stageName}
                                                         </span>
-                                                        <span className="text-500 font-mono" style={{ fontSize: '10px' }}>{ev.time}</span>
+                                                        <span className="text-500 font-mono" style={{ fontSize: '9px' }}>{ev.time}</span>
                                                     </div>
-                                                    <div className="text-xs text-900 font-medium line-height-2 mt-1">
+                                                    <div className="text-xs text-900 font-medium line-height-2 mt-1 overflow-hidden" style={{ wordBreak: 'break-word', fontSize: '11px' }}>
                                                         {ev.message}
                                                     </div>
                                                 </div>
