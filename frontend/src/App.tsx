@@ -9,6 +9,7 @@ import { Column } from 'primereact/column';
 import { Toast } from 'primereact/toast';
 import { ProcessManager } from './ProcessManager';
 import { GoldToolsModal } from './GoldToolsModal';
+import GoldWidget from './components/widgets/GoldWidget';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { AutoComplete } from 'primereact/autocomplete';
@@ -643,69 +644,14 @@ function App() {
                             </div>
                         </div>
 
-                        {/* 금 시세 (한돈 기준) */}
-                        <div className="surface-0 p-3 border-round shadow-1 flex flex-column">
-                            <div className="flex justify-content-between align-items-center mb-3">
-                                <h4 className="m-0 text-600 font-medium">금 시세 (한돈 기준)</h4>
-                                <Button 
-                                    icon="pi pi-calculator" 
-                                    className="p-button-rounded p-button-outlined p-button-warning p-button-sm" 
-                                    tooltip="금 시세 심층 도구 및 계산기" 
-                                    tooltipOptions={{ position: 'bottom' }} 
-                                    onClick={() => setGoldToolsVisible(true)} 
-                                />
-                            </div>
-                            <div className="flex gap-2 mb-3">
-                                <div className="flex-1 surface-50 p-2 border-round text-center border-1 border-300">
-                                    <div className="text-xs text-600 mb-1">24K (순금)</div>
-                                    <div className="font-bold text-yellow-600 text-lg">₩{todayGold.price24k.toLocaleString()}</div>
-                                    <div className="mt-1">{renderDelta(delta24k)}</div>
-                                </div>
-                                <div className="flex-1 surface-50 p-2 border-round text-center border-1 border-300">
-                                    <div className="text-xs text-600 mb-1">18K</div>
-                                    <div className="font-bold text-orange-500 text-lg">₩{todayGold.price18k.toLocaleString()}</div>
-                                    <div className="mt-1">{renderDelta(delta18k)}</div>
-                                </div>
-                                <div className="flex-1 surface-50 p-2 border-round text-center border-1 border-300">
-                                    <div className="text-xs text-600 mb-1">14K</div>
-                                    <div className="font-bold text-purple-500 text-lg">₩{todayGold.price14k.toLocaleString()}</div>
-                                    <div className="mt-1">{renderDelta(delta14k)}</div>
-                                </div>
-                            </div>
-
-                            <div className="w-full" style={{ height: '180px' }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={goldPriceData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
-                                        <defs>
-                                            <linearGradient id="color24k" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#eab308" stopOpacity={0.8}/>
-                                                <stop offset="95%" stopColor="#eab308" stopOpacity={0}/>
-                                            </linearGradient>
-                                            <linearGradient id="color18k" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/>
-                                                <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
-                                            </linearGradient>
-                                            <linearGradient id="color14k" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
-                                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                                        <XAxis dataKey="date" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-                                        <YAxis domain={['auto', 'auto']} tickFormatter={(val) => (val/10000) + '만'} tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-                                        <RechartsTooltip 
-                                            itemSorter={(item: any) => item.dataKey === 'price24k' ? -3 : item.dataKey === 'price18k' ? -2 : -1}
-                                            formatter={(value) => ['₩' + (value || 0).toLocaleString(), '']} 
-                                            contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', color: '#333' }} 
-                                        />
-                                        <Legend wrapperStyle={{ fontSize: '12px' }} />
-                                        <Area type="monotone" dataKey="price24k" name="24K (순금)" stroke="#eab308" fillOpacity={1} fill="url(#color24k)" />
-                                        <Area type="monotone" dataKey="price18k" name="18K" stroke="#f97316" fillOpacity={1} fill="url(#color18k)" />
-                                        <Area type="monotone" dataKey="price14k" name="14K" stroke="#8b5cf6" fillOpacity={1} fill="url(#color14k)" />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
+                        {/* 금 시세 (국내 시세 3.75g 기준 위젯) */}
+                        <GoldWidget 
+                            todayGold={todayGold} 
+                            yesterdayGold={yesterdayGold} 
+                            delta24k={delta24k} 
+                            goldPriceData={goldPriceData} 
+                            onOpenCalculator={() => setGoldToolsVisible(true)} 
+                        />
 
                         {/* 2. 석유 시세 */}
                         <PetroleumChart />
