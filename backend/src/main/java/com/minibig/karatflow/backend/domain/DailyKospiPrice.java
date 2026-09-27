@@ -4,6 +4,7 @@ import java.time.LocalDate;
 @Entity
 public class DailyKospiPrice {
 @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
+@Column(nullable = false, unique = true)
 private LocalDate date;
 private Double kospiIndex;
 private Double kospi200Index;

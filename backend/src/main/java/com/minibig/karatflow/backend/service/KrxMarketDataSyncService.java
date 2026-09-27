@@ -34,6 +34,7 @@ public class KrxMarketDataSyncService {
     private final DailyPetroleumPriceRepository dailyPetroleumPriceRepository;
     private final DailyKospiPriceRepository dailyKospiPriceRepository;
     private final RestTemplate restTemplate = new RestTemplate();
+    private final java.util.concurrent.atomic.AtomicBoolean isSyncing = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     @Value("${krx.api.key:}")
     private String krxApiKey;
@@ -43,8 +44,12 @@ public class KrxMarketDataSyncService {
      * If DB already has data up to today, returns immediately with 0 API calls.
      */
     public void triggerSyncIfNecessary() {
-        LocalDate today = LocalDate.now();
+        if (!isSyncing.compareAndSet(false, true)) {
+            log.info("KRX Sync: Catch-up sync already running in another thread. Skipping duplicate trigger.");
+            return;
+        }
 
+        LocalDate today = LocalDate.now();
         long goldCount = dailyMetalPriceRepository.count();
         boolean hasGoldToday = dailyMetalPriceRepository.findByPriceDateAndMetalType(today, "GOLD_24K").isPresent();
         boolean hasOilToday = dailyPetroleumPriceRepository.findByDate(today).isPresent();
@@ -52,6 +57,7 @@ public class KrxMarketDataSyncService {
 
         if (hasGoldToday && hasOilToday && hasKospiToday && goldCount >= 700) {
             log.info("KRX Sync: All market data up to date for {} (Count: {}). Skipping API calls.", today, goldCount);
+            isSyncing.set(false);
             return;
         }
 
@@ -67,12 +73,17 @@ public class KrxMarketDataSyncService {
     public void syncMarketDataAsync(LocalDate today) {
         if (krxApiKey == null || krxApiKey.trim().isEmpty()) {
             log.warn("KRX API Key missing. Skipping async sync.");
+            isSyncing.set(false);
             return;
         }
 
-        syncGold(today);
-        syncOil(today);
-        syncKospi(today);
+        try {
+            syncGold(today);
+            syncOil(today);
+            syncKospi(today);
+        } finally {
+            isSyncing.set(false);
+        }
     }
 
     private void syncGold(LocalDate today) {
@@ -154,7 +165,7 @@ public class KrxMarketDataSyncService {
 
     private void syncOil(LocalDate today) {
         Optional<DailyPetroleumPrice> latestOpt = dailyPetroleumPriceRepository.findFirstByOrderByDateDesc();
-        LocalDate startDate = latestOpt.isPresent() ? latestOpt.get().getDate().plusDays(1) : today.minusDays(7);
+        LocalDate startDate = latestOpt.isPresent() ? latestOpt.get().getDate().plusDays(1) : today.minusDays(1095);
 
         if (startDate.isAfter(today)) return;
 
@@ -163,48 +174,53 @@ public class KrxMarketDataSyncService {
                 continue;
             }
 
-            try { Thread.sleep(250); } catch (InterruptedException ignored) {}
-
-            String basDd = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
             boolean saved = false;
+            boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
 
-            try {
-                String rawUri = "https://data-dbg.krx.co.kr/svc/apis/gen/oil_bydd_trd?basDd=" + basDd;
-                HttpHeaders headers = new HttpHeaders();
-                headers.set("AUTH_KEY", krxApiKey);
-                HttpEntity<String> entity = new HttpEntity<>(headers);
-                ResponseEntity<Map> response = restTemplate.exchange(new URI(rawUri), HttpMethod.GET, entity, Map.class);
+            if (!isWeekend) {
+                try { Thread.sleep(200); } catch (InterruptedException ignored) {}
 
-                Map<String, Object> body = response.getBody();
-                if (body != null && body.containsKey("OutBlock_1")) {
-                    List<Map<String, Object>> list = (List<Map<String, Object>>) body.get("OutBlock_1");
-                    if (list != null && !list.isEmpty()) {
-                        Double gasoline = 0.0;
-                        Double diesel = 0.0;
-                        Double kerosene = 0.0;
+                String basDd = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+                try {
+                    String rawUri = "https://data-dbg.krx.co.kr/svc/apis/gen/oil_bydd_trd?basDd=" + basDd;
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.set("AUTH_KEY", krxApiKey);
+                    HttpEntity<String> entity = new HttpEntity<>(headers);
+                    ResponseEntity<Map> response = restTemplate.exchange(new URI(rawUri), HttpMethod.GET, entity, Map.class);
 
-                        for (Map<String, Object> item : list) {
-                            String oilNm = String.valueOf(item.get("OIL_NM"));
-                            double prc = Double.parseDouble(String.valueOf(item.get("WT_AVG_PRC")).replace(",", ""));
-                            if ("휘발유".equals(oilNm)) gasoline = prc;
-                            if ("경유".equals(oilNm)) diesel = prc;
-                            if ("등유".equals(oilNm)) kerosene = prc;
-                        }
+                    Map<String, Object> body = response.getBody();
+                    if (body != null && body.containsKey("OutBlock_1")) {
+                        List<Map<String, Object>> list = (List<Map<String, Object>>) body.get("OutBlock_1");
+                        if (list != null && !list.isEmpty()) {
+                            Double gasoline = 0.0;
+                            Double diesel = 0.0;
+                            Double kerosene = 0.0;
 
-                        if (gasoline > 0 || diesel > 0 || kerosene > 0) {
-                            DailyPetroleumPrice newPrice = new DailyPetroleumPrice();
-                            newPrice.setDate(date);
-                            newPrice.setGasolinePrice(gasoline);
-                            newPrice.setDieselPrice(diesel);
-                            newPrice.setKerosenePrice(kerosene);
-                            dailyPetroleumPriceRepository.save(newPrice);
-                            saved = true;
-                            log.info("KRX Oil: Saved Gas:{} Diesel:{} for {}", gasoline, diesel, date);
+                            for (Map<String, Object> item : list) {
+                                String oilNm = String.valueOf(item.get("OIL_NM"));
+                                String prcStr = String.valueOf(item.get("WT_AVG_PRC")).replace(",", "").trim();
+                                if (prcStr.isEmpty()) continue;
+                                double prc = Double.parseDouble(prcStr);
+                                if ("휘발유".equals(oilNm)) gasoline = prc;
+                                if ("경유".equals(oilNm)) diesel = prc;
+                                if ("등유".equals(oilNm)) kerosene = prc;
+                            }
+
+                            if (gasoline > 0 || diesel > 0 || kerosene > 0) {
+                                DailyPetroleumPrice newPrice = new DailyPetroleumPrice();
+                                newPrice.setDate(date);
+                                newPrice.setGasolinePrice(gasoline);
+                                newPrice.setDieselPrice(diesel);
+                                newPrice.setKerosenePrice(kerosene);
+                                dailyPetroleumPriceRepository.save(newPrice);
+                                saved = true;
+                                log.info("KRX Oil: Saved Gas:{} Diesel:{} for {}", gasoline, diesel, date);
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    log.error("KRX Oil API call failed for {}: {}", date, e.getMessage());
                 }
-            } catch (Exception e) {
-                log.error("KRX Oil API call failed for {}: {}", date, e.getMessage());
             }
 
             if (!saved) {
@@ -225,7 +241,7 @@ public class KrxMarketDataSyncService {
 
     private void syncKospi(LocalDate today) {
         Optional<DailyKospiPrice> latestOpt = dailyKospiPriceRepository.findFirstByOrderByDateDesc();
-        LocalDate startDate = latestOpt.isPresent() ? latestOpt.get().getDate().plusDays(1) : today.minusDays(7);
+        LocalDate startDate = latestOpt.isPresent() ? latestOpt.get().getDate().plusDays(1) : today.minusDays(1095);
 
         if (startDate.isAfter(today)) return;
 
@@ -234,53 +250,61 @@ public class KrxMarketDataSyncService {
                 continue;
             }
 
-            try { Thread.sleep(250); } catch (InterruptedException ignored) {}
-
-            String basDd = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
             boolean saved = false;
+            boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
 
-            try {
-                String rawUri = "https://data-dbg.krx.co.kr/svc/apis/idx/kospi_dd_trd?basDd=" + basDd;
-                HttpHeaders headers = new HttpHeaders();
-                headers.set("AUTH_KEY", krxApiKey);
-                HttpEntity<String> entity = new HttpEntity<>(headers);
-                ResponseEntity<Map> response = restTemplate.exchange(new URI(rawUri), HttpMethod.GET, entity, Map.class);
+            if (!isWeekend) {
+                try { Thread.sleep(200); } catch (InterruptedException ignored) {}
 
-                Map<String, Object> body = response.getBody();
-                if (body != null && body.containsKey("OutBlock_1")) {
-                    List<Map<String, Object>> list = (List<Map<String, Object>>) body.get("OutBlock_1");
-                    if (list != null && !list.isEmpty()) {
-                        Double kospi = 0.0;
-                        Double kospi200 = 0.0;
-                        Long val = 0L;
+                String basDd = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+                try {
+                    String rawUri = "https://data-dbg.krx.co.kr/svc/apis/idx/kospi_dd_trd?basDd=" + basDd;
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.set("AUTH_KEY", krxApiKey);
+                    HttpEntity<String> entity = new HttpEntity<>(headers);
+                    ResponseEntity<Map> response = restTemplate.exchange(new URI(rawUri), HttpMethod.GET, entity, Map.class);
 
-                        for (Map<String, Object> item : list) {
-                            String idxNm = String.valueOf(item.get("IDX_NM"));
-                            double clsprc = Double.parseDouble(String.valueOf(item.get("CLSPRC_IDX")).replace(",", ""));
-                            long trdVal = Long.parseLong(String.valueOf(item.get("ACC_TRDVAL")).replace(",", ""));
-                            if ("코스피".equals(idxNm)) {
-                                kospi = clsprc;
-                                val = trdVal;
+                    Map<String, Object> body = response.getBody();
+                    if (body != null && body.containsKey("OutBlock_1")) {
+                        List<Map<String, Object>> list = (List<Map<String, Object>>) body.get("OutBlock_1");
+                        if (list != null && !list.isEmpty()) {
+                            Double kospi = 0.0;
+                            Double kospi200 = 0.0;
+                            Long val = 0L;
+
+                            for (Map<String, Object> item : list) {
+                                String idxNm = String.valueOf(item.get("IDX_NM"));
+                                String clsprcStr = String.valueOf(item.get("CLSPRC_IDX")).replace(",", "").trim();
+                                if (clsprcStr.isEmpty()) continue;
+                                double clsprc = Double.parseDouble(clsprcStr);
+
+                                String trdValStr = String.valueOf(item.get("ACC_TRDVAL")).replace(",", "").trim();
+                                long trdVal = trdValStr.isEmpty() ? 0L : Long.parseLong(trdValStr);
+
+                                if ("코스피".equals(idxNm)) {
+                                    kospi = clsprc;
+                                    val = trdVal;
+                                }
+                                if ("코스피 200".equals(idxNm)) {
+                                    kospi200 = clsprc;
+                                }
                             }
-                            if ("코스피 200".equals(idxNm)) {
-                                kospi200 = clsprc;
-                            }
-                        }
 
-                        if (kospi > 0) {
-                            DailyKospiPrice newPrice = new DailyKospiPrice();
-                            newPrice.setDate(date);
-                            newPrice.setKospiIndex(kospi);
-                            newPrice.setKospi200Index(kospi200);
-                            newPrice.setTradingValue(val);
-                            dailyKospiPriceRepository.save(newPrice);
-                            saved = true;
-                            log.info("KRX KOSPI: Saved KOSPI:{} for {}", kospi, date);
+                            if (kospi > 0) {
+                                DailyKospiPrice newPrice = new DailyKospiPrice();
+                                newPrice.setDate(date);
+                                newPrice.setKospiIndex(kospi);
+                                newPrice.setKospi200Index(kospi200);
+                                newPrice.setTradingValue(val);
+                                dailyKospiPriceRepository.save(newPrice);
+                                saved = true;
+                                log.info("KRX KOSPI: Saved KOSPI:{} KOSPI200:{} for {}", kospi, kospi200, date);
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    log.error("KRX Kospi API call failed for {}: {}", date, e.getMessage());
                 }
-            } catch (Exception e) {
-                log.error("KRX Kospi API call failed for {}: {}", date, e.getMessage());
             }
 
             if (!saved) {
