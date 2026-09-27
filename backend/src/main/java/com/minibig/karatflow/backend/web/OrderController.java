@@ -1,16 +1,19 @@
 package com.minibig.karatflow.backend.web;
+
+import com.minibig.karatflow.backend.domain.EventNotification;
+import com.minibig.karatflow.backend.dto.InvoiceResponseDTO;
 import com.minibig.karatflow.backend.dto.OrderResponseDTO;
+import com.minibig.karatflow.backend.repository.EventNotificationRepository;
+import com.minibig.karatflow.backend.service.InvoiceCalculationService;
 import com.minibig.karatflow.backend.service.OrderService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
-
-import com.minibig.karatflow.backend.dto.InvoiceResponseDTO;
-import com.minibig.karatflow.backend.service.InvoiceCalculationService;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -20,6 +23,7 @@ public class OrderController {
     private final OrderService orderService;
     private final SimpMessagingTemplate messagingTemplate;
     private final InvoiceCalculationService invoiceCalculationService;
+    private final EventNotificationRepository eventNotificationRepository;
 
     @GetMapping
     public ResponseEntity<List<OrderResponseDTO>> getActiveOrders() {
@@ -35,11 +39,11 @@ public class OrderController {
     public ResponseEntity<OrderResponseDTO> createOrder(@RequestBody com.minibig.karatflow.backend.dto.OrderCreateRequestDTO dto) {
         OrderResponseDTO created = orderService.createOrder(dto);
         
-        // Broadcast new order alert
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("orderId", created.getId());
-        payload.put("message", "신규 주문이 접수되었습니다: " + created.getDesign() + " (" + created.getOrderType() + ")");
-        messagingTemplate.convertAndSend("/topic/process-alerts", (Object) payload);
+        String msg = "신규 주문이 접수되었습니다: " + created.getDesign() + " (" + created.getOrderType() + ")";
+        EventNotification notif = new EventNotification(created.getId(), created.getOrderNo(), msg, "접수");
+        EventNotification savedNotif = eventNotificationRepository.save(notif);
+
+        messagingTemplate.convertAndSend("/topic/process-alerts", savedNotif);
         
         return ResponseEntity.ok(created);
     }
@@ -58,11 +62,11 @@ public class OrderController {
     public ResponseEntity<Map<String, Object>> putOrderOnHold(@PathVariable Long orderId) {
         orderService.setOrderHoldStatus(orderId, true);
         
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("orderId", orderId);
-        payload.put("message", "주문 #" + orderId + "건이 고객 요청으로 보류(HOLD) 상태가 되었습니다.");
+        String msg = "주문 #" + orderId + "건이 고객 요청으로 보류(HOLD) 상태가 되었습니다.";
+        EventNotification notif = new EventNotification(orderId, "KF-" + orderId, msg, "보류");
+        EventNotification savedNotif = eventNotificationRepository.save(notif);
         
-        messagingTemplate.convertAndSend("/topic/process-alerts", (Object) payload);
+        messagingTemplate.convertAndSend("/topic/process-alerts", savedNotif);
         
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
@@ -72,12 +76,13 @@ public class OrderController {
     @PostMapping("/{orderId}/advance-stage")
     public ResponseEntity<Map<String, Object>> advanceStage(@PathVariable Long orderId) {
         Map<String, Object> res = orderService.advanceOrderStage(orderId);
+        String newStage = String.valueOf(res.getOrDefault("newStage", "진행"));
 
-        // Send alert
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("orderId", orderId);
-        payload.put("message", "주문 #" + orderId + " 공정이 [" + res.get("newStage") + "] 단계로 이동했습니다.");
-        messagingTemplate.convertAndSend("/topic/process-alerts", (Object) payload);
+        String msg = "주문 #" + orderId + " 공정이 [" + newStage + "] 단계로 이동했습니다.";
+        EventNotification notif = new EventNotification(orderId, "KF-" + orderId, msg, newStage);
+        EventNotification savedNotif = eventNotificationRepository.save(notif);
+
+        messagingTemplate.convertAndSend("/topic/process-alerts", savedNotif);
 
         return ResponseEntity.ok(res);
     }
@@ -92,11 +97,11 @@ public class OrderController {
     public ResponseEntity<Map<String, Object>> cancelOrder(@PathVariable Long orderId) {
         Map<String, Object> res = orderService.cancelOrder(orderId);
 
-        // Send alert
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("orderId", orderId);
-        payload.put("message", "주문 #" + orderId + "건이 취소되었습니다. 취소 수수료: " + res.get("cancellationFee"));
-        messagingTemplate.convertAndSend("/topic/process-alerts", (Object) payload);
+        String msg = "주문 #" + orderId + "건이 취소되었습니다. 취소 수수료: " + res.get("cancellationFee");
+        EventNotification notif = new EventNotification(orderId, "KF-" + orderId, msg, "취소");
+        EventNotification savedNotif = eventNotificationRepository.save(notif);
+
+        messagingTemplate.convertAndSend("/topic/process-alerts", savedNotif);
 
         return ResponseEntity.ok(res);
     }
