@@ -785,26 +785,28 @@ function App() {
                                 <button 
                                     type="button"
                                     onClick={() => setFeedViewMode('list')}
-                                    className={`px-2.5 py-1 text-xs border-none border-round-lg cursor-pointer transition-all transition-duration-150 flex align-items-center gap-1.5 ${
+                                    title="리스트 뷰"
+                                    className={`border-none border-round-lg cursor-pointer transition-all transition-duration-150 flex align-items-center justify-content-center ${
                                         feedViewMode === 'list' 
                                             ? 'bg-white text-primary font-bold shadow-1' 
                                             : 'bg-transparent text-600 hover:text-900'
                                     }`}
+                                    style={{ width: '30px', height: '30px' }}
                                 >
-                                    <i className="pi pi-list text-xs"></i>
-                                    <span>리스트</span>
+                                    <i className="pi pi-list text-sm font-bold"></i>
                                 </button>
                                 <button 
                                     type="button"
                                     onClick={() => setFeedViewMode('card')}
-                                    className={`px-2.5 py-1 text-xs border-none border-round-lg cursor-pointer transition-all transition-duration-150 flex align-items-center gap-1.5 ${
+                                    title="카드 뷰 (3열)"
+                                    className={`border-none border-round-lg cursor-pointer transition-all transition-duration-150 flex align-items-center justify-content-center ${
                                         feedViewMode === 'card' 
                                             ? 'bg-white text-primary font-bold shadow-1' 
                                             : 'bg-transparent text-600 hover:text-900'
                                     }`}
+                                    style={{ width: '30px', height: '30px' }}
                                 >
-                                    <i className="pi pi-th-large text-xs"></i>
-                                    <span>카드 (3열)</span>
+                                    <i className="pi pi-th-large text-sm font-bold"></i>
                                 </button>
                             </div>
                         </div>
@@ -824,8 +826,8 @@ function App() {
                                             >
                                                 <div className="flex justify-content-between align-items-center mb-2">
                                                     <span 
-                                                        className="text-white px-2.5 py-1 border-round-md font-bold text-xs shadow-1" 
-                                                        style={{ background: stageInfo.colorGradient || stageInfo.colorHex }}
+                                                        className="text-white px-3 py-1 border-round-md font-extrabold text-xs shadow-1" 
+                                                        style={{ background: stageInfo.colorGradient || stageInfo.colorHex, letterSpacing: '0.3px' }}
                                                     >
                                                         {stageInfo.stageName}
                                                     </span>
@@ -851,17 +853,17 @@ function App() {
                                                     style={{ 
                                                         backgroundColor: stageInfo.bgColor, 
                                                         borderTopColor: stageInfo.colorHex,
-                                                        minHeight: '85px' 
+                                                        minHeight: '90px' 
                                                     }}
                                                 >
                                                     <div className="flex justify-content-between align-items-center mb-1.5">
                                                         <span 
-                                                            className="text-white px-1.5 py-0.5 border-round font-bold" 
-                                                            style={{ background: stageInfo.colorGradient || stageInfo.colorHex, fontSize: '9px' }}
+                                                            className="text-white px-2 py-0.5 border-round font-extrabold" 
+                                                            style={{ background: stageInfo.colorGradient || stageInfo.colorHex, fontSize: '11px' }}
                                                         >
                                                             {stageInfo.stageName}
                                                         </span>
-                                                        <span className="text-500 font-mono" style={{ fontSize: '9px' }}>{ev.time}</span>
+                                                        <span className="text-500 font-mono font-semibold" style={{ fontSize: '10px' }}>{ev.time}</span>
                                                     </div>
                                                     <div className="text-xs text-900 font-medium line-height-2 mt-1 overflow-hidden" style={{ wordBreak: 'break-word', fontSize: '11px' }}>
                                                         {ev.message}
