@@ -93,6 +93,8 @@ const customizedContent = (item: any) => {
 function App() {
 
 
+    const [feedViewMode, setFeedViewMode] = useState<'list' | 'card'>('list');
+
     const getEventBorderColor = (msg: string) => {
         if (!msg) return '#3B82F6';
         if (msg.includes('접수') || msg.includes('신규')) return '#64748B';
@@ -102,6 +104,41 @@ function App() {
         if (msg.includes('완성')) return '#22C55E';
         if (msg.includes('보류') || msg.includes('HOLD')) return '#EAB308';
         return '#3B82F6';
+    };
+
+    const getEventStageInfo = (msg: string) => {
+        if (!msg) return { stageName: '알림', colorHex: '#3B82F6', colorGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', bgColor: '#eff6ff' };
+        
+        let matchedStep = (pipelineSteps && pipelineSteps.length > 0) 
+            ? pipelineSteps.find((step: any) => step.stageName && msg.includes(step.stageName)) 
+            : null;
+
+        if (!matchedStep) {
+            if (msg.includes('접수') || msg.includes('신규')) {
+                matchedStep = { stageName: '접수', colorHex: '#38BDF8', colorGradient: 'linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%)', bgColor: '#f0f9ff' };
+            } else if (msg.includes('CAD')) {
+                matchedStep = { stageName: 'CAD', colorHex: '#C084FC', colorGradient: 'linear-gradient(135deg, #e879f9 0%, #c084fc 100%)', bgColor: '#fdf4ff' };
+            } else if (msg.includes('주물')) {
+                matchedStep = { stageName: '주물', colorHex: '#F59E0B', colorGradient: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)', bgColor: '#fffbeb' };
+            } else if (msg.includes('세공')) {
+                matchedStep = { stageName: '세공', colorHex: '#EF4444', colorGradient: 'linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)', bgColor: '#fef2f2' };
+            } else if (msg.includes('완료') || msg.includes('완성')) {
+                matchedStep = { stageName: '완료', colorHex: '#22C55E', colorGradient: 'linear-gradient(135deg, #86efac 0%, #22c55e 100%)', bgColor: '#f0fdf4' };
+            } else if (msg.includes('보류') || msg.includes('HOLD')) {
+                matchedStep = { stageName: '보류', colorHex: '#EAB308', colorGradient: 'linear-gradient(135deg, #fde047 0%, #eab308 100%)', bgColor: '#fefce8' };
+            }
+        }
+
+        if (matchedStep) {
+            return {
+                stageName: matchedStep.stageName || '공정',
+                colorHex: matchedStep.colorHex || '#3B82F6',
+                colorGradient: matchedStep.colorGradient || 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                bgColor: matchedStep.bgColor || '#f8fafc'
+            };
+        }
+
+        return { stageName: '알림', colorHex: '#3B82F6', colorGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', bgColor: '#eff6ff' };
     };
 
     const { t } = useTranslation();
@@ -738,26 +775,88 @@ function App() {
                     </div>
 
                     {/* Right Panel: Live Feed */}
-                    <div className="surface-0 p-3 border-round shadow-1 flex flex-column" style={{ width: '350px' }}>
-                        <div className="flex justify-content-between align-items-center mb-3">
-                            <h4 className="m-0 text-600 font-medium">Live Event Feed</h4>
-                            <span className="flex align-items-center gap-2">
-                                <span className="w-1rem h-1rem bg-green-500 border-circle inline-block" style={{ animation: 'pulse 2s infinite' }}></span>
-                                <span className="text-sm text-green-500 font-bold">LIVE</span>
-                            </span>
+                    <div className="surface-0 p-3 border-round shadow-1 flex flex-column" style={{ width: '360px' }}>
+                        <div className="flex justify-content-between align-items-center mb-3 border-bottom-1 border-200 pb-2">
+                            <div className="flex align-items-center gap-2">
+                                <span className="w-0.5rem h-0.5rem bg-green-500 border-circle inline-block" style={{ animation: 'pulse 2s infinite' }}></span>
+                                <h4 className="m-0 text-700 font-bold text-sm">Live Event Feed</h4>
+                            </div>
+                            <div className="flex align-items-center gap-1 bg-surface-100 p-1 border-round border-1 border-200">
+                                <Button 
+                                    icon="pi pi-list" 
+                                    className={`p-button-xs ${feedViewMode === 'list' ? 'p-button-primary' : 'p-button-text p-button-secondary'}`} 
+                                    onClick={() => setFeedViewMode('list')} 
+                                    tooltip="리스트 뷰 (1줄 1건)" 
+                                    tooltipOptions={{ position: 'bottom' }} 
+                                />
+                                <Button 
+                                    icon="pi pi-th-large" 
+                                    className={`p-button-xs ${feedViewMode === 'card' ? 'p-button-primary' : 'p-button-text p-button-secondary'}`} 
+                                    onClick={() => setFeedViewMode('card')} 
+                                    tooltip="카드 뷰 (공정 색상 카드)" 
+                                    tooltipOptions={{ position: 'bottom' }} 
+                                />
+                            </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto pr-2" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+
+                        <div className="flex-1 overflow-y-auto pr-1">
                             {_liveEvents.length === 0 ? (
-                                <div className="text-center text-gray-500 py-4 mt-5">최근 발생한 이벤트가 없습니다.</div>
+                                <div className="text-center text-gray-400 py-5 text-sm">최근 발생한 이벤트가 없습니다.</div>
+                            ) : feedViewMode === 'list' ? (
+                                <div className="flex flex-column gap-2">
+                                    {_liveEvents.map(ev => {
+                                        const stageInfo = getEventStageInfo(ev.message);
+                                        return (
+                                            <div 
+                                                key={ev.id} 
+                                                className="surface-50 p-2.5 border-round border-left-3 shadow-1 fadein animation-duration-300" 
+                                                style={{ borderLeftColor: stageInfo.colorHex }}
+                                            >
+                                                <div className="flex justify-content-between align-items-center mb-1">
+                                                    <span 
+                                                        className="text-white px-2 py-0 border-round font-bold" 
+                                                        style={{ background: stageInfo.colorGradient || stageInfo.colorHex, fontSize: '10px' }}
+                                                    >
+                                                        {stageInfo.stageName}
+                                                    </span>
+                                                    <span className="text-xs text-500 font-mono"><i className="pi pi-clock mr-1"></i>{ev.time}</span>
+                                                </div>
+                                                <div className="text-xs text-900 line-height-2">{ev.message}</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             ) : (
-                                _liveEvents.map(ev => (
-                                    <div key={ev.id} className="surface-50 p-3 border-round border-left-3 shadow-1 fadein animation-duration-300" style={{ borderLeftColor: getEventBorderColor(ev.message) }}>
-                                        <div className="flex justify-content-between align-items-center mb-1">
-                                            <span className="text-xs text-600"><i className="pi pi-clock mr-1"></i> {ev.time}</span>
-                                        </div>
-                                        <div className="text-sm text-900 line-height-3">{ev.message}</div>
-                                    </div>
-                                ))
+                                <div className="grid grid-nogutter gap-2 align-content-start">
+                                    {_liveEvents.map(ev => {
+                                        const stageInfo = getEventStageInfo(ev.message);
+                                        return (
+                                            <div key={ev.id} className="col-6">
+                                                <div 
+                                                    className="p-2 border-round shadow-1 fadein animation-duration-300 flex flex-column justify-content-between h-full border-top-3"
+                                                    style={{ 
+                                                        backgroundColor: stageInfo.bgColor, 
+                                                        borderTopColor: stageInfo.colorHex,
+                                                        minHeight: '82px' 
+                                                    }}
+                                                >
+                                                    <div className="flex justify-content-between align-items-center mb-1">
+                                                        <span 
+                                                            className="text-white px-2 py-0 border-round font-bold" 
+                                                            style={{ background: stageInfo.colorGradient || stageInfo.colorHex, fontSize: '10px' }}
+                                                        >
+                                                            {stageInfo.stageName}
+                                                        </span>
+                                                        <span className="text-500 font-mono" style={{ fontSize: '10px' }}>{ev.time}</span>
+                                                    </div>
+                                                    <div className="text-xs text-900 font-medium line-height-2 mt-1">
+                                                        {ev.message}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             )}
                         </div>
                     </div>
