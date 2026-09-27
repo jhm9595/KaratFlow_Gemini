@@ -57,3 +57,8 @@ server:
 logging:
   level:
     org.springframework.security: TRACE
+
+krx:
+  api:
+    key: ${KRX_API_KEY:ADC20ED6167F4FB3878CCD2008E4E53733BA8876}
+

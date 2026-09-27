@@ -234,7 +234,7 @@ public class KrxMarketDataSyncService {
             boolean saved = false;
 
             try {
-                String rawUri = "https://data-dbg.krx.co.kr/svc/apis/gen/kospi_dd_trd?basDd=" + basDd;
+                String rawUri = "https://data-dbg.krx.co.kr/svc/apis/idx/kospi_dd_trd?basDd=" + basDd;
                 HttpHeaders headers = new HttpHeaders();
                 headers.set("AUTH_KEY", krxApiKey);
                 HttpEntity<String> entity = new HttpEntity<>(headers);
