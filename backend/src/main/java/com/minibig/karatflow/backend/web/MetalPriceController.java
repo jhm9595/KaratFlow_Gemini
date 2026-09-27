@@ -62,10 +62,6 @@ public class MetalPriceController {
             calculatedList.add(map);
         }
 
-        List<Map<String, Object>> response = calculatedList.size() > 7 
-                ? calculatedList.subList(calculatedList.size() - 7, calculatedList.size()) 
-                : calculatedList;
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(calculatedList);
     }
 }
