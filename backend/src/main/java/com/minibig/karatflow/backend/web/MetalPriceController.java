@@ -2,6 +2,7 @@ package com.minibig.karatflow.backend.web;
 
 import com.minibig.karatflow.backend.domain.DailyMetalPrice;
 import com.minibig.karatflow.backend.repository.DailyMetalPriceRepository;
+import com.minibig.karatflow.backend.service.KrxMarketDataSyncService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,11 +21,14 @@ import java.util.stream.Collectors;
 public class MetalPriceController {
 
     private final DailyMetalPriceRepository dailyMetalPriceRepository;
+    private final KrxMarketDataSyncService krxMarketDataSyncService;
 
     @GetMapping("/recent")
     public ResponseEntity<List<Map<String, Object>>> getRecentPrices() {
-        // Fetch the 7 most recent prices, order by date desc, then reverse to asc for the chart
-                List<DailyMetalPrice> all = dailyMetalPriceRepository.findAllByMetalTypeOrderByPriceDateAsc("GOLD_24K");
+        // Trigger non-blocking async catch-up sync if today's data is missing in DB
+        krxMarketDataSyncService.triggerSyncIfNecessary();
+
+        List<DailyMetalPrice> all = dailyMetalPriceRepository.findAllByMetalTypeOrderByPriceDateAsc("GOLD_24K");
         double lastPrice = 0, lastVol = 0, lastVal = 0;
         for (DailyMetalPrice p : all) {
             if (p.getPricePer375g() != null && p.getPricePer375g() > 0) lastPrice = p.getPricePer375g();
@@ -39,7 +43,6 @@ public class MetalPriceController {
         List<DailyMetalPrice> recent = all.size() > 7 ? all.subList(all.size() - 7, all.size()) : all;
         
         List<Map<String, Object>> response = recent.stream()
-                
                 .map(price -> {
                     Map<String, Object> map = new HashMap<>();
                     map.put("date", price.getPriceDate().format(DateTimeFormatter.ofPattern("MM/dd")));

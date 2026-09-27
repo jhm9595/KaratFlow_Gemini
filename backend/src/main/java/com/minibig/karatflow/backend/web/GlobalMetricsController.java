@@ -16,9 +16,9 @@ import java.util.Map;
 import java.util.List;
 import com.minibig.karatflow.backend.repository.DailyPetroleumPriceRepository;
 import com.minibig.karatflow.backend.repository.DailyKospiPriceRepository;
+import com.minibig.karatflow.backend.service.KrxMarketDataSyncService;
 import lombok.RequiredArgsConstructor;
 import java.time.LocalDate;
-
 
 @Slf4j
 @RestController
@@ -27,15 +27,15 @@ import java.time.LocalDate;
 public class GlobalMetricsController {
 
     private final RestTemplate restTemplate = new RestTemplate();
-
     private final DailyPetroleumPriceRepository petroleumRepo;
     private final DailyKospiPriceRepository kospiRepo;
-
-
+    private final KrxMarketDataSyncService krxMarketDataSyncService;
 
     @GetMapping("/petroleum/history")
     public ResponseEntity<List<com.minibig.karatflow.backend.domain.DailyPetroleumPrice>> getPetroleumHistory() {
-                List<com.minibig.karatflow.backend.domain.DailyPetroleumPrice> all = petroleumRepo.findAllByOrderByDateAsc();
+        krxMarketDataSyncService.triggerSyncIfNecessary();
+
+        List<com.minibig.karatflow.backend.domain.DailyPetroleumPrice> all = petroleumRepo.findAllByOrderByDateAsc();
         double lastGas = 0, lastDie = 0, lastKer = 0;
         for (com.minibig.karatflow.backend.domain.DailyPetroleumPrice p : all) {
             if (p.getGasolinePrice() != null && p.getGasolinePrice() > 0) lastGas = p.getGasolinePrice();
@@ -53,7 +53,9 @@ public class GlobalMetricsController {
 
     @GetMapping("/kospi/history")
     public ResponseEntity<List<com.minibig.karatflow.backend.domain.DailyKospiPrice>> getKospiHistory() {
-                List<com.minibig.karatflow.backend.domain.DailyKospiPrice> all = kospiRepo.findAllByOrderByDateAsc();
+        krxMarketDataSyncService.triggerSyncIfNecessary();
+
+        List<com.minibig.karatflow.backend.domain.DailyKospiPrice> all = kospiRepo.findAllByOrderByDateAsc();
         double lastKospi = 0, lastKospi200 = 0;
         for (com.minibig.karatflow.backend.domain.DailyKospiPrice k : all) {
             if (k.getKospiIndex() != null && k.getKospiIndex() > 0) lastKospi = k.getKospiIndex();
@@ -68,6 +70,8 @@ public class GlobalMetricsController {
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> getGlobalMetrics() {
+        krxMarketDataSyncService.triggerSyncIfNecessary();
+
         Map<String, Object> result = new HashMap<>();
         
         HttpHeaders headers = new HttpHeaders();
@@ -103,30 +107,10 @@ public class GlobalMetricsController {
                     }
                 }
             } catch (Exception e) {
-                log.error("Failed to fetch yahoo finance for {}", symbols[i], e);
+                log.error("Failed to fetch yahoo metrics for {}: {}", symbols[i], e.getMessage());
             }
         }
-
         
-        // Fetch DB data (Latest available)
-        petroleumRepo.findAllByOrderByDateAsc().stream().reduce((first, second) -> second).ifPresent(p -> {
-            Map<String, Object> pMap = new HashMap<>();
-            pMap.put("date", p.getDate());
-            pMap.put("gasoline", p.getGasolinePrice());
-            pMap.put("diesel", p.getDieselPrice());
-            pMap.put("kerosene", p.getKerosenePrice());
-            result.put("petroleum", pMap);
-        });
-        
-        kospiRepo.findAllByOrderByDateAsc().stream().reduce((first, second) -> second).ifPresent(k -> {
-            Map<String, Object> kMap = new HashMap<>();
-            kMap.put("date", k.getDate());
-            kMap.put("kospi", k.getKospiIndex());
-            kMap.put("kospi200", k.getKospi200Index());
-            kMap.put("tradingValue", k.getTradingValue());
-            result.put("kospi", kMap);
-        });
-
         return ResponseEntity.ok(result);
     }
 }
