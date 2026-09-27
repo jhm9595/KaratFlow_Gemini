@@ -217,7 +217,7 @@ function App() {
             });
     };
     
-    const [_liveEvents, _setLiveEvents] = useState<{id: number, message: string, time: string}[]>([]);
+    const [_liveEvents, _setLiveEvents] = useState<any[]>([]);
     const [_dashboardStats, setDashboardStats] = useState({
         totalRevenue: 0,
         activeOrders: 0,
@@ -471,9 +471,40 @@ function App() {
             .catch((_err) => console.error('Error fetching stats:', _err));
     };
 
+    const fetchNotifications = () => {
+        fetch('http://localhost:8888/api/notifications', { headers: getAuthHeaders() })
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    const mapped = data.map((n: any) => ({
+                        ...n,
+                        time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+                    }));
+                    _setLiveEvents(mapped);
+                }
+            })
+            .catch(err => console.error('Failed to fetch notifications:', err));
+    };
+
+    const handleNotificationClick = (ev: any) => {
+        if (!ev.isRead) {
+            fetch(`http://localhost:8888/api/notifications/${ev.id}/read`, { method: 'POST', headers: getAuthHeaders() })
+                .then(() => {
+                    _setLiveEvents(prev => prev.map(item => item.id === ev.id ? { ...item, isRead: true } : item));
+                })
+                .catch(err => console.error('Failed to mark notification as read:', err));
+        }
+
+        if (ev.orderId) {
+            setSelectedOrderId(ev.orderId);
+            openOrderDetail(ev.orderId);
+        }
+    };
+
     useEffect(() => {
         fetchOrders();
         fetchPipelineStages();
+        fetchNotifications();
         
         fetch('http://localhost:8888/api/metal-prices/recent', { headers: getAuthHeaders() })
             .then(res => res.json())
@@ -493,11 +524,11 @@ function App() {
                             detail: payload.message, 
                             life: 4000 
                         });
-                        _setLiveEvents(prev => [{
-                            id: Date.now(), 
-                            message: payload.message, 
-                            time: new Date().toLocaleTimeString()
-                        }, ...prev].slice(0, 50));
+                        const newEv = {
+                            ...payload,
+                            time: payload.createdAt ? new Date(payload.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+                        };
+                        _setLiveEvents(prev => [newEv, ...prev.filter(item => item.id !== newEv.id)].slice(0, 50));
                         fetchOrders();
                     }
                 });
@@ -508,9 +539,7 @@ function App() {
         });
         client.activate();
 
-        
-
-    return () => {
+        return () => {
             client.deactivate();
         };
     }, []);
@@ -818,19 +847,33 @@ function App() {
                                 <div className="flex flex-column gap-3">
                                     {_liveEvents.map(ev => {
                                         const stageInfo = getEventStageInfo(ev.message);
+                                        const isUnread = ev.isRead === false || ev.isRead === undefined;
                                         return (
                                             <div 
                                                 key={ev.id} 
-                                                className="surface-50 p-3 border-round border-left-4 shadow-1 fadein animation-duration-300 transition-all hover:surface-100" 
-                                                style={{ borderLeftColor: stageInfo.colorHex }}
+                                                onClick={() => handleNotificationClick(ev)}
+                                                className={`surface-50 p-3 border-round shadow-1 fadein animation-duration-300 transition-all hover:surface-100 cursor-pointer ${isUnread ? 'unread-live-event-card' : ''}`}
+                                                style={{ 
+                                                    borderLeft: `5px solid ${stageInfo.colorHex}`,
+                                                    borderTop: '1px solid #f1f5f9',
+                                                    borderRight: '1px solid #f1f5f9',
+                                                    borderBottom: '1px solid #f1f5f9'
+                                                }}
                                             >
                                                 <div className="flex justify-content-between align-items-center mb-2">
-                                                    <span 
-                                                        className="text-white px-3 py-1 border-round-md font-extrabold text-xs shadow-1" 
-                                                        style={{ background: stageInfo.colorGradient || stageInfo.colorHex, letterSpacing: '0.3px' }}
-                                                    >
-                                                        {stageInfo.stageName}
-                                                    </span>
+                                                    <div className="flex align-items-center gap-2">
+                                                        <span 
+                                                            className="text-white px-3 py-1 border-round-md font-extrabold text-xs shadow-1" 
+                                                            style={{ background: stageInfo.colorGradient || stageInfo.colorHex, letterSpacing: '0.3px' }}
+                                                        >
+                                                            {stageInfo.stageName}
+                                                        </span>
+                                                        {isUnread && (
+                                                            <span className="bg-red-500 text-white font-bold text-xs px-2 py-0.5 border-round-circle inline-block shadow-1" style={{ fontSize: '10px' }}>
+                                                                NEW
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <span className="text-xs text-500 font-mono flex align-items-center gap-1">
                                                         <i className="pi pi-clock text-xs text-400"></i> {ev.time}
                                                     </span>
@@ -846,23 +889,33 @@ function App() {
                                 <div className="grid grid-nogutter gap-2 align-content-start">
                                     {_liveEvents.map(ev => {
                                         const stageInfo = getEventStageInfo(ev.message);
+                                        const isUnread = ev.isRead === false || ev.isRead === undefined;
                                         return (
                                             <div key={ev.id} className="col-4">
                                                 <div 
-                                                    className="p-2 border-round shadow-1 fadein animation-duration-300 flex flex-column justify-content-between h-full border-top-3 cursor-pointer hover:shadow-2 transition-all"
+                                                    onClick={() => handleNotificationClick(ev)}
+                                                    className={`p-2 border-round shadow-1 fadein animation-duration-300 flex flex-column justify-content-between h-full cursor-pointer hover:shadow-2 transition-all ${isUnread ? 'unread-live-event-card' : ''}`}
                                                     style={{ 
                                                         backgroundColor: stageInfo.bgColor, 
-                                                        borderTopColor: stageInfo.colorHex,
-                                                        minHeight: '90px' 
+                                                        borderTop: `4px solid ${stageInfo.colorHex}`,
+                                                        borderLeft: '1px solid #e2e8f0',
+                                                        borderRight: '1px solid #e2e8f0',
+                                                        borderBottom: '1px solid #e2e8f0',
+                                                        minHeight: '92px' 
                                                     }}
                                                 >
                                                     <div className="flex justify-content-between align-items-center mb-1.5">
-                                                        <span 
-                                                            className="text-white px-2 py-0.5 border-round font-extrabold" 
-                                                            style={{ background: stageInfo.colorGradient || stageInfo.colorHex, fontSize: '11px' }}
-                                                        >
-                                                            {stageInfo.stageName}
-                                                        </span>
+                                                        <div className="flex align-items-center gap-1">
+                                                            <span 
+                                                                className="text-white px-2 py-0.5 border-round font-extrabold" 
+                                                                style={{ background: stageInfo.colorGradient || stageInfo.colorHex, fontSize: '11px' }}
+                                                            >
+                                                                {stageInfo.stageName}
+                                                            </span>
+                                                            {isUnread && (
+                                                                <span className="bg-red-500 text-white font-bold border-circle text-center" style={{ fontSize: '8px', width: '8px', height: '8px', display: 'inline-block' }}></span>
+                                                            )}
+                                                        </div>
                                                         <span className="text-500 font-mono font-semibold" style={{ fontSize: '10px' }}>{ev.time}</span>
                                                     </div>
                                                     <div className="text-xs text-900 font-medium line-height-2 mt-1 overflow-hidden" style={{ wordBreak: 'break-word', fontSize: '11px' }}>
