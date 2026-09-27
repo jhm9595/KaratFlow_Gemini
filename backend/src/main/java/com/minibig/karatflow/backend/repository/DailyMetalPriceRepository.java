@@ -8,6 +8,7 @@ import java.util.Optional;
 public interface DailyMetalPriceRepository extends JpaRepository<DailyMetalPrice, Long> {
     Optional<DailyMetalPrice> findByPriceDateAndMetalType(LocalDate date, String metalType);
     Optional<DailyMetalPrice> findFirstByMetalTypeOrderByPriceDateDesc(String metalType);
+    Optional<DailyMetalPrice> findFirstByMetalTypeOrderByPriceDateAsc(String metalType);
     java.util.List<DailyMetalPrice> findTop7ByMetalTypeOrderByPriceDateDesc(String metalType);
     java.util.List<DailyMetalPrice> findAllByMetalTypeOrderByPriceDateAsc(String metalType);
 }

@@ -87,8 +87,13 @@ public class KrxMarketDataSyncService {
     }
 
     private void syncGold(LocalDate today) {
+        LocalDate targetStart = today.minusDays(1095);
+        Optional<DailyMetalPrice> oldestOpt = dailyMetalPriceRepository.findFirstByMetalTypeOrderByPriceDateAsc("GOLD_24K");
         Optional<DailyMetalPrice> latestOpt = dailyMetalPriceRepository.findFirstByMetalTypeOrderByPriceDateDesc("GOLD_24K");
-        LocalDate startDate = latestOpt.isPresent() ? latestOpt.get().getPriceDate().plusDays(1) : today.minusDays(1095);
+
+        LocalDate startDate = (!oldestOpt.isPresent() || oldestOpt.get().getPriceDate().isAfter(targetStart))
+                ? targetStart
+                : (latestOpt.isPresent() ? latestOpt.get().getPriceDate().plusDays(1) : targetStart);
 
         if (startDate.isAfter(today)) return;
 
@@ -164,8 +169,13 @@ public class KrxMarketDataSyncService {
     }
 
     private void syncOil(LocalDate today) {
+        LocalDate targetStart = today.minusDays(1095);
+        Optional<DailyPetroleumPrice> oldestOpt = dailyPetroleumPriceRepository.findFirstByOrderByDateAsc();
         Optional<DailyPetroleumPrice> latestOpt = dailyPetroleumPriceRepository.findFirstByOrderByDateDesc();
-        LocalDate startDate = latestOpt.isPresent() ? latestOpt.get().getDate().plusDays(1) : today.minusDays(1095);
+
+        LocalDate startDate = (!oldestOpt.isPresent() || oldestOpt.get().getDate().isAfter(targetStart))
+                ? targetStart
+                : (latestOpt.isPresent() ? latestOpt.get().getDate().plusDays(1) : targetStart);
 
         if (startDate.isAfter(today)) return;
 
@@ -240,8 +250,13 @@ public class KrxMarketDataSyncService {
     }
 
     private void syncKospi(LocalDate today) {
+        LocalDate targetStart = today.minusDays(1095);
+        Optional<DailyKospiPrice> oldestOpt = dailyKospiPriceRepository.findFirstByOrderByDateAsc();
         Optional<DailyKospiPrice> latestOpt = dailyKospiPriceRepository.findFirstByOrderByDateDesc();
-        LocalDate startDate = latestOpt.isPresent() ? latestOpt.get().getDate().plusDays(1) : today.minusDays(1095);
+
+        LocalDate startDate = (!oldestOpt.isPresent() || oldestOpt.get().getDate().isAfter(targetStart))
+                ? targetStart
+                : (latestOpt.isPresent() ? latestOpt.get().getDate().plusDays(1) : targetStart);
 
         if (startDate.isAfter(today)) return;
 
