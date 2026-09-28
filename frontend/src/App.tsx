@@ -838,12 +838,12 @@ function App() {
                                 <div className="text-center text-gray-400 py-5 text-sm">최근 발생한 이벤트가 없습니다.</div>
                             ) : feedViewMode === 'list' ? (
                                 <div className="flex flex-column gap-3">
-                                    {_liveEvents.map(ev => {
+                                    {_liveEvents.map((ev, idx) => {
                                         const stageInfo = getEventStageInfo(ev.message);
                                         const isUnread = ev.isRead === false || ev.isRead === undefined;
                                         return (
                                             <div 
-                                                key={ev.id} 
+                                                key={`${ev.id || 'ev'}-${idx}`} 
                                                 onClick={() => handleNotificationClick(ev)}
                                                 className={`surface-50 p-3 border-round shadow-1 fadein animation-duration-300 transition-all hover:surface-100 cursor-pointer ${isUnread ? 'unread-live-event-card' : ''}`}
                                                 style={{ 
@@ -883,11 +883,11 @@ function App() {
                                 </div>
                             ) : (
                                 <div className="grid grid-nogutter gap-2 align-content-start">
-                                    {_liveEvents.map(ev => {
+                                    {_liveEvents.map((ev, idx) => {
                                         const stageInfo = getEventStageInfo(ev.message);
                                         const isUnread = ev.isRead === false || ev.isRead === undefined;
                                         return (
-                                            <div key={ev.id} className="col-4">
+                                            <div key={`${ev.id || 'ev'}-${idx}`} className="col-4">
                                                 <div 
                                                     onClick={() => handleNotificationClick(ev)}
                                                     className={`p-2 border-round shadow-1 fadein animation-duration-300 flex flex-column justify-content-between h-full cursor-pointer hover:shadow-2 transition-all ${isUnread ? 'unread-live-event-card' : ''}`}
