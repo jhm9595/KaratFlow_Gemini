@@ -51,6 +51,9 @@ public class OrderService {
         List<Map<String, Object>> rows = orderRepository.findDashboardOrders();
         return rows.stream().map(row -> OrderResponseDTO.builder()
                 .id(row.get("ID") != null ? ((Number) row.get("ID")).longValue() : null)
+                .workOrderId(row.get("WORKORDERID") != null ? ((Number) row.get("WORKORDERID")).longValue() : null)
+                .templateId(row.get("TEMPLATEID") != null ? ((Number) row.get("TEMPLATEID")).longValue() : null)
+                .templateName((String) row.get("TEMPLATENAME"))
                 .orderNo((String) row.get("ORDERNO"))
                 .shortCode((String) row.get("SHORTCODE"))
                 .design((String) row.get("DESIGN"))
@@ -156,6 +159,8 @@ public class OrderService {
 
         return OrderResponseDTO.builder()
                 .id(order.getId())
+                .templateId(defaultTemplate != null ? defaultTemplate.getId() : null)
+                .templateName(defaultTemplate != null ? defaultTemplate.getTemplateName() : null)
                 .orderNo(order.getOrderNo())
                 .shortCode(order.getShortCode())
                 .design(design != null ? design.getDesignCode() : null)
@@ -235,6 +240,8 @@ public class OrderService {
                     OrderDetailDTO.WorkOrderDTO.builder()
                             .id(w.getId())
                             .workOrderNo(w.getWorkOrderNo() != null ? w.getWorkOrderNo() : "WO-" + w.getId())
+                            .templateId(w.getTemplate() != null ? w.getTemplate().getId() : (template != null ? template.getId() : null))
+                            .templateName(w.getTemplate() != null ? w.getTemplate().getTemplateName() : (template != null ? template.getTemplateName() : null))
                             .stage(w.getCurrentStage())
                             .isHold(w.getIsHold())
                             .createdAt(w.getCreatedAt() != null ? w.getCreatedAt().toString() : null)
@@ -244,6 +251,8 @@ public class OrderService {
             woDTOs.add(OrderDetailDTO.WorkOrderDTO.builder()
                     .id(order.getId())
                     .workOrderNo(order.getOrderNo() != null ? order.getOrderNo() : "WO-" + order.getId())
+                    .templateId(template != null ? template.getId() : null)
+                    .templateName(template != null ? template.getTemplateName() : null)
                     .stage(currStep != null ? (currStep.getStageName() != null ? currStep.getStageName() : currStep.getStageCode()) : "접수")
                     .isHold(false)
                     .createdAt(order.getCreatedAt() != null ? order.getCreatedAt().toString() : null)
@@ -253,6 +262,9 @@ public class OrderService {
         return OrderDetailDTO.builder()
                 .orderId(order.getId())
                 .orderNo(order.getOrderNo())
+                .templateId(template != null ? template.getId() : null)
+                .templateName(template != null ? template.getTemplateName() : null)
+                .templateSteps(steps)
                 .customerName(order.getCustomerName())
                 .customerPhone(order.getCustomerPhone())
                 .orderType(order.getOrderType())
@@ -457,13 +469,8 @@ public class OrderService {
             }
         }
 
-        ProcessTemplateStep firstStep = steps.get(0);
-        if (wo != null) {
-            String firstStageName = firstStep.getStageName() != null ? firstStep.getStageName() : firstStep.getStageCode();
-            wo.setCurrentStage(firstStageName);
-            workOrderRepository.save(wo);
-        }
-        return firstStep;
+        // Return first step without silently mutating currentStage in DB
+        return steps.get(0);
     }
 
     private String nextStage(WorkOrder wo) {

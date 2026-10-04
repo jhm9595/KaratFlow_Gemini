@@ -4,6 +4,7 @@ import { Button } from 'primereact/button';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Tag } from 'primereact/tag';
+import { getAuthHeaders } from '../api/client';
 
 interface MultiOrderDetailModalProps {
     visible: boolean;
@@ -259,7 +260,21 @@ export const MultiOrderDetailModal: React.FC<MultiOrderDetailModalProps> = ({
                                                 icon="pi pi-forward"
                                                 label="공정 진행"
                                                 className="p-button-xs p-button-outlined p-button-success white-space-nowrap"
-                                                onClick={() => advanceStage(r.id || rowData.id)}
+                                                onClick={async () => {
+                                                    if (r.id) {
+                                                        try {
+                                                            const res = await fetch(`http://localhost:8888/api/work-orders/${r.id}/advance-stage`, {
+                                                                method: 'POST',
+                                                                headers: getAuthHeaders()
+                                                            });
+                                                            if (res.ok) {
+                                                                advanceStage(rowData.id);
+                                                                return;
+                                                            }
+                                                        } catch (e) {}
+                                                    }
+                                                    advanceStage(r.id || rowData.id);
+                                                }}
                                             />
                                         ) : null}
                                     </div>

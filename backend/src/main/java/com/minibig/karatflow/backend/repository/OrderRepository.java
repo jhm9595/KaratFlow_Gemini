@@ -7,7 +7,7 @@ import java.util.Map;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
     
-    @Query(value = "SELECT o.order_id as id, o.order_no as orderNo, o.short_code as shortCode, d.design_code as design, o.order_date as date, " +
+    @Query(value = "SELECT o.order_id as id, w.work_order_id as workOrderId, w.template_id as templateId, pt.template_name as templateName, o.order_no as orderNo, o.short_code as shortCode, d.design_code as design, o.order_date as date, " +
                    "d.brand as brand, oi.image_url as imageUrl, oi.quantity as quantity, oi.unmapped_product_name as unmappedProductName, " +
                    "w.current_stage as stage, w.is_hold as isHold, " +
                    "w.created_at as createdAt, w.pending_completed_at as pendingCompletedAt, " +
@@ -20,6 +20,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
                    "JOIN order_items oi ON o.order_id = oi.order_id " +
                    "LEFT JOIN designs d ON oi.design_id = d.design_id " +
                    "JOIN work_orders w ON oi.order_item_id = w.order_item_id " +
+                   "LEFT JOIN process_templates pt ON w.template_id = pt.id " +
                    "ORDER BY o.order_id DESC", nativeQuery = true)
     List<Map<String, Object>> findDashboardOrders();
 

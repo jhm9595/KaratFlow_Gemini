@@ -75,11 +75,15 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             createdAt: rowData.createdAt || rowData.date
         }];
 
+    const stepsToUse = (orderDetailData?.templateSteps && orderDetailData.templateSteps.length > 0)
+        ? orderDetailData.templateSteps
+        : pipelineSteps;
+
     const getStepBgColor = (stageName: string) => {
-        if (!pipelineSteps || pipelineSteps.length === 0) return null;
+        if (!stepsToUse || stepsToUse.length === 0) return null;
         
         // 1. Exact match by stageName
-        let matched = pipelineSteps.find((step: any) => step.stageName === stageName);
+        let matched = stepsToUse.find((step: any) => step.stageName === stageName);
         
         // 2. Case insensitive / trim match
         if (!matched) {

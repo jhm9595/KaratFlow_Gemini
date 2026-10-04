@@ -5,6 +5,9 @@ import lombok.Data;
 @Builder
 public class OrderResponseDTO {
     private Long id;
+    private Long workOrderId;
+    private Long templateId;
+    private String templateName;
     private String orderNo;
     private String shortCode;
     private String design;

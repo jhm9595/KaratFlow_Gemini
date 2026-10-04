@@ -26,17 +26,19 @@ export const PipelineStatusBadge: React.FC<PipelineStatusBadgeProps> = ({ rowDat
         rawStage = (rowData.stage && rowData.stage !== 'COMPLETED' && rowData.stage !== 'DONE') ? rowData.stage : lastStage;
     }
 
-    let matchedStep = (pipelineSteps && pipelineSteps.length > 0) ? pipelineSteps.find((step: any) => step.stageName === rawStage) : null;
-    if (!matchedStep && pipelineSteps && pipelineSteps.length > 0) {
-        matchedStep = pipelineSteps.find((step: any) => 
+    const stepsToUse = rowData.templateSteps && rowData.templateSteps.length > 0 ? rowData.templateSteps : pipelineSteps;
+
+    let matchedStep = (stepsToUse && stepsToUse.length > 0) ? stepsToUse.find((step: any) => step.stageName === rawStage) : null;
+    if (!matchedStep && stepsToUse && stepsToUse.length > 0) {
+        matchedStep = stepsToUse.find((step: any) => 
             step.stageName && step.stageName.trim().toLowerCase() === rawStage.trim().toLowerCase()
         );
     }
-    if (!matchedStep && pipelineSteps && pipelineSteps.length > 0) {
+    if (!matchedStep && stepsToUse && stepsToUse.length > 0) {
         if (rawStage === 'COMPLETED' || rawStage === 'DONE' || rawStage === '완성') {
-            matchedStep = pipelineSteps.find((step: any) => step.stageName === '완료' || step.stageName === 'COMPLETED');
+            matchedStep = stepsToUse.find((step: any) => step.stageName === '완료' || step.stageName === 'COMPLETED');
         } else if (rawStage === 'PENDING') {
-            matchedStep = pipelineSteps.find((step: any) => step.stageName === '접수' || step.stageName === 'PENDING');
+            matchedStep = stepsToUse.find((step: any) => step.stageName === '접수' || step.stageName === 'PENDING');
         }
     }
 

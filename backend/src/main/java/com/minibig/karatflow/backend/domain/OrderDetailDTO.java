@@ -9,6 +9,9 @@ import java.util.List;
 public class OrderDetailDTO {
     private Long orderId;
     private String orderNo;
+    private Long templateId;
+    private String templateName;
+    private List<ProcessTemplateStep> templateSteps;
     private String customerName;
     private String customerPhone;
     private String orderType;
@@ -39,6 +42,8 @@ public class OrderDetailDTO {
     public static class WorkOrderDTO {
         private Long id;
         private String workOrderNo;
+        private Long templateId;
+        private String templateName;
         private String stage;
         private Boolean isHold;
         private String createdAt;
