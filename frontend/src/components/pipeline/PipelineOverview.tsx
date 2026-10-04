@@ -1,23 +1,55 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Dropdown } from 'primereact/dropdown';
 
 interface PipelineOverviewProps {
     orders: any[];
     pipelineSteps: any[];
+    templates?: any[];
 }
 
-export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipelineSteps }) => {
+export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipelineSteps, templates }) => {
+    const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+
+    const activeTemplate = templates && templates.length > 0
+        ? (selectedTemplateId ? templates.find(t => t.id === selectedTemplateId) || templates[0] : (templates.find(t => t.isDefault) || templates[0]))
+        : null;
+
+    const stepsToRender = activeTemplate?.steps && activeTemplate.steps.length > 0
+        ? activeTemplate.steps
+        : pipelineSteps;
+
     return (
         <div className="surface-0 p-3 border-round shadow-1">
             <div className="flex justify-content-between align-items-center mb-3">
-                <h4 className="m-0 text-600 font-medium">실시간 공정 현황 (Pipeline)</h4>
+                <h4 className="m-0 text-600 font-medium flex align-items-center gap-2">
+                    <i className="pi pi-sitemap text-primary"></i> 실시간 공정 현황 (Pipeline)
+                </h4>
+                {templates && templates.length > 1 && (
+                    <div className="flex align-items-center gap-2" style={{ minWidth: '220px' }}>
+                        <span className="text-xs text-500 font-bold white-space-nowrap">템플릿 필터:</span>
+                        <Dropdown 
+                            value={activeTemplate?.id} 
+                            options={templates.map(t => ({ label: `${t.templateName}${t.isDefault ? ' (기본)' : ''}`, value: t.id }))} 
+                            onChange={(e) => setSelectedTemplateId(e.value)} 
+                            className="p-inputtext-sm font-bold text-xs" 
+                            style={{ height: '32px' }} 
+                        />
+                    </div>
+                )}
             </div>
+
             <div className="flex justify-content-between align-items-center px-4 relative">
                 {/* Connecting Line */}
                 <div className="absolute w-full z-0" style={{ height: '4px', backgroundColor: '#e5e7eb', top: '30px', left: '0' }}></div>
                 
-                {pipelineSteps.map((stepObj: any, idx: number) => {
-                    const stage = stepObj.stageName;
+                {stepsToRender.map((stepObj: any) => {
+                    const stage = stepObj.stageName || stepObj.stageCode;
                     const count = orders.filter(o => {
+                        // Match if order uses this template (or no template set), and is at this stage
+                        if (activeTemplate && o.templateId && o.templateId !== activeTemplate.id) {
+                            return false;
+                        }
+
                         let s = o.stage || '접수';
                         if (s === 'PENDING') s = '접수';
                         else if (s === 'CASTING') s = '주물';

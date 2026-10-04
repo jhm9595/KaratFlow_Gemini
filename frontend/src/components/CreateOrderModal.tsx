@@ -4,6 +4,7 @@ import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
 import { AutoComplete } from 'primereact/autocomplete';
+import { Dropdown } from 'primereact/dropdown';
 
 interface CreateOrderModalProps {
     visible: boolean;
@@ -16,11 +17,12 @@ interface CreateOrderModalProps {
     searchProduct: (e: { query: string }) => void;
     handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
     submitCreateOrder: () => void;
+    templates?: any[];
 }
 
 export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     visible, onHide, createOrderForm, setCreateOrderForm, selectedProduct, setSelectedProduct,
-    filteredProducts, searchProduct, handleFileUpload, submitCreateOrder
+    filteredProducts, searchProduct, handleFileUpload, submitCreateOrder, templates
 }) => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8888';
 
@@ -118,6 +120,23 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                         placeholder="B2C, B2B" 
                     />
                 </div>
+
+                {templates && templates.length > 0 && (
+                    <div className="field col-12 md:col-8">
+                        <label className="font-bold text-primary flex align-items-center gap-1">
+                            <i className="pi pi-sitemap"></i> 적용 공정 템플릿 선택
+                        </label>
+                        <Dropdown 
+                            value={createOrderForm.processTemplateId || (templates.find(t => t.isDefault)?.id || templates[0].id)} 
+                            options={templates.map(t => ({
+                                label: `${t.templateName}${t.isDefault ? ' (기본)' : ''} [${t.steps?.map((s: any) => s.stageName).join(' ➔ ')}]`,
+                                value: t.id
+                            }))} 
+                            onChange={(e) => setCreateOrderForm({ ...createOrderForm, processTemplateId: e.value })} 
+                            placeholder="공정 템플릿 선택" 
+                        />
+                    </div>
+                )}
                 
                 <div className="field col-12 md:col-4">
                     <label className="font-bold">고객명</label>

@@ -133,13 +133,23 @@ public class OrderService {
                 .build();
         orderItem = orderItemRepository.save(orderItem);
 
-        ProcessTemplate defaultTemplate = templateRepository.findAll().stream()
-                .filter(t -> Boolean.TRUE.equals(t.getIsDefault()))
-                .findFirst().orElse(null);
+        ProcessTemplate selectedTemplate = null;
+        if (dto.getProcessTemplateId() != null && dto.getProcessTemplateId() > 0) {
+            selectedTemplate = templateRepository.findById(dto.getProcessTemplateId()).orElse(null);
+        }
+        if (selectedTemplate == null) {
+            selectedTemplate = templateRepository.findAll().stream()
+                    .filter(t -> Boolean.TRUE.equals(t.getIsDefault()))
+                    .findFirst().orElse(null);
+        }
+        if (selectedTemplate == null) {
+            List<ProcessTemplate> all = templateRepository.findAll();
+            selectedTemplate = all.isEmpty() ? null : all.get(0);
+        }
 
         String initialStage = "접수";
-        if (defaultTemplate != null && defaultTemplate.getSteps() != null && !defaultTemplate.getSteps().isEmpty()) {
-            ProcessTemplateStep firstStep = defaultTemplate.getSteps().get(0);
+        if (selectedTemplate != null && selectedTemplate.getSteps() != null && !selectedTemplate.getSteps().isEmpty()) {
+            ProcessTemplateStep firstStep = selectedTemplate.getSteps().get(0);
             initialStage = firstStep.getStageName() != null ? firstStep.getStageName() : firstStep.getStageCode();
         }
 
@@ -147,7 +157,7 @@ public class OrderService {
         for (int i = 0; i < qty; i++) {
             WorkOrder wo = WorkOrder.builder()
                     .orderItemId(orderItem.getId())
-                    .template(defaultTemplate)
+                    .template(selectedTemplate)
                     .currentStage(initialStage)
                     .isHold(false)
                     .createdAt(LocalDateTime.now())
@@ -159,8 +169,8 @@ public class OrderService {
 
         return OrderResponseDTO.builder()
                 .id(order.getId())
-                .templateId(defaultTemplate != null ? defaultTemplate.getId() : null)
-                .templateName(defaultTemplate != null ? defaultTemplate.getTemplateName() : null)
+                .templateId(selectedTemplate != null ? selectedTemplate.getId() : null)
+                .templateName(selectedTemplate != null ? selectedTemplate.getTemplateName() : null)
                 .orderNo(order.getOrderNo())
                 .shortCode(order.getShortCode())
                 .design(design != null ? design.getDesignCode() : null)

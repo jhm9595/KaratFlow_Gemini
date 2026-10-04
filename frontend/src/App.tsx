@@ -12,6 +12,7 @@ import { PipelineOverview } from './components/pipeline/PipelineOverview';
 import { LiveEventFeed } from './components/events/LiveEventFeed';
 import { AppModals } from './components/AppModals';
 import { useGoldPrices } from './hooks/useGoldPrices';
+import { useProcessTemplates } from './hooks/useProcessTemplates';
 import { Client } from '@stomp/stompjs';
 import i18n from './i18n';
 
@@ -77,6 +78,7 @@ const customizedContent = (item: any) => {
 
 function App() {
     const { goldPriceData, todayGold, yesterdayGold, delta24k } = useGoldPrices();
+    const { templates } = useProcessTemplates();
     const [feedViewMode, setFeedViewMode] = useState<'list' | 'card'>('list');
 
     const getEventBorderColor = (msg: string) => {
@@ -638,6 +640,7 @@ function App() {
                         <PipelineOverview 
                             orders={orders}
                             pipelineSteps={pipelineSteps}
+                            templates={templates}
                         />
 
                         {/* Enhanced Data Table */}
@@ -731,6 +734,7 @@ function App() {
                 goldToolsVisible={goldToolsVisible}
                 setGoldToolsVisible={setGoldToolsVisible}
                 goldPriceData={goldPriceData}
+                templates={templates}
             />
 
             {/* Print Views */}

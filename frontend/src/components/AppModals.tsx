@@ -74,6 +74,7 @@ interface AppModalsProps {
     goldToolsVisible: boolean;
     setGoldToolsVisible: (v: boolean) => void;
     goldPriceData: any[];
+    templates?: any[];
 }
 
 export const AppModals: React.FC<AppModalsProps> = ({
@@ -140,6 +141,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
     goldToolsVisible,
     setGoldToolsVisible,
     goldPriceData,
+    templates,
 }) => {
     const currentOrder = selectedOrderId ? orders.find(o => o.id === selectedOrderId) : null;
     const isMultiItem = Boolean(
@@ -164,6 +166,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
                 searchProduct={searchProduct}
                 handleFileUpload={handleFileUpload}
                 submitCreateOrder={submitCreateOrder}
+                templates={templates}
             />
 
             <ChangeRequestModal
