@@ -1,6 +1,7 @@
 package com.minibig.karatflow.backend.web;
 
 import com.minibig.karatflow.backend.domain.DailyMetalPrice;
+import com.minibig.karatflow.backend.dto.MetalPriceResponseDTO;
 import com.minibig.karatflow.backend.repository.DailyMetalPriceRepository;
 import com.minibig.karatflow.backend.service.KrxMarketDataSyncService;
 import lombok.RequiredArgsConstructor;
@@ -11,9 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/metal-prices")
@@ -24,18 +24,21 @@ public class MetalPriceController {
     private final KrxMarketDataSyncService krxMarketDataSyncService;
 
     @GetMapping("/recent")
-    public ResponseEntity<List<Map<String, Object>>> getRecentPrices() {
+    public ResponseEntity<List<MetalPriceResponseDTO>> getRecentPrices() {
         // Trigger non-blocking async catch-up sync if today's data is missing in DB
         krxMarketDataSyncService.triggerSyncIfNecessary();
 
-        List<DailyMetalPrice> all = dailyMetalPriceRepository.findAllByMetalTypeOrderByPriceDateAsc("GOLD_24K");
-        
-        List<Map<String, Object>> calculatedList = new ArrayList<>();
+        // Limit response to recent 90 days to prevent huge payloads while supporting chart views
+        List<DailyMetalPrice> recentDesc = dailyMetalPriceRepository.findTop90ByMetalTypeOrderByPriceDateDesc("GOLD_24K");
+        List<DailyMetalPrice> recentAsc = new ArrayList<>(recentDesc);
+        Collections.reverse(recentAsc);
+
+        List<MetalPriceResponseDTO> responseList = new ArrayList<>();
         double runningGram = 107645.0; // Fallback g-unit price
         double runningVol = 215000.0;
         double runningVal = 41000000000.0;
 
-        for (DailyMetalPrice p : all) {
+        for (DailyMetalPrice p : recentAsc) {
             double gram = p.getEffectiveGramPrice();
             if (gram <= 0) {
                 gram = p.getEffective375gPrice() > 0 ? (p.getEffective375gPrice() / 3.75) : runningGram;
@@ -50,18 +53,21 @@ public class MetalPriceController {
             double p18 = Math.round((p24 * 0.825) / 100) * 100;
             double p14 = Math.round((p24 * 0.6435) / 100) * 100;
 
-            Map<String, Object> map = new HashMap<>();
-            map.put("date", p.getPriceDate().format(DateTimeFormatter.ofPattern("MM/dd")));
-            map.put("pricePerGram", Math.round(gram * 10.0) / 10.0);
-            map.put("price24k", p24);
-            map.put("price18k", p18);
-            map.put("price14k", p14);
-            map.put("volume", runningVol);
-            map.put("value", runningVal);
+            MetalPriceResponseDTO dto = MetalPriceResponseDTO.builder()
+                    .priceDate(p.getPriceDate().toString())
+                    .date(p.getPriceDate().format(DateTimeFormatter.ofPattern("MM/dd")))
+                    .pricePerGram(Math.round(gram * 10.0) / 10.0)
+                    .pricePer375g(p24)
+                    .price24k(p24)
+                    .price18k(p18)
+                    .price14k(p14)
+                    .volume(runningVol)
+                    .value(runningVal)
+                    .build();
 
-            calculatedList.add(map);
+            responseList.add(dto);
         }
 
-        return ResponseEntity.ok(calculatedList);
+        return ResponseEntity.ok(responseList);
     }
 }

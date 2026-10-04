@@ -49,8 +49,9 @@ public class InvoiceCalculationService {
         // 2. 정산 기준 중량 = 순수 금 중량 * (1 + 해리율/100)
         double settlementBaseWeight = pureGoldWeight * (1 + lossRate / 100.0);
 
-        // get today's gold price
-        Optional<DailyMetalPrice> priceOpt = dailyMetalPriceRepository.findByPriceDateAndMetalType(LocalDate.now(), "GOLD_24K");
+        // get today's gold price with fallback to latest available DB date
+        Optional<DailyMetalPrice> priceOpt = dailyMetalPriceRepository.findByPriceDateAndMetalType(LocalDate.now(), "GOLD_24K")
+                .or(() -> dailyMetalPriceRepository.findFirstByMetalTypeOrderByPriceDateDesc("GOLD_24K"));
         double pricePer375 = priceOpt.map(DailyMetalPrice::getPricePer375g).orElse(400000.0);
         LocalDate priceDate = priceOpt.map(DailyMetalPrice::getPriceDate).orElse(LocalDate.now());
 

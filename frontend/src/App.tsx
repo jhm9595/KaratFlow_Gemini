@@ -11,6 +11,7 @@ import { DashboardSidebar } from './components/dashboard/DashboardSidebar';
 import { PipelineOverview } from './components/pipeline/PipelineOverview';
 import { LiveEventFeed } from './components/events/LiveEventFeed';
 import { AppModals } from './components/AppModals';
+import { useGoldPrices } from './hooks/useGoldPrices';
 import { Client } from '@stomp/stompjs';
 import i18n from './i18n';
 
@@ -75,8 +76,7 @@ const customizedContent = (item: any) => {
 };
 
 function App() {
-
-
+    const { goldPriceData, todayGold, yesterdayGold, delta24k } = useGoldPrices();
     const [feedViewMode, setFeedViewMode] = useState<'list' | 'card'>('list');
 
     const getEventBorderColor = (msg: string) => {
@@ -483,11 +483,6 @@ function App() {
         fetchOrders();
         fetchPipelineStages();
         fetchNotifications();
-        
-        fetch('http://localhost:8888/api/metal-prices/recent', { headers: getAuthHeaders() })
-            .then(res => res.json())
-            .then(data => setGoldPriceData(data))
-            .catch(err => console.error('Failed to fetch metal prices', err));
 
         const client = new Client({
             brokerURL: 'ws://localhost:8888/ws-alerts-raw',
@@ -598,23 +593,6 @@ function App() {
         { date: '08/22', CAD: 2.2, 주물: 4.4, 세공: 8.0 },
         { date: '08/23', CAD: 1.9, 주물: 4.0, 세공: 7.5 }
     ];
-    
-    
-    const [goldPriceData, setGoldPriceData] = useState<any[]>([]);
-    // --- Gold Price Display Logic ---
-    const todayGold = goldPriceData.length > 0 ? goldPriceData[goldPriceData.length - 1] : { price24k: 0, price18k: 0, price14k: 0 };
-    const yesterdayGold = goldPriceData.length > 1 ? goldPriceData[goldPriceData.length - 2] : todayGold;
-    
-    const delta24k = todayGold.price24k - yesterdayGold.price24k;
-    const delta18k = todayGold.price18k - yesterdayGold.price18k;
-    const delta14k = todayGold.price14k - yesterdayGold.price14k;
-
-    const renderDelta = (delta: number) => {
-        if (delta > 0) return <span className="text-red-500 text-sm font-bold">▲ {delta.toLocaleString()}</span>;
-        if (delta < 0) return <span className="text-blue-500 text-sm font-bold">▼ {Math.abs(delta).toLocaleString()}</span>;
-        return <span className="text-600 text-sm font-bold">-</span>;
-    };
-    // ---------------------------------
 
     return (
         <>

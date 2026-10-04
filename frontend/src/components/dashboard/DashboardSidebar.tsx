@@ -5,8 +5,8 @@ import { KospiChart } from '../charts/KospiChart';
 
 interface DashboardSidebarProps {
     orders: any[];
-    todayGold: number | null;
-    yesterdayGold: number | null;
+    todayGold: any;
+    yesterdayGold: any;
     delta24k: number | null;
     goldPriceData: any[];
     onOpenGoldTools: () => void;

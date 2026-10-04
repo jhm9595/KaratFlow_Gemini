@@ -25,12 +25,11 @@ const GoldWidget: React.FC<GoldWidgetProps> = ({
         );
     }
 
-    // Process data in frontend: calculate 24K, 18K, 14K prices per 1-don (3.75g) from g-unit price
+    // Use backend-provided derived prices directly; fallback to calculation only if missing
     const processedData = goldPriceData.map(item => {
-        const gram = item.pricePerGram || (item.price24k ? item.price24k / 3.75 : 0);
-        const p24 = Math.round(gram * 3.75);
-        const p18 = Math.round((p24 * 0.825) / 100) * 100;
-        const p14 = Math.round((p24 * 0.6435) / 100) * 100;
+        const p24 = item.price24k ?? Math.round((item.pricePerGram || 0) * 3.75);
+        const p18 = item.price18k ?? Math.round((p24 * 0.825) / 100) * 100;
+        const p14 = item.price14k ?? Math.round((p24 * 0.6435) / 100) * 100;
         return {
             ...item,
             price24k: p24,

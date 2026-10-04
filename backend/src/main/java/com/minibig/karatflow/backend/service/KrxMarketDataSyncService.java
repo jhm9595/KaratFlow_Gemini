@@ -127,9 +127,9 @@ public class KrxMarketDataSyncService {
                         if (list != null && !list.isEmpty()) {
                             for (Map<String, Object> item : list) {
                                 if ("04020000".equals(String.valueOf(item.get("ISU_CD"))) || "금99.99_1kg".equals(String.valueOf(item.get("ISU_NM")))) {
-                                    double clpr = Double.parseDouble(String.valueOf(item.get("TDD_CLSPRC")).replace(",", ""));
-                                    double vol = Double.parseDouble(String.valueOf(item.get("ACC_TRDVOL")).replace(",", ""));
-                                    double val = Double.parseDouble(String.valueOf(item.get("ACC_TRDVAL")).replace(",", ""));
+                                    double clpr = parseNumeric(item.get("TDD_CLSPRC"), 0.0);
+                                    double vol = parseNumeric(item.get("ACC_TRDVOL"), 0.0);
+                                    double val = parseNumeric(item.get("ACC_TRDVAL"), 0.0);
 
                                     DailyMetalPrice newPrice = new DailyMetalPrice();
                                     newPrice.setPriceDate(date);
@@ -354,6 +354,18 @@ public class KrxMarketDataSyncService {
                     log.info("KRX KOSPI (Carry-Forward): Saved KOSPI {} for {}", prev.getKospiIndex(), date);
                 }
             }
+        }
+    }
+
+    private double parseNumeric(Object valObj, double defaultVal) {
+        if (valObj == null) return defaultVal;
+        String str = String.valueOf(valObj).replace(",", "").trim();
+        if (str.isEmpty() || "-".equals(str) || "null".equalsIgnoreCase(str)) return defaultVal;
+        try {
+            return Double.parseDouble(str);
+        } catch (NumberFormatException e) {
+            log.warn("KRX Sync: Failed to parse numeric value '{}'", str);
+            return defaultVal;
         }
     }
 }

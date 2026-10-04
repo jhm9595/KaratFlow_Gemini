@@ -8,7 +8,9 @@ import lombok.Setter;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "daily_metal_prices")
+@Table(name = "daily_metal_prices", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"price_date", "metal_type"})
+})
 @Getter @Setter
 @NoArgsConstructor
 public class DailyMetalPrice {
@@ -17,7 +19,7 @@ public class DailyMetalPrice {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "price_date", nullable = false)
     private LocalDate priceDate;
 
     @Column(name = "price_per_gram", nullable = true)
