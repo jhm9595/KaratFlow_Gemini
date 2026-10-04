@@ -1,34 +1,18 @@
-import { Tag } from 'primereact/tag';
 import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image } from 'primereact/image';
-import { Badge } from 'primereact/badge';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
 import { Toast } from 'primereact/toast';
-import { ProcessManager } from './ProcessManager';
-import { GoldToolsModal } from './GoldToolsModal';
-import GoldWidget from './components/widgets/GoldWidget';
 import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
-import { AutoComplete } from 'primereact/autocomplete';
-import { Timeline } from 'primereact/timeline';
-
-import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
-import { InputText } from 'primereact/inputtext';
-import { InputNumber } from 'primereact/inputnumber';
+import PrintView from './components/print/PrintView';
+import { useOrderPrint } from './hooks/useOrderPrint';
+import { getAuthHeaders } from './api/client';
+import { OrderTable } from './components/orders/OrderTable';
+import { DashboardSidebar } from './components/dashboard/DashboardSidebar';
+import { PipelineOverview } from './components/pipeline/PipelineOverview';
+import { LiveEventFeed } from './components/events/LiveEventFeed';
+import { AppModals } from './components/AppModals';
 import { Client } from '@stomp/stompjs';
 import i18n from './i18n';
-import { PetroleumChart } from './components/charts/PetroleumChart';
-import { KospiChart } from './components/charts/KospiChart';
-import { OrderDetailModal } from './components/OrderDetailModal';
-import { MultiOrderDetailModal } from './components/MultiOrderDetailModal';
-import { CreateOrderModal } from './components/CreateOrderModal';
-import { ChangeRequestModal } from './components/ChangeRequestModal';
-import { CancelOrderModal } from './components/CancelOrderModal';
-import { PartnerHandshakeModal } from './components/PartnerHandshakeModal';
-import { SubcontractModal } from './components/SubcontractModal';
 
 
 
@@ -241,8 +225,7 @@ function App() {
     });
 
     const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
-    const [printOrder, setPrintOrder] = useState<any>(null);
-    const [printMode, setPrintMode] = useState<'label' | 'invoice' | null>(null);
+    const { printOrder, printMode, handlePrint } = useOrderPrint(getAuthHeaders);
 
     const [cancelModalVisible, setCancelModalVisible] = useState(false);
     const [cancelEstimate, setCancelEstimate] = useState<number | null>(null);
@@ -262,12 +245,7 @@ function App() {
     const [businessNumber, setBusinessNumber] = useState('');
     const [businessResult, setBusinessResult] = useState<any>(null);
 
-    const getAuthHeaders = (): Record<string, string> => {
-        const token = localStorage.getItem('access_token') || localStorage.getItem('jwtToken');
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        return headers;
-    };
+
 
     const openHandshakeModal = () => {
         fetch('http://localhost:8888/api/handshake', { headers: getAuthHeaders() })
@@ -606,38 +584,7 @@ function App() {
 
     
     
-    const handlePrint = async (order: any, mode: 'label' | 'invoice') => {
-        if (!order) return;
-        let mergedOrder = { ...order };
-        
-        try {
-            const detailRes = await fetch(`http://localhost:8888/api/orders/${order.id}/details`, { headers: getAuthHeaders() });
-            if (detailRes.ok) {
-                const detailData = await detailRes.json();
-                mergedOrder = { ...mergedOrder, ...detailData };
-            }
-        } catch (err) {
-            console.error('Failed to fetch details for print:', err);
-        }
 
-        if (mode === 'invoice') {
-            try {
-                const res = await fetch(`http://localhost:8888/api/orders/${order.id}/invoice`, { headers: getAuthHeaders() });
-                if (res.ok) {
-                    const invoiceData = await res.json();
-                    mergedOrder.invoice = invoiceData;
-                }
-            } catch (err) {
-                console.error('Failed to fetch invoice data:', err);
-            }
-        }
-
-        setPrintOrder(mergedOrder);
-        setPrintMode(mode);
-        setTimeout(() => {
-            window.print();
-        }, 300);
-    };
 
     
     
@@ -697,544 +644,119 @@ function App() {
                 {/* APM Main Content */}
                 <div className="flex-1 flex overflow-hidden p-3 gap-3">
                     {/* Left Panel: Metrics & Charts */}
-                    <div className="flex flex-column gap-3 overflow-y-auto" style={{ width: '450px', maxHeight: '100%', overflowX: 'hidden' }}>
-                        <div className="surface-0 p-3 border-round shadow-1">
-                            <h4 className="m-0 mb-3 text-600 font-medium">실시간 핵심 지표</h4>
-                            <div className="flex justify-content-between align-items-end mb-3">
-                                <span className="text-600">진행중 주문</span>
-                                <span className="text-3xl font-bold text-900">{orders.filter(o => o.status !== 'CANCELLED' && o.status !== 'COMPLETED').length} <small className="text-sm font-normal text-gray-500">건</small></span>
-                            </div>
-                            <div className="flex justify-content-between align-items-end mb-3">
-                                <span className="text-600">금일 완료</span>
-                                <span className="text-3xl font-bold text-green-400">{orders.filter(o => o.status === 'COMPLETED').length} <small className="text-sm font-normal text-gray-500">건</small></span>
-                            </div>
-                        </div>
-
-                        {/* 금 시세 (국내 시세 3.75g 기준 위젯) */}
-                        <GoldWidget 
-                            todayGold={todayGold} 
-                            yesterdayGold={yesterdayGold} 
-                            delta24k={delta24k} 
-                            goldPriceData={goldPriceData} 
-                            onOpenCalculator={() => setGoldToolsVisible(true)} 
-                        />
-
-                        {/* 2. 석유 시세 */}
-                        <PetroleumChart />
-
-                        {/* 3. 코스피 지수 */}
-                        <KospiChart />
-                    </div>
+                    <DashboardSidebar 
+                        orders={orders}
+                        todayGold={todayGold}
+                        yesterdayGold={yesterdayGold}
+                        delta24k={delta24k}
+                        goldPriceData={goldPriceData}
+                        onOpenGoldTools={() => setGoldToolsVisible(true)}
+                    />
 
                     {/* Right Panel: Pipeline & Data Table */}
                     <div className="flex-1 flex flex-column gap-3 overflow-hidden">
                         
                         {/* Pipeline Visualizer */}
-                        <div className="surface-0 p-3 border-round shadow-1">
-                            <div className="flex justify-content-between align-items-center mb-3">
-                                <h4 className="m-0 text-600 font-medium">실시간 공정 현황 (Pipeline)</h4>
-                            </div>
-                            <div className="flex justify-content-between align-items-center px-4 relative">
-                                {/* Connecting Line */}
-                                <div className="absolute w-full z-0" style={{ height: '4px', backgroundColor: '#e5e7eb', top: '30px', left: '0' }}></div>
-                                
-                                {pipelineSteps.map((stepObj: any, idx: number) => {
-                                    const stage = stepObj.stageName;
-                                    const count = orders.filter(o => {
-                                        let s = o.stage || '접수';
-                                        if (s === 'PENDING') s = '접수';
-                                        else if (s === 'CASTING') s = '주물';
-                                        else if (s === 'POLISHING') s = '세공';
-                                        
-                                        const isDone = (st: string) => st === '완성' || st === '완료' || st === 'COMPLETED' || st === 'DONE';
-                                        if ((isDone(s) || o.status === 'COMPLETED') && isDone(stage)) {
-                                            return true;
-                                        }
-                                        return s === stage;
-                                    }).length;
-
-                                    const bg = stepObj.colorGradient || stepObj.colorHex || 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
-
-                                    return (
-                                        <div key={stage} className="flex flex-column align-items-center z-1 relative bg-white" style={{ borderRadius: '50%' }}>
-                                            <div 
-                                                className="flex align-items-center justify-content-center border-circle mb-2 transition-transform transform hover:scale-110" 
-                                                style={{ 
-                                                    width: '60px', 
-                                                    height: '60px', 
-                                                    background: bg,
-                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
-                                                    border: '2px solid #ffffff'
-                                                }}
-                                            >
-                                                <span className="text-2xl font-bold text-white drop-shadow">{count}</span>
-                                            </div>
-                                            <span className="text-800 font-bold bg-white px-2 border-round text-xs shadow-1" style={{ color: stepObj.colorHex || '#333' }}>{stage}</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                        <PipelineOverview 
+                            orders={orders}
+                            pipelineSteps={pipelineSteps}
+                        />
 
                         {/* Enhanced Data Table */}
                         <div className="surface-0 p-3 border-round shadow-1 flex-1 flex flex-column overflow-hidden">
                             <h4 className="m-0 mb-3 text-600 font-medium">상세 주문 모니터링</h4>
                             <div className="flex-1 overflow-auto custom-dark-table pb-3">
-                                {/* @ts-ignore */}
-                                <DataTable value={orders} size="small" paginator rows={10} selectionMode="single" selection={selectedOrderId === null ? null : orders.find(o => o.id === selectedOrderId)} onSelectionChange={(e) => { setSelectedOrderId(e.value?.id); if(e.value) openOrderDetail(e.value.id); }} dataKey="id" emptyMessage="등록된 주문이 없습니다." className="p-datatable-sm cursor-pointer" rowClassName={(row: any) => row.isHold ? 'hold-pulse-row' : 'surface-0 text-900 hover:surface-50 transition-colors transition-duration-200'}>
-                                    <Column header="" style={{width:'52px'}} body={(row: any) => row.imageUrl ? (
-                                    <Image src={`http://localhost:8888${row.imageUrl}`} alt="" width="36" height="36" preview style={{objectFit:'cover', borderRadius:'6px'}} />
-                                ) : <span className="pi pi-image text-300" />} />
-                                    <Column header="주문 번호" body={(r) => <span className="font-bold text-primary">#{r.orderNo || r.id}</span>} style={{ minWidth: '120px' }} />
-                                    <Column header="수량" style={{width:'72px'}} body={(row: any) => <span className="font-bold text-700">{row.quantity ?? 1}건</span>} />
-                                    <Column field="design" header="Design" />
-                                    <Column field="customerName" header="고객명" />
-                                    <Column field="stage" header="공정 상태" body={statusBodyTemplate}></Column>
-                                    <Column header="" body={(rowData) => <Button icon="pi pi-eye" onClick={(e) => { e.stopPropagation(); setSelectedOrderId(rowData.id); setOrderDetailVisible(true); }} className="p-button-rounded p-button-text p-button-sm p-button-secondary" aria-label="상세보기" tooltip="상세보기" tooltipOptions={{position: 'left'}} />} style={{ width: '60px' }} />
-                                </DataTable>
+                                <OrderTable 
+                                    orders={orders}
+                                    selectedOrderId={selectedOrderId}
+                                    onSelectOrder={(id) => setSelectedOrderId(id)}
+                                    onOpenOrderDetail={(id) => openOrderDetail(id)}
+                                    pipelineSteps={pipelineSteps}
+                                    pipelineStages={pipelineStages}
+                                />
                             </div>
                         </div>
                     </div>
 
                     {/* Right Panel: Live Feed */}
-                    <div className="surface-0 p-3 border-round shadow-1 flex flex-column" style={{ width: '480px', minWidth: '420px' }}>
-                        <div className="flex justify-content-between align-items-center mb-3 border-bottom-1 border-200 pb-2">
-                            <div className="flex align-items-center gap-2">
-                                <span className="w-0.5rem h-0.5rem bg-green-500 border-circle inline-block" style={{ animation: 'pulse 2s infinite' }}></span>
-                                <h4 className="m-0 text-800 font-bold text-base">Live Event Feed</h4>
-                            </div>
-                            <div className="flex align-items-center surface-100 p-1 border-round-xl gap-1">
-                                <button 
-                                    type="button"
-                                    onClick={() => setFeedViewMode('list')}
-                                    title="리스트 뷰"
-                                    className={`border-none border-round-lg cursor-pointer transition-all transition-duration-150 flex align-items-center justify-content-center ${
-                                        feedViewMode === 'list' 
-                                            ? 'bg-white text-primary font-bold shadow-1' 
-                                            : 'bg-transparent text-600 hover:text-900'
-                                    }`}
-                                    style={{ width: '30px', height: '30px' }}
-                                >
-                                    <i className="pi pi-list text-sm font-bold"></i>
-                                </button>
-                                <button 
-                                    type="button"
-                                    onClick={() => setFeedViewMode('card')}
-                                    title="카드 뷰 (3열)"
-                                    className={`border-none border-round-lg cursor-pointer transition-all transition-duration-150 flex align-items-center justify-content-center ${
-                                        feedViewMode === 'card' 
-                                            ? 'bg-white text-primary font-bold shadow-1' 
-                                            : 'bg-transparent text-600 hover:text-900'
-                                    }`}
-                                    style={{ width: '30px', height: '30px' }}
-                                >
-                                    <i className="pi pi-th-large text-sm font-bold"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto pr-1">
-                            {_liveEvents.length === 0 ? (
-                                <div className="text-center text-gray-400 py-5 text-sm">최근 발생한 이벤트가 없습니다.</div>
-                            ) : feedViewMode === 'list' ? (
-                                <div className="flex flex-column gap-3">
-                                    {_liveEvents.map((ev, idx) => {
-                                        const stageInfo = getEventStageInfo(ev.message);
-                                        const isUnread = ev.isRead === false || ev.isRead === undefined;
-                                        return (
-                                            <div 
-                                                key={`${ev.id || 'ev'}-${idx}`} 
-                                                onClick={() => handleNotificationClick(ev)}
-                                                className={`surface-50 p-3 border-round shadow-1 fadein animation-duration-300 transition-all hover:surface-100 cursor-pointer ${isUnread ? 'unread-live-event-card' : ''}`}
-                                                style={{ 
-                                                    borderLeft: `5px solid ${stageInfo.colorHex}`,
-                                                    borderTop: '1px solid #f1f5f9',
-                                                    borderRight: '1px solid #f1f5f9',
-                                                    borderBottom: '1px solid #f1f5f9'
-                                                }}
-                                            >
-                                                <div className="flex justify-content-between align-items-center mb-2">
-                                                    <div className="flex align-items-center gap-2">
-                                                        <span 
-                                                            className="text-white px-3 py-1 border-round-md font-extrabold text-xs shadow-1" 
-                                                            style={{ background: stageInfo.colorGradient || stageInfo.colorHex, letterSpacing: '0.3px' }}
-                                                        >
-                                                            {stageInfo.stageName}
-                                                        </span>
-                                                        {isUnread && (
-                                                            <span 
-                                                                className="px-2 py-0.5 border-round font-bold text-white shadow-1 flex align-items-center" 
-                                                                style={{ backgroundColor: '#ef4444', color: '#ffffff', fontSize: '10px', lineHeight: 1 }}
-                                                            >
-                                                                NEW
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <span className="text-xs text-500 font-mono flex align-items-center gap-1">
-                                                        <i className="pi pi-clock text-xs text-400"></i> {ev.time}
-                                                    </span>
-                                                </div>
-                                                <div className="text-sm text-900 line-height-3 font-medium px-1">
-                                                    {ev.message}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="grid grid-nogutter gap-2 align-content-start">
-                                    {_liveEvents.map((ev, idx) => {
-                                        const stageInfo = getEventStageInfo(ev.message);
-                                        const isUnread = ev.isRead === false || ev.isRead === undefined;
-                                        return (
-                                            <div key={`${ev.id || 'ev'}-${idx}`} className="col-4">
-                                                <div 
-                                                    onClick={() => handleNotificationClick(ev)}
-                                                    className={`p-2 border-round shadow-1 fadein animation-duration-300 flex flex-column justify-content-between h-full cursor-pointer hover:shadow-2 transition-all ${isUnread ? 'unread-live-event-card' : ''}`}
-                                                    style={{ 
-                                                        backgroundColor: stageInfo.bgColor, 
-                                                        borderTop: `4px solid ${stageInfo.colorHex}`,
-                                                        borderLeft: '1px solid #e2e8f0',
-                                                        borderRight: '1px solid #e2e8f0',
-                                                        borderBottom: '1px solid #e2e8f0',
-                                                        minHeight: '92px' 
-                                                    }}
-                                                >
-                                                    <div className="flex justify-content-between align-items-center mb-1.5">
-                                                        <div className="flex align-items-center gap-1">
-                                                            <span 
-                                                                className="text-white px-2 py-0.5 border-round font-extrabold" 
-                                                                style={{ background: stageInfo.colorGradient || stageInfo.colorHex, fontSize: '11px' }}
-                                                            >
-                                                                {stageInfo.stageName}
-                                                            </span>
-                                                            {isUnread && (
-                                                                <span 
-                                                                    className="border-circle inline-block shadow-1" 
-                                                                    style={{ backgroundColor: '#ef4444', width: '8px', height: '8px' }}
-                                                                ></span>
-                                                            )}
-                                                        </div>
-                                                        <span className="text-500 font-mono font-semibold" style={{ fontSize: '10px' }}>{ev.time}</span>
-                                                    </div>
-                                                    <div className="text-xs text-900 font-medium line-height-2 mt-1 overflow-hidden" style={{ wordBreak: 'break-word', fontSize: '11px' }}>
-                                                        {ev.message}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <LiveEventFeed 
+                        events={_liveEvents}
+                        feedViewMode={feedViewMode}
+                        onFeedViewModeChange={(mode) => setFeedViewMode(mode)}
+                        onEventClick={(ev) => handleNotificationClick(ev)}
+                        pipelineSteps={pipelineSteps}
+                    />
                 </div>
-
-                <CreateOrderModal
-                    visible={createOrderModalVisible}
-                    onHide={() => setCreateOrderModalVisible(false)}
-                    createOrderForm={createOrderForm}
-                    setCreateOrderForm={setCreateOrderForm}
-                    selectedProduct={selectedProduct}
-                    setSelectedProduct={setSelectedProduct}
-                    filteredProducts={filteredProducts}
-                    searchProduct={searchProduct}
-                    handleFileUpload={handleFileUpload}
-                    submitCreateOrder={submitCreateOrder}
-                />
-
-                <ChangeRequestModal
-                    visible={changeModalVisible}
-                    onHide={() => setChangeModalVisible(false)}
-                    submitChangeRequest={submitChangeRequest}
-                />
-
-                <CancelOrderModal
-                    visible={cancelModalVisible}
-                    onHide={() => setCancelModalVisible(false)}
-                    cancelEstimate={cancelEstimate}
-                    submitCancelOrder={submitCancelOrder}
-                />
-
-                <PartnerHandshakeModal
-                    visible={partnerModalVisible}
-                    onHide={() => setPartnerModalVisible(false)}
-                    handshakes={handshakes}
-                    handshakePin={handshakePin}
-                    setHandshakePin={setHandshakePin}
-                    generatedPin={generatedPin}
-                    requestHandshake={requestHandshake}
-                    verifyHandshake={verifyHandshake}
-                    businessNumber={businessNumber}
-                    setBusinessNumber={setBusinessNumber}
-                    verifyBusiness={verifyBusiness}
-                    businessResult={businessResult}
-                />
-
-                <SubcontractModal
-                    visible={subcontractModalVisible}
-                    onHide={() => setSubcontractModalVisible(false)}
-                    subcontracts={subcontracts}
-                    scForm={scForm}
-                    setScForm={setScForm}
-                    receiveForm={receiveForm}
-                    setReceiveForm={setReceiveForm}
-                    handleDispatchSubcontract={handleDispatchSubcontract}
-                    handleReceiveSubcontract={handleReceiveSubcontract}
-                />
             </div>
 
+            <AppModals 
+                createOrderModalVisible={createOrderModalVisible}
+                setCreateOrderModalVisible={setCreateOrderModalVisible}
+                createOrderForm={createOrderForm}
+                setCreateOrderForm={setCreateOrderForm}
+                selectedProduct={selectedProduct}
+                setSelectedProduct={setSelectedProduct}
+                filteredProducts={filteredProducts}
+                searchProduct={searchProduct}
+                handleFileUpload={handleFileUpload}
+                submitCreateOrder={submitCreateOrder}
 
+                changeModalVisible={changeModalVisible}
+                setChangeModalVisible={setChangeModalVisible}
+                submitChangeRequest={submitChangeRequest}
 
-            {selectedOrderId && orders.find(o => o.id === selectedOrderId) && (() => {
-                const currentOrder = orders.find(o => o.id === selectedOrderId);
-                const isMultiItem = Boolean(
-                    (currentOrder?.quantity && currentOrder.quantity > 1) || 
-                    (orderDetailData?.workOrders && orderDetailData.workOrders.length > 1)
-                );
+                cancelModalVisible={cancelModalVisible}
+                setCancelModalVisible={setCancelModalVisible}
+                cancelEstimate={cancelEstimate}
+                submitCancelOrder={submitCancelOrder}
 
-                return isMultiItem ? (
-                    <MultiOrderDetailModal
-                        visible={orderDetailVisible}
-                        onHide={() => setOrderDetailVisible(false)}
-                        order={currentOrder}
-                        orderDetailData={orderDetailData}
-                        pipelineStages={pipelineStages}
-                        pipelineSteps={pipelineSteps}
-                        advanceStage={advanceStage}
-                        openSubcontractModal={(id) => { setOrderDetailVisible(false); openSubcontractModal(id); }}
-                        openChangeModal={() => { setOrderDetailVisible(false); setChangeModalVisible(true); }}
-                        openCancelModal={(id) => { setOrderDetailVisible(false); openCancelModal(id); }}
-                        handlePrint={handlePrint}
-                        statusBodyTemplate={statusBodyTemplate}
-                    />
-                ) : (
-                    <OrderDetailModal
-                        visible={orderDetailVisible}
-                        onHide={() => setOrderDetailVisible(false)}
-                        order={currentOrder}
-                        orderDetailData={orderDetailData}
-                        pipelineStages={pipelineStages}
-                        pipelineSteps={pipelineSteps}
-                        advanceStage={advanceStage}
-                        openSubcontractModal={(id) => { setOrderDetailVisible(false); openSubcontractModal(id); }}
-                        openChangeModal={() => { setOrderDetailVisible(false); setChangeModalVisible(true); }}
-                        openCancelModal={(id) => { setOrderDetailVisible(false); openCancelModal(id); }}
-                        handlePrint={handlePrint}
-                        statusBodyTemplate={statusBodyTemplate}
-                    />
-                );
-            })()}
+                partnerModalVisible={partnerModalVisible}
+                setPartnerModalVisible={setPartnerModalVisible}
+                handshakes={handshakes}
+                handshakePin={handshakePin}
+                setHandshakePin={setHandshakePin}
+                generatedPin={generatedPin}
+                requestHandshake={requestHandshake}
+                verifyHandshake={verifyHandshake}
+                businessNumber={businessNumber}
+                setBusinessNumber={setBusinessNumber}
+                verifyBusiness={verifyBusiness}
+                businessResult={businessResult}
 
-            <ProcessManager 
-                visible={processManagerVisible} 
-                onHide={() => {
-                    setProcessManagerVisible(false);
-                    fetchOrders();
-                    fetchPipelineStages();
-                }} 
+                subcontractModalVisible={subcontractModalVisible}
+                setSubcontractModalVisible={setSubcontractModalVisible}
+                subcontracts={subcontracts}
+                scForm={scForm}
+                setScForm={setScForm}
+                receiveForm={receiveForm}
+                setReceiveForm={setReceiveForm}
+                handleDispatchSubcontract={handleDispatchSubcontract}
+                handleReceiveSubcontract={handleReceiveSubcontract}
+
+                selectedOrderId={selectedOrderId}
+                orders={orders}
+                orderDetailVisible={orderDetailVisible}
+                setOrderDetailVisible={setOrderDetailVisible}
+                orderDetailData={orderDetailData}
+                pipelineStages={pipelineStages}
+                pipelineSteps={pipelineSteps}
+                advanceStage={advanceStage}
+                openSubcontractModal={openSubcontractModal}
+                openCancelModal={openCancelModal}
+                handlePrint={handlePrint}
+
+                processManagerVisible={processManagerVisible}
+                setProcessManagerVisible={setProcessManagerVisible}
+                fetchOrders={fetchOrders}
+                fetchPipelineStages={fetchPipelineStages}
+
+                goldToolsVisible={goldToolsVisible}
+                setGoldToolsVisible={setGoldToolsVisible}
+                goldPriceData={goldPriceData}
             />
 
             {/* Print Views */}
-            {printOrder && printMode === 'label' && (
-                <div className="print-mode-label">
-                    <div style={{ borderBottom: '1px solid #000', paddingBottom: '1mm', marginBottom: '1mm', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 'bold', fontSize: '9pt' }}>KaratFlow</span>
-                        <span style={{ fontSize: '8pt', fontFamily: 'monospace' }}>{printOrder.orderNo || `KF-${printOrder.id}`}</span>
-                    </div>
-                    <div style={{ fontSize: '8pt', lineHeight: '1.3' }}>
-                        <div><strong>고객명:</strong> {printOrder.customerName || '-'}</div>
-                        <div><strong>브랜드:</strong> {printOrder.brand || '-'}</div>
-                        <div><strong>제품명:</strong> {printOrder.productName || printOrder.unmappedProductName || printOrder.design || '-'}</div>
-                        <div><strong>마감/수량:</strong> {printOrder.surfaceFinish || '유광'} / {printOrder.quantity || 1}개</div>
-                    </div>
-                    {printOrder.engravingText && (
-                        <div className="engraving-highlight">
-                            각인: {printOrder.engravingText} {printOrder.engravingLocation ? `(${printOrder.engravingLocation})` : ''}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {printOrder && printMode === 'invoice' && (
-                <div className="print-mode-invoice">
-                    {/* Header Metadata Bar */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '9pt', color: '#444', marginBottom: '4mm' }}>
-                        <span style={{ fontWeight: 'bold' }}>[서식 제2026-KF09호]</span>
-                        <span style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>문서관리번호: KF-DOC-{printOrder.id}-{new Date().toISOString().slice(0,10).replace(/-/g,'')}</span>
-                    </div>
-
-                    {/* Main Document Title */}
-                    <div style={{ textAlign: 'center', marginBottom: '8mm', borderBottom: '3px double #000', paddingBottom: '4mm' }}>
-                        <h1 style={{ fontSize: '22pt', margin: 0, letterSpacing: '4px', fontWeight: 'bold', color: '#000' }}>
-                            {printOrder.orderType === 'B2B' ? '공 식 거 래 명 세 표 ( 도 매 용 )' : '품 질 보 증 서 및 정 산 명 세 서'}
-                        </h1>
-                        <div style={{ fontSize: '9.5pt', color: '#555', marginTop: '2mm', letterSpacing: '0.5px' }}>
-                            ( 귀금속 통합 제작 공정 관리 시스템 K-APM 공식 인증 문서 )
-                        </div>
-                    </div>
-                    
-                    {/* Legal Provider / Receiver Table */}
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6mm', fontSize: '9.5pt' }}>
-                        <tbody>
-                            <tr>
-                                <th rowSpan={4} style={{ width: '4%', backgroundColor: '#f1f3f5', border: '1px solid #000', textAlign: 'center', writingMode: 'vertical-rl', letterSpacing: '3px' }}>공급자</th>
-                                <td style={{ width: '13%', backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', padding: '5px 8px' }}>사업자번호</td>
-                                <td style={{ width: '33%', border: '1px solid #000', padding: '5px 8px' }}>124-81-99881</td>
-                                <th rowSpan={4} style={{ width: '4%', backgroundColor: '#f1f3f5', border: '1px solid #000', textAlign: 'center', writingMode: 'vertical-rl', letterSpacing: '3px' }}>공급받는자</th>
-                                <td style={{ width: '13%', backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', padding: '5px 8px' }}>주문번호</td>
-                                <td style={{ width: '33%', border: '1px solid #000', padding: '5px 8px', fontWeight: 'bold', color: '#1d4ed8' }}>{printOrder.orderNo || `KF-${printOrder.id}`}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', padding: '5px 8px' }}>상호(법인명)</td>
-                                <td style={{ border: '1px solid #000', padding: '5px 8px' }}>KaratFlow Jewelry (주)</td>
-                                <td style={{ backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', padding: '5px 8px' }}>성명 / 상호</td>
-                                <td style={{ border: '1px solid #000', padding: '5px 8px', fontWeight: 'bold' }}>{printOrder.customerName || '지정되지 않음'}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', padding: '5px 8px' }}>성명(대표자)</td>
-                                <td style={{ border: '1px solid #000', padding: '5px 8px' }}>홍 길 동 (인)</td>
-                                <td style={{ backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', padding: '5px 8px' }}>연락처</td>
-                                <td style={{ border: '1px solid #000', padding: '5px 8px' }}>{printOrder.customerPhone || '-'}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', padding: '5px 8px' }}>사업장 주소</td>
-                                <td style={{ border: '1px solid #000', padding: '5px 8px' }}>서울시 종로구 돈화문로 11길 15</td>
-                                <td style={{ backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', padding: '5px 8px' }}>발행일시</td>
-                                <td style={{ border: '1px solid #000', padding: '5px 8px' }}>{new Date().toLocaleString('ko-KR')}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    {/* Table of Items */}
-                    <div style={{ fontSize: '10pt', fontWeight: 'bold', marginBottom: '2mm', display: 'flex', justifyContent: 'space-between', borderLeft: '3px solid #000', paddingLeft: '6px' }}>
-                        <span>1. 품목 및 주문 규격 명세</span>
-                        <span style={{ fontSize: '9pt', fontWeight: 'normal', color: '#666' }}>단위: 원(KRW), VAT 포함</span>
-                    </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6mm', fontSize: '9.5pt' }}>
-                        <thead>
-                            <tr style={{ backgroundColor: '#e9ecef', textAlign: 'center' }}>
-                                <th style={{ border: '1px solid #000', padding: '6px', width: '6%' }}>No.</th>
-                                <th style={{ border: '1px solid #000', padding: '6px', width: '14%' }}>브랜드</th>
-                                <th style={{ border: '1px solid #000', padding: '6px', width: '28%' }}>품명 및 디자인 규격</th>
-                                <th style={{ border: '1px solid #000', padding: '6px', width: '12%' }}>표면 마감</th>
-                                <th style={{ border: '1px solid #000', padding: '6px', width: '20%' }}>각인 문구 (위치)</th>
-                                <th style={{ border: '1px solid #000', padding: '6px', width: '8%' }}>수량</th>
-                                <th style={{ border: '1px solid #000', padding: '6px', width: '12%' }}>금액</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr style={{ textAlign: 'center' }}>
-                                <td style={{ border: '1px solid #000', padding: '6px' }}>1</td>
-                                <td style={{ border: '1px solid #000', padding: '6px' }}>{printOrder.brand || '-'}</td>
-                                <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'left' }}>
-                                    <strong>{printOrder.productName || printOrder.unmappedProductName || printOrder.design || '-'}</strong>
-                                </td>
-                                <td style={{ border: '1px solid #000', padding: '6px' }}>{printOrder.surfaceFinish || '유광'}</td>
-                                <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'left' }}>
-                                    {printOrder.engravingText ? `${printOrder.engravingText} (${printOrder.engravingLocation || '기본'})` : '없음'}
-                                </td>
-                                <td style={{ border: '1px solid #000', padding: '6px' }}>{printOrder.quantity || 1} EA</td>
-                                <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 'bold' }}>
-                                    {printOrder.finalConsumerPrice ? `₩${printOrder.finalConsumerPrice.toLocaleString()}` : '-'}
-                                </td>
-                            </tr>
-                        </tbody>
-                        <tfoot>
-                            <tr style={{ backgroundColor: '#f8f9fa', fontWeight: 'bold' }}>
-                                <td colSpan={5} style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>합 계 (TOTAL)</td>
-                                <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{printOrder.quantity || 1} EA</td>
-                                <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', color: '#166534', fontSize: '10.5pt' }}>
-                                    {printOrder.finalConsumerPrice ? `₩${printOrder.finalConsumerPrice.toLocaleString()}` : '-'}
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
-
-                    {/* B2B Detailed Gold & Labor Settlement Block */}
-                    {printOrder.invoice && printOrder.orderType === 'B2B' && (
-                        <div style={{ marginBottom: '6mm' }}>
-                            <div style={{ fontSize: '10pt', fontWeight: 'bold', marginBottom: '2mm', borderLeft: '3px solid #000', paddingLeft: '6px' }}>2. B2B 정밀 귀금속 및 공임 정산 명세</div>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9pt' }}>
-                                <tbody>
-                                    <tr>
-                                        <td style={{ backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', width: '20%', padding: '5px' }}>적용 시세 (기준일)</td>
-                                        <td style={{ border: '1px solid #000', width: '30%', padding: '5px' }}>₩{printOrder.invoice.goldPricePer375g?.toLocaleString()} / 3.75g ({printOrder.invoice.priceDate})</td>
-                                        <td style={{ backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', width: '20%', padding: '5px' }}>출고 실측 중량</td>
-                                        <td style={{ border: '1px solid #000', width: '30%', padding: '5px' }}>{printOrder.invoice.completedWeightG} g</td>
-                                    </tr>
-                                    <tr>
-                                        <td style={{ backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', padding: '5px' }}>스톤 차감 중량</td>
-                                        <td style={{ border: '1px solid #000', padding: '5px' }}>{printOrder.invoice.stoneWeightG} g</td>
-                                        <td style={{ backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', padding: '5px' }}>정산 기준 중량 (해리 {printOrder.invoice.lossRatePercent}%)</td>
-                                        <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>{printOrder.invoice.settlementBaseWeightG?.toFixed(3)} g</td>
-                                    </tr>
-                                    <tr>
-                                        <td style={{ backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', padding: '5px' }}>산출 금 재료비</td>
-                                        <td style={{ border: '1px solid #000', padding: '5px' }}>₩{printOrder.invoice.calculatedGoldPrice?.toLocaleString(undefined, {maximumFractionDigits:0})}</td>
-                                        <td style={{ backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', padding: '5px' }}>원청 기본 공임비</td>
-                                        <td style={{ border: '1px solid #000', padding: '5px' }}>₩{printOrder.invoice.baseLaborFee?.toLocaleString()}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style={{ backgroundColor: '#fafafa', border: '1px solid #000', fontWeight: 'bold', padding: '5px' }}>스톤 세팅 공임비</td>
-                                        <td style={{ border: '1px solid #000', padding: '5px' }}>₩{printOrder.invoice.stoneFee?.toLocaleString()}</td>
-                                        <td style={{ backgroundColor: '#fee2e2', border: '1px solid #000', fontWeight: 'bold', padding: '5px', color: '#991b1b' }}>최종 정산 청구 금액</td>
-                                        <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', fontSize: '11pt', color: '#991b1b' }}>
-                                            ₩{printOrder.invoice.finalBillingAmount?.toLocaleString(undefined, {maximumFractionDigits:0})} 원
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                    
-                    {/* Legal Quality Assurance & Official Stamp Box */}
-                    <div style={{ border: '2px solid #000', padding: '6mm', marginTop: '6mm', backgroundColor: '#ffffff', position: 'relative' }}>
-                        <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '11pt', marginBottom: '3mm', letterSpacing: '2px' }}>
-                            [ 품 질 보 증 및 서 명 직 인 ]
-                        </div>
-                        <p style={{ fontSize: '9pt', lineHeight: '1.6', color: '#333', textAlign: 'justify', margin: 0 }}>
-                            본 문서는 귀금속 통합 제작 공정 시스템(KaratFlow APM System)에서 공정별 정밀 검수 완료 후 공식 발행된 서류입니다.
-                            본 서류에 기재된 순도, 실측 중량 및 제품 사양은 국가 표준 귀금속 품질 보증 규정에 의거하여 정품임을 철저히 보증하며, 무단 복제 및 변조를 금합니다.
-                        </p>
-                        
-                        <div style={{ marginTop: '6mm', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ fontSize: '9.5pt' }}>
-                                <div><strong>발행일자:</strong> {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                                <div><strong>발행기관:</strong> KaratFlow Jewelry 주식회사</div>
-                            </div>
-                            
-                            {/* Red Official Seal Graphic / Stamp Container */}
-                            <div style={{ textAlign: 'right', position: 'relative', paddingRight: '10px' }}>
-                                <div style={{ fontSize: '11pt', fontWeight: 'bold', letterSpacing: '1px', display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
-                                    <span>발행원 / 대표이사 홍 길 동</span>
-                                    <span style={{ 
-                                        display: 'inline-block', 
-                                        width: '42px', 
-                                        height: '42px', 
-                                        borderRadius: '50%', 
-                                        border: '2px double #dc2626', 
-                                        color: '#dc2626', 
-                                        fontSize: '9pt', 
-                                        fontWeight: 'bold', 
-                                        lineHeight: '38px', 
-                                        textAlign: 'center',
-                                        transform: 'rotate(-5deg)'
-                                    }}>
-                                        직인
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            )}
-
-            {/* @ts-ignore */}
-            <ProcessManager visible={processManagerVisible} onHide={() => setProcessManagerVisible(false)} />
-            {/* @ts-ignore */}
-            <GoldToolsModal visible={goldToolsVisible} onHide={() => setGoldToolsVisible(false)} recentPrices={goldPriceData} />
+            <PrintView printOrder={printOrder} printMode={printMode} />
         </>
     );
 }
