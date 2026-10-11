@@ -38,7 +38,7 @@ const formatDate = (dateStr: any) => {
 };
 
 export const MultiOrderDetailModal: React.FC<MultiOrderDetailModalProps> = ({
-    visible, onHide, order, orderDetailData, pipelineStages = ['접수', 'CAD', '주물', '세공', '완료'], pipelineSteps = [], advanceStage,
+    visible, onHide, order, orderDetailData, pipelineStages = [], pipelineSteps = [], advanceStage,
     openSubcontractModal, openChangeModal, openCancelModal, handlePrint, statusBodyTemplate
 }) => {
     const [selectedStageFilter, setSelectedStageFilter] = useState<string>('ALL');
@@ -46,7 +46,15 @@ export const MultiOrderDetailModal: React.FC<MultiOrderDetailModalProps> = ({
 
     if (!order) return null;
     const rowData = order;
-    const stagesList = pipelineStages && pipelineStages.length > 0 ? pipelineStages : ['접수', 'CAD', '주물', '세공', '완료'];
+
+    // Determine effective template steps for this order
+    const stepsToUse = (orderDetailData?.templateSteps && orderDetailData.templateSteps.length > 0)
+        ? orderDetailData.templateSteps
+        : (pipelineSteps && pipelineSteps.length > 0 ? pipelineSteps : []);
+
+    const stagesList: string[] = stepsToUse.length > 0
+        ? stepsToUse.map((s: any) => s.stageName || s.stageCode)
+        : (pipelineStages && pipelineStages.length > 0 ? pipelineStages : []);
 
     // Work Orders list
     const workOrders = (orderDetailData?.workOrders && orderDetailData.workOrders.length > 0)
@@ -54,32 +62,32 @@ export const MultiOrderDetailModal: React.FC<MultiOrderDetailModalProps> = ({
         : [{
             id: rowData.id,
             workOrderNo: rowData.orderNo || `WO-${rowData.id}`,
-            stage: rowData.stage || '접수',
+            stage: rowData.stage || (stagesList[0] || ''),
             createdAt: rowData.createdAt || rowData.date
         }];
 
     // Calculate stage distribution count for summary
     const stageCounts: { [key: string]: number } = {};
     workOrders.forEach((wo: any) => {
-        const st = wo.stage || '접수';
+        const st = wo.stage || (stagesList[0] || '');
         stageCounts[st] = (stageCounts[st] || 0) + 1;
     });
 
     // Filter work orders by stage if selected
     const filteredWorkOrders = selectedStageFilter === 'ALL'
         ? workOrders
-        : workOrders.filter((wo: any) => (wo.stage || '접수') === selectedStageFilter);
+        : workOrders.filter((wo: any) => (wo.stage || '') === selectedStageFilter);
 
     // Active item for timeline stepper (defaults to selectedWorkOrder or first item)
     const activeItem = selectedWorkOrder || workOrders[0] || {};
-    const activeItemStage = activeItem.stage || rowData.stage || '접수';
+    const activeItemStage = activeItem.stage || rowData.stage || (stagesList[0] || '');
     const activeItemStageIdx = stagesList.indexOf(activeItemStage) >= 0 ? stagesList.indexOf(activeItemStage) : 0;
 
     const getStepBgColor = (stageName: string) => {
-        if (!pipelineSteps || pipelineSteps.length === 0) return null;
-        let matched = pipelineSteps.find((step: any) => step.stageName === stageName);
+        if (!stepsToUse || stepsToUse.length === 0) return null;
+        let matched = stepsToUse.find((step: any) => step.stageName === stageName);
         if (!matched) {
-            matched = pipelineSteps.find((step: any) =>
+            matched = stepsToUse.find((step: any) =>
                 step.stageName && step.stageName.trim().toLowerCase() === stageName.trim().toLowerCase()
             );
         }

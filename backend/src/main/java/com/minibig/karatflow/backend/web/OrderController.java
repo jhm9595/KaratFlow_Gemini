@@ -49,8 +49,9 @@ public class OrderController {
             productName = created.getOrderNo();
         }
         
-        String msg = "신규 주문이 접수되었습니다: " + productName + " (" + (created.getOrderType() != null ? created.getOrderType() : "B2C") + ")";
-        EventNotification notif = new EventNotification(securityUtils.getCurrentUserId(), created.getId(), created.getOrderNo(), msg, "접수");
+        String msg = "신규 주문이 생성되었습니다: " + productName + " (" + (created.getOrderType() != null ? created.getOrderType() : "B2C") + ")";
+        String initStage = created.getStage() != null ? created.getStage() : "신규";
+        EventNotification notif = new EventNotification(securityUtils.getCurrentUserId(), created.getId(), created.getOrderNo(), msg, initStage);
         EventNotification savedNotif = eventNotificationRepository.save(notif);
 
         messagingTemplate.convertAndSend("/topic/process-alerts", savedNotif);

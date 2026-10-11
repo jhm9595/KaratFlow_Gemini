@@ -38,7 +38,7 @@ const formatDate = (dateStr: any) => {
 };
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ 
-    visible, onHide, order, orderDetailData, pipelineStages = ['접수', 'CAD', '주물', '세공', '완료'], pipelineSteps = [], advanceStage, openSubcontractModal, 
+    visible, onHide, order, orderDetailData, pipelineStages = [], pipelineSteps = [], advanceStage, openSubcontractModal, 
     openChangeModal, openCancelModal, handlePrint, statusBodyTemplate 
 }) => {
     const [imageZoomVisible, setImageZoomVisible] = useState<boolean>(false);
@@ -46,9 +46,17 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     if (!order) return null;
     const rowData = order;
 
+    // Determine effective template steps for this order
+    const stepsToUse = (orderDetailData?.templateSteps && orderDetailData.templateSteps.length > 0)
+        ? orderDetailData.templateSteps
+        : (pipelineSteps && pipelineSteps.length > 0 ? pipelineSteps : []);
+
+    const stagesList: string[] = stepsToUse.length > 0
+        ? stepsToUse.map((s: any) => s.stageName || s.stageCode)
+        : (pipelineStages && pipelineStages.length > 0 ? pipelineStages : []);
+
     // Current order stage
-    const currentStage = orderDetailData?.workOrders?.[0]?.stage || rowData.stage || '접수';
-    const stagesList = pipelineStages && pipelineStages.length > 0 ? pipelineStages : ['접수', 'CAD', '주물', '세공', '완료'];
+    const currentStage = orderDetailData?.workOrders?.[0]?.stage || rowData.stage || (stagesList[0] || '');
     const currentStageIdx = stagesList.indexOf(currentStage) >= 0 ? stagesList.indexOf(currentStage) : 0;
     const isDone = (st: string) => 
         st === '완성' || st === '완료' || st === 'COMPLETED' || st === 'DONE' || 
@@ -77,10 +85,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             stage: currentStage,
             createdAt: rowData.createdAt || rowData.date
         }];
-
-    const stepsToUse = (orderDetailData?.templateSteps && orderDetailData.templateSteps.length > 0)
-        ? orderDetailData.templateSteps
-        : pipelineSteps;
 
     const getStepBgColor = (stageName: string) => {
         if (!stepsToUse || stepsToUse.length === 0) return null;

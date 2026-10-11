@@ -173,12 +173,12 @@ public class OrderService {
         if (selectedTemplate == null) {
             throw new IllegalArgumentException("등록된 공정 템플릿이 없습니다. [공정 관리]에서 먼저 공정 템플릿을 생성해야 주문을 등록할 수 있습니다.");
         }
-
-        String initialStage = "접수";
-        if (selectedTemplate != null && selectedTemplate.getSteps() != null && !selectedTemplate.getSteps().isEmpty()) {
-            ProcessTemplateStep firstStep = selectedTemplate.getSteps().get(0);
-            initialStage = firstStep.getStageName() != null ? firstStep.getStageName() : firstStep.getStageCode();
+        if (selectedTemplate.getSteps() == null || selectedTemplate.getSteps().isEmpty()) {
+            throw new IllegalArgumentException("선택된 공정 템플릿에 등록된 공정 단계가 없습니다.");
         }
+
+        ProcessTemplateStep firstStep = selectedTemplate.getSteps().get(0);
+        String initialStage = firstStep.getStageName() != null ? firstStep.getStageName() : firstStep.getStageCode();
 
         int qty = orderItem.getQuantity() != null ? orderItem.getQuantity() : 1;
         for (int i = 0; i < qty; i++) {
@@ -315,12 +315,15 @@ public class OrderService {
                             .build()
             ).collect(Collectors.toList());
         } else {
+            String defaultStage = (steps != null && !steps.isEmpty())
+                    ? (steps.get(0).getStageName() != null ? steps.get(0).getStageName() : steps.get(0).getStageCode())
+                    : "대기";
             woDTOs.add(OrderDetailDTO.WorkOrderDTO.builder()
                     .id(order.getId())
                     .workOrderNo(order.getOrderNo() != null ? order.getOrderNo() : "WO-" + order.getId())
                     .templateId(template != null ? template.getId() : null)
                     .templateName(template != null ? template.getTemplateName() : null)
-                    .stage(currStep != null ? (currStep.getStageName() != null ? currStep.getStageName() : currStep.getStageCode()) : "접수")
+                    .stage(currStep != null ? (currStep.getStageName() != null ? currStep.getStageName() : currStep.getStageCode()) : defaultStage)
                     .isHold(false)
                     .createdAt(order.getCreatedAt() != null ? order.getCreatedAt().toString() : null)
                     .build());
@@ -360,11 +363,14 @@ public class OrderService {
             List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
             OrderItem oi = items.isEmpty() ? null : items.get(0);
             ProcessTemplate defT = templateRepository.findAll().stream().filter(t -> Boolean.TRUE.equals(t.getIsDefault())).findFirst().orElse(null);
+            String initialStage = (defT != null && defT.getSteps() != null && !defT.getSteps().isEmpty())
+                    ? (defT.getSteps().get(0).getStageName() != null ? defT.getSteps().get(0).getStageName() : defT.getSteps().get(0).getStageCode())
+                    : "대기";
             
             WorkOrder wo = WorkOrder.builder()
                     .orderItem(oi)
                     .template(defT)
-                    .currentStage("접수")
+                    .currentStage(initialStage)
                     .isHold(false)
                     .build();
             wo = workOrderRepository.save(wo);
@@ -478,15 +484,24 @@ public class OrderService {
     public Double calculateCancelEstimate(Long orderId) {
         List<WorkOrder> wos = workOrderRepository.findAllByOrderId(orderId);
         if (wos.isEmpty()) return 0.0;
-        String stage = wos.get(0).getCurrentStage();
-        return switch (stage) {
-            case "PENDING", "접수" -> 0.0;
-            case "CAD" -> 50000.0;
-            case "CASTING", "주물" -> 150000.0;
-            case "POLISHING", "세공" -> 200000.0;
-            case "PLATING", "도금" -> 250000.0;
-            default -> 300000.0;
-        };
+        WorkOrder wo = wos.get(0);
+        String stage = wo.getCurrentStage();
+        ProcessTemplate tpl = wo.getTemplate();
+        if (tpl != null && tpl.getSteps() != null && !tpl.getSteps().isEmpty()) {
+            List<ProcessTemplateStep> steps = tpl.getSteps();
+            int stageIdx = -1;
+            for (int i = 0; i < steps.size(); i++) {
+                String name = steps.get(i).getStageName() != null ? steps.get(i).getStageName() : steps.get(i).getStageCode();
+                if (stage != null && (stage.equalsIgnoreCase(name) || stage.equalsIgnoreCase(steps.get(i).getStageCode()))) {
+                    stageIdx = i;
+                    break;
+                }
+            }
+            if (stageIdx <= 0) return 0.0;
+            double ratio = (double) stageIdx / (double) Math.max(1, steps.size() - 1);
+            return Math.round(ratio * 300000.0 / 10000.0) * 10000.0;
+        }
+        return 0.0;
     }
 
     @Transactional

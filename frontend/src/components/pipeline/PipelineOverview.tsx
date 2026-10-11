@@ -16,9 +16,26 @@ export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipe
         ? (selectedTemplateId ? validTemplates.find(t => t.id === selectedTemplateId) || validTemplates[0] : (validTemplates.find(t => t.isDefault) || validTemplates[0]))
         : null;
 
-    const stepsToRender = activeTemplate?.steps && activeTemplate.steps.length > 0
+    const stepsToRender: any[] = activeTemplate?.steps && activeTemplate.steps.length > 0
         ? activeTemplate.steps
-        : pipelineSteps;
+        : (pipelineSteps && pipelineSteps.length > 0 ? pipelineSteps : []);
+
+    if (stepsToRender.length === 0) {
+        return (
+            <div className="surface-0 p-4 border-round shadow-1">
+                <div className="flex justify-content-between align-items-center mb-3">
+                    <h4 className="m-0 text-600 font-medium flex align-items-center gap-2">
+                        <i className="pi pi-sitemap text-primary"></i> 실시간 공정 현황 (Pipeline)
+                    </h4>
+                </div>
+                <div className="flex flex-column align-items-center justify-content-center py-4 surface-50 border-round border-1 border-dashed border-300">
+                    <i className="pi pi-sitemap text-400 text-4xl mb-2"></i>
+                    <h5 className="m-0 mb-1 text-700 font-bold">등록된 공정 템플릿 단계가 없습니다</h5>
+                    <p className="text-500 text-sm m-0">상단의 [공정 관리]에서 템플릿을 등록하면 사업장 고유의 실시간 공정 파이프라인이 표시됩니다.</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="surface-0 p-3 border-round shadow-1">
@@ -52,11 +69,7 @@ export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipe
                             return false;
                         }
 
-                        let s = o.stage || '접수';
-                        if (s === 'PENDING') s = '접수';
-                        else if (s === 'CASTING') s = '주물';
-                        else if (s === 'POLISHING') s = '세공';
-                        
+                        const s = o.stage || '';
                         const isDone = (st: string) => st === '완성' || st === '완료' || st === 'COMPLETED' || st === 'DONE';
                         if ((isDone(s) || o.status === 'COMPLETED') && isDone(stage)) {
                             return true;

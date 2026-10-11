@@ -36,14 +36,8 @@ function App() {
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
     const [allProducts, setAllProducts] = useState<any[]>([]);
-    const [pipelineStages, setPipelineStages] = useState<string[]>(['접수', 'CAD', '주물', '세공', '완료']);
-    const [pipelineSteps, setPipelineSteps] = useState<any[]>([
-        { stageName: '접수', colorHex: '#38BDF8', colorGradient: 'linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%)' },
-        { stageName: 'CAD', colorHex: '#C084FC', colorGradient: 'linear-gradient(135deg, #e879f9 0%, #c084fc 100%)' },
-        { stageName: '주물', colorHex: '#FB923C', colorGradient: 'linear-gradient(135deg, #fde047 0%, #fb923c 100%)' },
-        { stageName: '세공', colorHex: '#F472B6', colorGradient: 'linear-gradient(135deg, #f472b6 0%, #fb7185 100%)' },
-        { stageName: '완료', colorHex: '#34D399', colorGradient: 'linear-gradient(135deg, #6ee7b7 0%, #34d399 100%)' }
-    ]);
+    const [pipelineStages, setPipelineStages] = useState<string[]>([]);
+    const [pipelineSteps, setPipelineSteps] = useState<any[]>([]);
 
     const fetchPipelineStages = () => {
         fetch('http://localhost:8888/api/process-templates', { headers: getAuthHeaders() })
@@ -53,12 +47,19 @@ function App() {
                     const defaultTpl = templates.find(t => t.isDefault) || templates[0];
                     if (defaultTpl && defaultTpl.steps && defaultTpl.steps.length > 0) {
                         setPipelineSteps(defaultTpl.steps);
-                        const stages = defaultTpl.steps.map((s: any) => s.stageName);
+                        const stages = defaultTpl.steps.map((s: any) => s.stageName || s.stageCode);
                         setPipelineStages(stages);
+                        return;
                     }
                 }
+                setPipelineSteps([]);
+                setPipelineStages([]);
             })
-            .catch(err => console.error('Failed to fetch pipeline stages:', err));
+            .catch(err => {
+                console.error('Failed to fetch pipeline stages:', err);
+                setPipelineSteps([]);
+                setPipelineStages([]);
+            });
     };
 
     // Load all products once for AutoComplete suggestions
@@ -391,7 +392,7 @@ function App() {
             .then(data => {
                 const mappedData = data.map((o: any) => ({
                     ...o,
-                    stage: o.stage || '접수'
+                    stage: o.stage || ''
                 }));
                 setOrders(mappedData);
             })

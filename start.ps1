@@ -1,4 +1,4 @@
-﻿# ==========================================
+# ==========================================
 # KaratFlow 통합 실행 스크립트 (start.ps1)
 # ==========================================
 
@@ -33,12 +33,12 @@ Start-Sleep -Seconds 2
 
 # 2. 백엔드 실행
 Write-Host "`n[2/3] 백엔드(Spring Boot, 8888)를 새 창에서 시작합니다..." -ForegroundColor Yellow
-$cmdBackend = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; chcp 65001 | Out-Null; cd backend; ./run.ps1"
+$cmdBackend = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; chcp 65001 | Out-Null; cd c:\secjob\KaratFlow_Gemini\backend; .\run.ps1"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $cmdBackend -WindowStyle Normal
 
 # 3. 프론트엔드 실행
 Write-Host "`n[3/3] 프론트엔드(React, 5555)를 새 창에서 시작합니다..." -ForegroundColor Yellow
-$cmdFrontend = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; chcp 65001 | Out-Null; cd frontend; npm run dev -- --port 5555"
+$cmdFrontend = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; chcp 65001 | Out-Null; cd c:\secjob\KaratFlow_Gemini\frontend; npm run dev -- --port 5555"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $cmdFrontend -WindowStyle Normal
 
 Write-Host "`n========================================================" -ForegroundColor Green
