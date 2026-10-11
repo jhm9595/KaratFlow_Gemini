@@ -24,33 +24,45 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
     const completedTodayCount = orders.filter(o => o.status === 'COMPLETED').length;
 
     return (
-        <div className="flex flex-column gap-3 overflow-y-auto" style={{ width: '450px', maxHeight: '100%', overflowX: 'hidden' }}>
-            <div className="surface-0 p-3 border-round shadow-1">
-                <h4 className="m-0 mb-3 text-600 font-medium">실시간 핵심 지표</h4>
-                <div className="flex justify-content-between align-items-end mb-3">
-                    <span className="text-600">진행중 주문</span>
-                    <span className="text-3xl font-bold text-900">{activeOrderCount} <small className="text-sm font-normal text-gray-500">건</small></span>
+        <div className="flex flex-column gap-3 h-full flex-shrink-0" style={{ width: '450px', height: '100%', overflow: 'hidden' }}>
+            {/* 1. Ultra-compact Stat Bar */}
+            <div className="surface-0 px-3 py-2 border-round-xl shadow-1 flex justify-content-between align-items-center flex-shrink-0" style={{ border: '1px solid #e2e8f0' }}>
+                <div className="flex align-items-center gap-2">
+                    <div className="flex align-items-center justify-content-center border-circle" style={{ width: '26px', height: '26px', backgroundColor: '#eff6ff', color: '#2563eb' }}>
+                        <i className="pi pi-chart-pie text-xs font-bold" />
+                    </div>
+                    <span className="text-800 font-bold text-sm">실시간 핵심 지표</span>
                 </div>
-                <div className="flex justify-content-between align-items-end mb-3">
-                    <span className="text-600">금일 완료</span>
-                    <span className="text-3xl font-bold text-green-400">{completedTodayCount} <small className="text-sm font-normal text-gray-500">건</small></span>
+                <div className="flex align-items-center gap-2">
+                    <span className="px-2 py-1 border-round-md text-xs font-semibold" style={{ backgroundColor: '#f1f5f9', color: '#334155' }}>
+                        진행중 <b className="text-blue-600 font-bold ml-1">{activeOrderCount}</b>건
+                    </span>
+                    <span className="px-2 py-1 border-round-md text-xs font-semibold" style={{ backgroundColor: '#f0fdf4', color: '#166534' }}>
+                        금일완료 <b className="text-green-600 font-bold ml-1">{completedTodayCount}</b>건
+                    </span>
                 </div>
             </div>
 
-            {/* 금 시세 (국내 시세 3.75g 기준 위젯) */}
-            <GoldWidget 
-                todayGold={todayGold} 
-                yesterdayGold={yesterdayGold} 
-                delta24k={delta24k ?? undefined} 
-                goldPriceData={goldPriceData} 
-                onOpenCalculator={onOpenGoldTools} 
-            />
+            {/* 2. 금 시세 (Compact 3.75g Widget - flex-1) */}
+            <div className="flex-1 min-h-0 flex flex-column">
+                <GoldWidget 
+                    todayGold={todayGold} 
+                    yesterdayGold={yesterdayGold} 
+                    delta24k={delta24k ?? undefined} 
+                    goldPriceData={goldPriceData} 
+                    onOpenCalculator={onOpenGoldTools} 
+                />
+            </div>
 
-            {/* 2. 석유 시세 */}
-            <PetroleumChart />
+            {/* 3. 석유 시세 (독립 컴포넌트 - flex-1) */}
+            <div className="flex-1 min-h-0 flex flex-column">
+                <PetroleumChart />
+            </div>
 
-            {/* 3. 코스피 지수 */}
-            <KospiChart />
+            {/* 4. 코스피 지수 (독립 컴포넌트 - flex-1) */}
+            <div className="flex-1 min-h-0 flex flex-column">
+                <KospiChart />
+            </div>
         </div>
     );
 };

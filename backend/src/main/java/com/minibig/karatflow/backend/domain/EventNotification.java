@@ -17,6 +17,9 @@ public class EventNotification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "user_id")
+    private Long userId;
+
     private Long orderId;
     private String orderNo;
 
@@ -31,6 +34,11 @@ public class EventNotification {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public EventNotification(Long orderId, String orderNo, String message, String stageName) {
+        this(null, orderId, orderNo, message, stageName);
+    }
+
+    public EventNotification(Long userId, Long orderId, String orderNo, String message, String stageName) {
+        this.userId = userId;
         this.orderId = orderId;
         this.orderNo = orderNo;
         this.message = message;

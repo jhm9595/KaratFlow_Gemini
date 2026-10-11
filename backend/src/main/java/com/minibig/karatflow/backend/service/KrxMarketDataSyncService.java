@@ -218,12 +218,13 @@ public class KrxMarketDataSyncService {
 
                             for (Map<String, Object> item : list) {
                                 String oilNm = String.valueOf(item.get("OIL_NM"));
-                                String prcStr = String.valueOf(item.get("WT_AVG_PRC")).replace(",", "").trim();
-                                if (prcStr.isEmpty()) continue;
-                                double prc = Double.parseDouble(prcStr);
-                                if ("휘발유".equals(oilNm)) gasoline = prc;
-                                if ("경유".equals(oilNm)) diesel = prc;
-                                if ("등유".equals(oilNm)) kerosene = prc;
+                                double prc = parseNumeric(item.get("WT_AVG_PRC"), 0.0);
+                                double disPrc = parseNumeric(item.get("WT_DIS_AVG_PRC"), 0.0);
+                                double effectivePrice = prc > 0 ? prc : disPrc;
+
+                                if ("휘발유".equals(oilNm)) gasoline = effectivePrice;
+                                if ("경유".equals(oilNm)) diesel = effectivePrice;
+                                if ("등유".equals(oilNm)) kerosene = effectivePrice;
                             }
 
                             if (gasoline > 0 || diesel > 0 || kerosene > 0) {

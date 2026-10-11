@@ -1,6 +1,10 @@
-# ==========================================
+﻿# ==========================================
 # KaratFlow 통합 실행 스크립트 (start.ps1)
 # ==========================================
+
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+chcp 65001 | Out-Null
 
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "   KaratFlow 서버 통합 시작을 준비합니다" -ForegroundColor Cyan
@@ -29,12 +33,13 @@ Start-Sleep -Seconds 2
 
 # 2. 백엔드 실행
 Write-Host "`n[2/3] 백엔드(Spring Boot, 8888)를 새 창에서 시작합니다..." -ForegroundColor Yellow
-# backend 폴더로 이동하여 기존에 만든 run.ps1 (환경변수 주입 스크립트)을 실행합니다.
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd backend; ./run.ps1" -WindowStyle Normal
+$cmdBackend = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; chcp 65001 | Out-Null; cd backend; ./run.ps1"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", $cmdBackend -WindowStyle Normal
 
 # 3. 프론트엔드 실행
 Write-Host "`n[3/3] 프론트엔드(React, 5555)를 새 창에서 시작합니다..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd frontend; npm run dev -- --port 5555" -WindowStyle Normal
+$cmdFrontend = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; chcp 65001 | Out-Null; cd frontend; npm run dev -- --port 5555"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", $cmdFrontend -WindowStyle Normal
 
 Write-Host "`n========================================================" -ForegroundColor Green
 Write-Host " 🚀 모든 서버 구동 명령이 완료되었습니다!" -ForegroundColor Green

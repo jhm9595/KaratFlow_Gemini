@@ -4,6 +4,7 @@ import { Button } from 'primereact/button';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { TabView, TabPanel } from 'primereact/tabview';
+import { formatImageUrl } from '../utils/image';
 
 
 export const ProductAdminModal = ({ visible, onHide, toast, getAuthHeaders }: any) => {
@@ -53,7 +54,15 @@ export const ProductAdminModal = ({ visible, onHide, toast, getAuthHeaders }: an
     };
 
     const imageBodyTemplate = (rowData: any) => {
-        return rowData.imageUrl ? <img src={`http://localhost:8888${rowData.imageUrl}`} alt="Product" style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} /> : <span>이미지 없음</span>;
+        const imgUrl = formatImageUrl(rowData.imageUrl);
+        return imgUrl ? (
+            <img 
+                src={imgUrl} 
+                alt="Product" 
+                style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} 
+                onError={(e: any) => { e.target.style.display = 'none'; }}
+            />
+        ) : <span>이미지 없음</span>;
     };
 
     const actionBodyTemplate = (rowData: any) => {

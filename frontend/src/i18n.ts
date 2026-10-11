@@ -5,7 +5,7 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   en: {
     translation: {
-      "title": "KaratFlow Gemini - Dashboard",
+      "title": "KaratFlow",
       "invite_partner": "Invite Partner",
       "simulate_hold": "Simulate HOLD Alert",
       "active_orders": "Active Work Orders",
@@ -39,7 +39,7 @@ const resources = {
   },
   ko: {
     translation: {
-      "title": "KaratFlow Gemini - 통합 모니터링 대시보드",
+      "title": "KaratFlow",
       "invite_partner": "협력사 초대",
       "active_orders": "진행 중인 물건",
       "order_id": "주문 번호",

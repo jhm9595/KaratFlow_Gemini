@@ -21,6 +21,7 @@ interface AppModalsProps {
     searchProduct: (e: any) => void;
     handleFileUpload: (e: any) => void;
     submitCreateOrder: () => void;
+    localImagePreview?: string | null;
 
     changeModalVisible: boolean;
     setChangeModalVisible: (v: boolean) => void;
@@ -88,6 +89,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
     searchProduct,
     handleFileUpload,
     submitCreateOrder,
+    localImagePreview,
 
     changeModalVisible,
     setChangeModalVisible,
@@ -167,6 +169,8 @@ export const AppModals: React.FC<AppModalsProps> = ({
                 handleFileUpload={handleFileUpload}
                 submitCreateOrder={submitCreateOrder}
                 templates={templates}
+                localImagePreview={localImagePreview}
+                onOpenProcessManager={() => setProcessManagerVisible(true)}
             />
 
             <ChangeRequestModal

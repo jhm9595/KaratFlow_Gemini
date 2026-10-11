@@ -9,6 +9,7 @@ import { Toast } from 'primereact/toast';
 import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
 import { Dialog } from 'primereact/dialog';
+import { formatImageUrl } from '../utils/image';
 
 
 export const ProductAdmin = () => {
@@ -124,7 +125,15 @@ export const ProductAdmin = () => {
     };
 
     const imageBodyTemplate = (rowData: any) => {
-        return rowData.imageUrl ? <img src={`http://localhost:8888${rowData.imageUrl}`} alt="Product" style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} /> : <span>이미지 없음</span>;
+        const imgUrl = formatImageUrl(rowData.imageUrl);
+        return imgUrl ? (
+            <img 
+                src={imgUrl} 
+                alt="Product" 
+                style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} 
+                onError={(e: any) => { e.target.style.display = 'none'; }}
+            />
+        ) : <span>이미지 없음</span>;
     };
 
     const treeImageBodyTemplate = (node: any) => {
@@ -196,7 +205,7 @@ export const ProductAdmin = () => {
                         <label className="font-bold">제품 이미지</label>
                         <div className="flex align-items-center gap-3">
                             <input type="file" onChange={handleFileUpload} accept="image/*" className="p-inputtext p-component flex-1" style={{padding: '0.5rem'}} />
-                            {createForm.imageUrl && <img src={`http://localhost:8888${createForm.imageUrl}`} alt="preview" className="shadow-2 border-round" style={{width: '50px', height: '50px', objectFit: 'cover'}} />}
+                            {createForm.imageUrl && <img src={formatImageUrl(createForm.imageUrl)} alt="preview" className="shadow-2 border-round" style={{width: '50px', height: '50px', objectFit: 'cover'}} onError={(e: any) => { e.target.style.display = 'none'; }} />}
                         </div>
                     </div>
                 </div>

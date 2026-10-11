@@ -1,12 +1,18 @@
 package com.minibig.karatflow.backend.domain;
+
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "order_items")
+@Table(
+    name = "order_items",
+    indexes = {
+        @Index(name = "idx_order_items_order_id", columnList = "order_id"),
+        @Index(name = "idx_order_items_design_id", columnList = "design_id")
+    }
+)
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class OrderItem {
+public class OrderItem extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "order_item_id")
     private Long id;
@@ -43,7 +49,4 @@ public class OrderItem {
     private String surfaceFinish;
     
     private String status;
-    
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
 }

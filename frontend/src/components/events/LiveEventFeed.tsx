@@ -102,12 +102,12 @@ export const LiveEventFeed: React.FC<LiveEventFeedProps> = ({
                         })}
                     </div>
                 ) : (
-                    <div className="grid grid-nogutter gap-2 align-content-start">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
                         {events.map((ev, idx) => {
                             const stageInfo = getEventStageInfo(ev.message, pipelineSteps);
                             const isUnread = ev.isRead === false || ev.isRead === undefined;
                             return (
-                                <div key={`${ev.id || 'ev'}-${idx}`} className="col-4">
+                                <div key={`${ev.id || 'ev'}-${idx}`} className="w-full">
                                     <div 
                                         onClick={() => onEventClick(ev)}
                                         className={`p-2 border-round shadow-1 fadein animation-duration-300 flex flex-column justify-content-between h-full cursor-pointer hover:shadow-2 transition-all ${isUnread ? 'unread-live-event-card' : ''}`}

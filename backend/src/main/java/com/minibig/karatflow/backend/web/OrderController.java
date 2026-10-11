@@ -6,6 +6,7 @@ import com.minibig.karatflow.backend.dto.OrderResponseDTO;
 import com.minibig.karatflow.backend.repository.EventNotificationRepository;
 import com.minibig.karatflow.backend.service.InvoiceCalculationService;
 import com.minibig.karatflow.backend.service.OrderService;
+import com.minibig.karatflow.backend.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -24,6 +25,7 @@ public class OrderController {
     private final SimpMessagingTemplate messagingTemplate;
     private final InvoiceCalculationService invoiceCalculationService;
     private final EventNotificationRepository eventNotificationRepository;
+    private final SecurityUtils securityUtils;
 
     @GetMapping
     public ResponseEntity<List<OrderResponseDTO>> getActiveOrders() {
@@ -39,8 +41,16 @@ public class OrderController {
     public ResponseEntity<OrderResponseDTO> createOrder(@RequestBody com.minibig.karatflow.backend.dto.OrderCreateRequestDTO dto) {
         OrderResponseDTO created = orderService.createOrder(dto);
         
-        String msg = "신규 주문이 접수되었습니다: " + created.getDesign() + " (" + created.getOrderType() + ")";
-        EventNotification notif = new EventNotification(created.getId(), created.getOrderNo(), msg, "접수");
+        String productName = created.getDesign();
+        if (productName == null || productName.trim().isEmpty()) {
+            productName = created.getUnmappedProductName();
+        }
+        if (productName == null || productName.trim().isEmpty()) {
+            productName = created.getOrderNo();
+        }
+        
+        String msg = "신규 주문이 접수되었습니다: " + productName + " (" + (created.getOrderType() != null ? created.getOrderType() : "B2C") + ")";
+        EventNotification notif = new EventNotification(securityUtils.getCurrentUserId(), created.getId(), created.getOrderNo(), msg, "접수");
         EventNotification savedNotif = eventNotificationRepository.save(notif);
 
         messagingTemplate.convertAndSend("/topic/process-alerts", savedNotif);
@@ -63,7 +73,7 @@ public class OrderController {
         orderService.setOrderHoldStatus(orderId, true);
         
         String msg = "주문 #" + orderId + "건이 고객 요청으로 보류(HOLD) 상태가 되었습니다.";
-        EventNotification notif = new EventNotification(orderId, "KF-" + orderId, msg, "보류");
+        EventNotification notif = new EventNotification(securityUtils.getCurrentUserId(), orderId, "KF-" + orderId, msg, "보류");
         EventNotification savedNotif = eventNotificationRepository.save(notif);
         
         messagingTemplate.convertAndSend("/topic/process-alerts", savedNotif);
@@ -79,7 +89,7 @@ public class OrderController {
         String newStage = String.valueOf(res.getOrDefault("newStage", "진행"));
 
         String msg = "주문 #" + orderId + " 공정이 [" + newStage + "] 단계로 이동했습니다.";
-        EventNotification notif = new EventNotification(orderId, "KF-" + orderId, msg, newStage);
+        EventNotification notif = new EventNotification(securityUtils.getCurrentUserId(), orderId, "KF-" + orderId, msg, newStage);
         EventNotification savedNotif = eventNotificationRepository.save(notif);
 
         messagingTemplate.convertAndSend("/topic/process-alerts", savedNotif);
@@ -98,7 +108,7 @@ public class OrderController {
         Map<String, Object> res = orderService.cancelOrder(orderId);
 
         String msg = "주문 #" + orderId + "건이 취소되었습니다. 취소 수수료: " + res.get("cancellationFee");
-        EventNotification notif = new EventNotification(orderId, "KF-" + orderId, msg, "취소");
+        EventNotification notif = new EventNotification(securityUtils.getCurrentUserId(), orderId, "KF-" + orderId, msg, "취소");
         EventNotification savedNotif = eventNotificationRepository.save(notif);
 
         messagingTemplate.convertAndSend("/topic/process-alerts", savedNotif);

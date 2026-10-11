@@ -1,17 +1,22 @@
 package com.minibig.karatflow.backend.domain;
+
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "companies")
+@Table(
+    name = "companies",
+    indexes = {
+        @Index(name = "idx_companies_role", columnList = "role")
+    }
+)
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class Company {
+public class Company extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "company_id")
     private Long id;
+    
     private String name;
+    
     private String role;
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
 }

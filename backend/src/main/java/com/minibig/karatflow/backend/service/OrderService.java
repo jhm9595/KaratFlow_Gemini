@@ -12,6 +12,16 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.minibig.karatflow.backend.security.SecurityUtils;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -23,6 +33,7 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final WorkOrderRepository workOrderRepository;
     private final DesignRepository designRepository;
+    private final SecurityUtils securityUtils;
 
     // ─── Stats ───────────────────────────────────────────────────────────────
 
@@ -48,8 +59,19 @@ public class OrderService {
     // ─── Dashboard list ───────────────────────────────────────────────────────
 
     public List<OrderResponseDTO> getDashboardOrders() {
+        Long currentUserId = securityUtils.getCurrentUserId();
+        boolean isDemo = securityUtils.isDemoSession();
         List<Map<String, Object>> rows = orderRepository.findDashboardOrders();
-        return rows.stream().map(row -> OrderResponseDTO.builder()
+        return rows.stream()
+                .filter(row -> {
+                    Object uid = row.get("USERID");
+                    if (isDemo) {
+                        return uid == null || ((Number) uid).longValue() == currentUserId;
+                    } else {
+                        return uid != null && ((Number) uid).longValue() == currentUserId;
+                    }
+                })
+                .map(row -> OrderResponseDTO.builder()
                 .id(row.get("ID") != null ? ((Number) row.get("ID")).longValue() : null)
                 .workOrderId(row.get("WORKORDERID") != null ? ((Number) row.get("WORKORDERID")).longValue() : null)
                 .templateId(row.get("TEMPLATEID") != null ? ((Number) row.get("TEMPLATEID")).longValue() : null)
@@ -100,6 +122,8 @@ public class OrderService {
         String dateStr = java.time.format.DateTimeFormatter.ofPattern("yyMMdd").format(LocalDateTime.now());
         String shortCode = java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
+        Long currentUserId = securityUtils.getCurrentUserId();
+
         Order order = Order.builder()
                 .orderType(dto.getOrderType())
                 .customerName(dto.getCustomerName())
@@ -108,7 +132,7 @@ public class OrderService {
                         ? BigDecimal.valueOf(dto.getFinalConsumerPrice()) : null)
                 .orderDate(LocalDateTime.now().toLocalDate())
                 .status("PROCESSING")
-                .createdAt(LocalDateTime.now())
+                .userId(currentUserId)
                 .shortCode(shortCode)
                 .build();
         order = orderRepository.save(order);
@@ -146,6 +170,9 @@ public class OrderService {
             List<ProcessTemplate> all = templateRepository.findAll();
             selectedTemplate = all.isEmpty() ? null : all.get(0);
         }
+        if (selectedTemplate == null) {
+            throw new IllegalArgumentException("등록된 공정 템플릿이 없습니다. [공정 관리]에서 먼저 공정 템플릿을 생성해야 주문을 등록할 수 있습니다.");
+        }
 
         String initialStage = "접수";
         if (selectedTemplate != null && selectedTemplate.getSteps() != null && !selectedTemplate.getSteps().isEmpty()) {
@@ -156,11 +183,10 @@ public class OrderService {
         int qty = orderItem.getQuantity() != null ? orderItem.getQuantity() : 1;
         for (int i = 0; i < qty; i++) {
             WorkOrder wo = WorkOrder.builder()
-                    .orderItemId(orderItem.getId())
+                    .orderItem(orderItem)
                     .template(selectedTemplate)
                     .currentStage(initialStage)
                     .isHold(false)
-                    .createdAt(LocalDateTime.now())
                     .build();
             wo = workOrderRepository.save(wo);
             wo.setWorkOrderNo(WorkOrder.generateWorkOrderNo(wo.getId()));
@@ -174,9 +200,7 @@ public class OrderService {
                 .orderNo(order.getOrderNo())
                 .shortCode(order.getShortCode())
                 .design(design != null ? design.getDesignCode() : null)
-                .brand(design != null ? design.getBrand() : dto.getUnmappedBrandName())
-                .imageUrl(dto.getImageUrl() != null ? dto.getImageUrl()
-                        : (design != null ? design.getImageUrl() : null))
+                .imageUrl(dto.getImageUrl())
                 .quantity(orderItem.getQuantity())
                 .unmappedProductName(dto.getUnmappedProductName())
                 .date(order.getOrderDate().toString())
@@ -282,8 +306,7 @@ public class OrderService {
                 .brand(d != null ? d.getBrand() : (oi != null ? oi.getUnmappedBrandName() : null))
                 .designCode(d != null ? d.getDesignCode() : null)
                 .productName(d != null ? d.getName() : (oi != null ? oi.getUnmappedProductName() : null))
-                .imageUrl(oi != null && oi.getImageUrl() != null ? oi.getImageUrl()
-                        : (d != null ? d.getImageUrl() : null))
+                .imageUrl(oi != null ? oi.getImageUrl() : null)
                 .quantity(oi != null ? oi.getQuantity() : 1)
                 .engravingText(oi != null ? oi.getEngravingText() : null)
                 .engravingLocation(oi != null ? oi.getEngravingLocation() : null)
@@ -306,11 +329,10 @@ public class OrderService {
             ProcessTemplate defT = templateRepository.findAll().stream().filter(t -> Boolean.TRUE.equals(t.getIsDefault())).findFirst().orElse(null);
             
             WorkOrder wo = WorkOrder.builder()
-                    .orderItemId(oi != null ? oi.getId() : null)
+                    .orderItem(oi)
                     .template(defT)
                     .currentStage("접수")
                     .isHold(false)
-                    .createdAt(LocalDateTime.now())
                     .build();
             wo = workOrderRepository.save(wo);
             wo.setWorkOrderNo(WorkOrder.generateWorkOrderNo(wo.getId()));
@@ -358,10 +380,14 @@ public class OrderService {
         recordHistory(wo, newStage);
         workOrderRepository.save(wo);
 
-        OrderItem oi = orderItemRepository.findById(wo.getOrderItemId()).orElseThrow();
-        Order order = oi.getOrder();
-        Design d = oi.getDesign();
-        List<WorkOrder> all = workOrderRepository.findAllByOrderId(order.getId());
+        OrderItem oi = wo.getOrderItem();
+        if (oi == null) {
+            List<OrderItem> items = orderItemRepository.findByOrderId(workOrderId);
+            oi = items.isEmpty() ? null : items.get(0);
+        }
+        Order order = oi != null ? oi.getOrder() : null;
+        Design d = oi != null ? oi.getDesign() : null;
+        List<WorkOrder> all = order != null ? workOrderRepository.findAllByOrderId(order.getId()) : List.of();
         String rep = newStage;
         WorkOrder minWo = null;
         int minIdx = 999;
@@ -376,15 +402,15 @@ public class OrderService {
             rep = minWo.getCurrentStage();
         }
         return OrderResponseDTO.builder()
-                .id(order.getId()).orderNo(order.getOrderNo()).shortCode(order.getShortCode())
+                .id(order != null ? order.getId() : null).orderNo(order != null ? order.getOrderNo() : null).shortCode(order != null ? order.getShortCode() : null)
                 .design(d != null ? d.getDesignCode() : null)
-                .brand(d != null ? d.getBrand() : oi.getUnmappedBrandName())
-                .imageUrl(oi.getImageUrl() != null ? oi.getImageUrl() : (d != null ? d.getImageUrl() : null))
-                .quantity(oi.getQuantity()).unmappedProductName(oi.getUnmappedProductName())
-                .date(order.getOrderDate().toString()).stage(rep)
+                .brand(d != null ? d.getBrand() : (oi != null ? oi.getUnmappedBrandName() : null))
+                .imageUrl(oi != null ? oi.getImageUrl() : null)
+                .quantity(oi != null ? oi.getQuantity() : 1).unmappedProductName(oi != null ? oi.getUnmappedProductName() : null)
+                .date(order != null && order.getOrderDate() != null ? order.getOrderDate().toString() : null).stage(rep)
                 .isHold(all.stream().anyMatch(w -> Boolean.TRUE.equals(w.getIsHold())))
-                .orderType(order.getOrderType()).customerName(order.getCustomerName())
-                .customerPhone(order.getCustomerPhone()).status(order.getStatus())
+                .orderType(order != null ? order.getOrderType() : null).customerName(order != null ? order.getCustomerName() : null)
+                .customerPhone(order != null ? order.getCustomerPhone() : null).status(order != null ? order.getStatus() : null)
                 .build();
     }
 
@@ -402,16 +428,16 @@ public class OrderService {
                 .orElseThrow(() -> new IllegalArgumentException("WorkOrder not found: " + workOrderId));
         wo.setIsHold(!Boolean.TRUE.equals(wo.getIsHold()));
         workOrderRepository.save(wo);
-        OrderItem oi = orderItemRepository.findById(wo.getOrderItemId()).orElseThrow();
-        Order order = oi.getOrder();
-        Design d = oi.getDesign();
-        List<WorkOrder> all = workOrderRepository.findAllByOrderId(order.getId());
+        OrderItem oi = wo.getOrderItem();
+        Order order = oi != null ? oi.getOrder() : null;
+        Design d = oi != null ? oi.getDesign() : null;
+        List<WorkOrder> all = order != null ? workOrderRepository.findAllByOrderId(order.getId()) : List.of();
         return OrderResponseDTO.builder()
-                .id(order.getId()).orderNo(order.getOrderNo()).stage(wo.getCurrentStage())
+                .id(order != null ? order.getId() : null).orderNo(order != null ? order.getOrderNo() : null).stage(wo.getCurrentStage())
                 .isHold(all.stream().anyMatch(w -> Boolean.TRUE.equals(w.getIsHold())))
-                .brand(d != null ? d.getBrand() : oi.getUnmappedBrandName())
-                .imageUrl(oi.getImageUrl() != null ? oi.getImageUrl() : (d != null ? d.getImageUrl() : null))
-                .quantity(oi.getQuantity()).status(order.getStatus()).build();
+                .brand(d != null ? d.getBrand() : (oi != null ? oi.getUnmappedBrandName() : null))
+                .imageUrl(oi != null ? oi.getImageUrl() : null)
+                .quantity(oi != null ? oi.getQuantity() : 1).status(order != null ? order.getStatus() : null).build();
     }
 
     // ─── Cancel ───────────────────────────────────────────────────────────────
@@ -435,7 +461,7 @@ public class OrderService {
         Order order = orderRepository.findById(orderId).orElseThrow();
         Double fee = calculateCancelEstimate(orderId);
         order.setStatus("CANCELLED");
-        order.setCancellationFee(fee);
+        order.setCancellationFee(fee != null ? BigDecimal.valueOf(fee) : null);
         orderRepository.save(order);
         Map<String, Object> res = new HashMap<>();
         res.put("orderId", orderId);

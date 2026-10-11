@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,8 +37,8 @@ public class SubcontractService {
                 .order(order)
                 .taskName(req.getTaskName())
                 .subcontractorName(req.getSubcontractorName())
-                .dispatchedWeightG(req.getDispatchedWeightG())
-                .agreedLaborFee(req.getAgreedLaborFee())
+                .dispatchedWeightG(req.getDispatchedWeightG() != null ? req.getDispatchedWeightG() : BigDecimal.ZERO)
+                .agreedLaborFee(req.getAgreedLaborFee() != null ? req.getAgreedLaborFee() : BigDecimal.ZERO)
                 .status("DISPATCHED")
                 .dispatchedAt(LocalDateTime.now())
                 .build();
@@ -47,12 +48,16 @@ public class SubcontractService {
     }
 
     @Transactional
-    public SubcontractTaskDTO receive(Long taskId, Double receivedWeightG) {
+    public SubcontractTaskDTO receive(Long taskId, BigDecimal receivedWeightG) {
         SubcontractTask task = subcontractTaskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Task not found"));
 
         task.setReceivedWeightG(receivedWeightG);
-        task.setLossWeightG(task.getDispatchedWeightG() - receivedWeightG);
+        if (task.getDispatchedWeightG() != null && receivedWeightG != null) {
+            task.setLossWeightG(task.getDispatchedWeightG().subtract(receivedWeightG));
+        } else {
+            task.setLossWeightG(BigDecimal.ZERO);
+        }
         task.setStatus("RECEIVED");
         task.setReceivedAt(LocalDateTime.now());
 

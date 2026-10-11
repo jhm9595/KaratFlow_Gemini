@@ -32,10 +32,13 @@ public class FileUploadController {
     @PostMapping
     public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file) {
         try {
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Empty file"));
+            }
             String originalFileName = file.getOriginalFilename();
             String fileExtension = "";
             if (originalFileName != null && originalFileName.contains(".")) {
-                fileExtension = originalFileName.substring(originalFileName.lastIndexOf("."));
+                fileExtension = originalFileName.substring(originalFileName.lastIndexOf(".")).toLowerCase();
             }
             String fileName = UUID.randomUUID().toString() + fileExtension;
             
@@ -46,7 +49,7 @@ public class FileUploadController {
             
             return ResponseEntity.ok(Map.of("url", fileDownloadUri));
         } catch (Exception ex) {
-            return ResponseEntity.internalServerError().body("Could not store file " + file.getOriginalFilename() + ". Please try again!");
+            return ResponseEntity.internalServerError().body(Map.of("error", "Could not store file " + file.getOriginalFilename() + ". Please try again!"));
         }
     }
     
@@ -55,9 +58,25 @@ public class FileUploadController {
         try {
             Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
             Resource resource = new UrlResource(filePath.toUri());
-            if (resource.exists()) {
+            if (resource.exists() && resource.isReadable()) {
+                String contentType = null;
+                try {
+                    contentType = Files.probeContentType(filePath);
+                } catch (Exception ignored) {}
+
+                if (contentType == null || contentType.isEmpty()) {
+                    String lowerName = fileName.toLowerCase();
+                    if (lowerName.endsWith(".png")) contentType = "image/png";
+                    else if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".jfif")) contentType = "image/jpeg";
+                    else if (lowerName.endsWith(".webp")) contentType = "image/webp";
+                    else if (lowerName.endsWith(".gif")) contentType = "image/gif";
+                    else if (lowerName.endsWith(".svg")) contentType = "image/svg+xml";
+                    else if (lowerName.endsWith(".bmp")) contentType = "image/bmp";
+                    else contentType = "application/octet-stream";
+                }
+
                 return ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType(Files.probeContentType(filePath)))
+                        .contentType(MediaType.parseMediaType(contentType))
                         .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
                         .body(resource);
             } else {

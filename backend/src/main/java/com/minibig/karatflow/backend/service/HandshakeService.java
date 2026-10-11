@@ -36,7 +36,6 @@ public class HandshakeService {
                 .targetCompany(target)
                 .status("PENDING")
                 .pinCode(pin)
-                .createdAt(LocalDateTime.now())
                 .expiresAt(LocalDateTime.now().plusDays(1))
                 .build();
 

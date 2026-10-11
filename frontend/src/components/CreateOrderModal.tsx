@@ -5,6 +5,7 @@ import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
 import { AutoComplete } from 'primereact/autocomplete';
 import { Dropdown } from 'primereact/dropdown';
+import { formatImageUrl } from '../utils/image';
 
 interface CreateOrderModalProps {
     visible: boolean;
@@ -18,13 +19,16 @@ interface CreateOrderModalProps {
     handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
     submitCreateOrder: () => void;
     templates?: any[];
+    localImagePreview?: string | null;
+    onOpenProcessManager?: () => void;
 }
 
 export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     visible, onHide, createOrderForm, setCreateOrderForm, selectedProduct, setSelectedProduct,
-    filteredProducts, searchProduct, handleFileUpload, submitCreateOrder, templates
+    filteredProducts, searchProduct, handleFileUpload, submitCreateOrder, templates, localImagePreview,
+    onOpenProcessManager
 }) => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8888';
+    const hasTemplates = templates && templates.length > 0;
 
     return (
         <Dialog 
@@ -36,13 +40,34 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             className="p-fluid"
             dismissableMask
         >
+            {!hasTemplates && (
+                <div className="surface-0 p-3 border-round-xl border-1 border-amber-200 bg-amber-50 flex flex-wrap align-items-center justify-content-between gap-3 mb-4 shadow-1">
+                    <div className="flex align-items-center gap-2.5">
+                        <i className="pi pi-exclamation-circle text-amber-600 text-lg font-bold"></i>
+                        <span className="font-bold text-amber-900 text-sm">공정 템플릿 등록이 필요합니다.</span>
+                    </div>
+                    {onOpenProcessManager && (
+                        <Button 
+                            label="+ 템플릿 등록" 
+                            icon="pi pi-plus" 
+                            className="p-button-warning p-button-sm font-bold flex-shrink-0" 
+                            style={{ width: 'auto' }}
+                            onClick={() => {
+                                onHide();
+                                onOpenProcessManager();
+                            }} 
+                        />
+                    )}
+                </div>
+            )}
+
             <div className="formgrid grid mt-2">
                 {(!selectedProduct || typeof selectedProduct === 'string') && (
                     <div className="field col-12 md:col-6">
                         <label className="font-bold">브랜드 (옵션)</label>
                         <InputText 
-                            value={createOrderForm.unmappedBrandName} 
-                            onChange={(e) => setCreateOrderForm({ ...createOrderForm, unmappedBrandName: e.target.value })} 
+                            value={createOrderForm.unmappedBrandName || ''} 
+                            onChange={(e) => setCreateOrderForm((prev: any) => ({ ...prev, unmappedBrandName: e.target.value }))} 
                             placeholder="신규 브랜드명" 
                         />
                     </div>
@@ -57,18 +82,29 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                         onChange={(e) => {
                             setSelectedProduct(e.value);
                             if (typeof e.value === 'object' && e.value !== null) {
-                                setCreateOrderForm({ ...createOrderForm, designId: e.value.id, unmappedProductName: '', unmappedBrandName: '' });
+                                setCreateOrderForm((prev: any) => ({ 
+                                    ...prev, 
+                                    designId: e.value.id, 
+                                    unmappedProductName: '', 
+                                    unmappedBrandName: '',
+                                    imageUrl: prev.imageUrl || ''
+                                }));
                             } else if (typeof e.value === 'string') {
-                                setCreateOrderForm({ ...createOrderForm, designId: 0, unmappedProductName: e.value });
+                                setCreateOrderForm((prev: any) => ({ 
+                                    ...prev, 
+                                    designId: 0, 
+                                    unmappedProductName: e.value 
+                                }));
                             }
                         }} 
                         itemTemplate={(item: any) => (
                             <div className="flex align-items-center gap-2">
                                 {item.imageUrl && (
                                     <img 
-                                        src={`${apiUrl}${item.imageUrl}`} 
+                                        src={formatImageUrl(item.imageUrl)} 
                                         alt={item.name} 
                                         style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '4px' }} 
+                                        onError={(e: any) => { e.target.style.display = 'none'; }}
                                     />
                                 )}
                                 <div>
@@ -82,7 +118,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 </div>
                 
                 <div className="field col-12 md:col-6">
-                    <label className="font-bold">제품 이미지</label>
+                    <label className="font-bold">제품 이미지 (선택, 최대 10MB)</label>
                     <div className="flex align-items-center gap-2">
                         <input 
                             type="file" 
@@ -91,22 +127,26 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                             className="p-inputtext p-component flex-1" 
                             style={{ padding: '0.5rem' }} 
                         />
-                        {createOrderForm.imageUrl && (
+                        {(localImagePreview || createOrderForm.imageUrl) && (
                             <img 
-                                src={`${apiUrl}${createOrderForm.imageUrl}`} 
+                                src={localImagePreview || formatImageUrl(createOrderForm.imageUrl)} 
                                 alt="preview" 
                                 className="shadow-2 border-round" 
                                 style={{ width: '40px', height: '40px', objectFit: 'cover' }} 
+                                onError={(e: any) => { e.target.style.display = 'none'; }}
                             />
                         )}
                     </div>
+                    <small className="text-500 mt-1 block">
+                        * 최대 10MB 이하 이미지 첨부 가능 (브라우저 자동 최적화 및 로컬 미리보기가 적용됩니다).
+                    </small>
                 </div>
 
                 <div className="field col-12 md:col-6">
                     <label className="font-bold">수량</label>
                     <InputNumber 
                         value={createOrderForm.quantity} 
-                        onValueChange={(e) => setCreateOrderForm({ ...createOrderForm, quantity: (e.value === null || e.value === undefined) ? 1 : e.value })} 
+                        onValueChange={(e) => setCreateOrderForm((prev: any) => ({ ...prev, quantity: (e.value === null || e.value === undefined) ? 1 : e.value }))} 
                         min={1} 
                         showButtons 
                     />
@@ -115,34 +155,41 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 <div className="field col-12 md:col-4">
                     <label className="font-bold">주문 구분</label>
                     <InputText 
-                        value={createOrderForm.orderType} 
-                        onChange={(e) => setCreateOrderForm({ ...createOrderForm, orderType: e.target.value })} 
+                        value={createOrderForm.orderType || ''} 
+                        onChange={(e) => setCreateOrderForm((prev: any) => ({ ...prev, orderType: e.target.value }))} 
                         placeholder="B2C, B2B" 
                     />
                 </div>
 
-                {templates && templates.length > 0 && (
+                {hasTemplates ? (
                     <div className="field col-12 md:col-8">
                         <label className="font-bold text-primary flex align-items-center gap-1">
-                            <i className="pi pi-sitemap"></i> 적용 공정 템플릿 선택
+                            <i className="pi pi-sitemap"></i> 적용 공정 템플릿 선택 <span className="text-red-500">*</span>
                         </label>
                         <Dropdown 
                             value={createOrderForm.processTemplateId || (templates.find(t => t.isDefault)?.id || templates[0].id)} 
-                            options={templates.map(t => ({
+                            options={templates.filter(t => t && t.templateName && t.templateName.trim() !== '').map(t => ({
                                 label: `${t.templateName}${t.isDefault ? ' (기본)' : ''} [${t.steps?.map((s: any) => s.stageName).join(' ➔ ')}]`,
                                 value: t.id
                             }))} 
-                            onChange={(e) => setCreateOrderForm({ ...createOrderForm, processTemplateId: e.value })} 
+                            onChange={(e) => setCreateOrderForm((prev: any) => ({ ...prev, processTemplateId: e.value }))} 
                             placeholder="공정 템플릿 선택" 
                         />
+                    </div>
+                ) : (
+                    <div className="field col-12 md:col-8">
+                        <label className="font-bold text-500 flex align-items-center gap-1">
+                            <i className="pi pi-sitemap"></i> 적용 공정 템플릿
+                        </label>
+                        <InputText value="등록된 공정 템플릿이 없습니다" disabled className="text-500 surface-100" />
                     </div>
                 )}
                 
                 <div className="field col-12 md:col-4">
                     <label className="font-bold">고객명</label>
                     <InputText 
-                        value={createOrderForm.customerName} 
-                        onChange={(e) => setCreateOrderForm({ ...createOrderForm, customerName: e.target.value })} 
+                        value={createOrderForm.customerName || ''} 
+                        onChange={(e) => setCreateOrderForm((prev: any) => ({ ...prev, customerName: e.target.value }))} 
                         placeholder="고객 이름" 
                     />
                 </div>
@@ -150,8 +197,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 <div className="field col-12 md:col-4">
                     <label className="font-bold">연락처</label>
                     <InputText 
-                        value={createOrderForm.customerPhone} 
-                        onChange={(e) => setCreateOrderForm({ ...createOrderForm, customerPhone: e.target.value })} 
+                        value={createOrderForm.customerPhone || ''} 
+                        onChange={(e) => setCreateOrderForm((prev: any) => ({ ...prev, customerPhone: e.target.value }))} 
                         placeholder="010-0000-0000" 
                     />
                 </div>
@@ -159,8 +206,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 <div className="field col-12 md:col-4">
                     <label className="font-bold">표면 처리</label>
                     <InputText 
-                        value={createOrderForm.surfaceFinish} 
-                        onChange={(e) => setCreateOrderForm({ ...createOrderForm, surfaceFinish: e.target.value })} 
+                        value={createOrderForm.surfaceFinish || ''} 
+                        onChange={(e) => setCreateOrderForm((prev: any) => ({ ...prev, surfaceFinish: e.target.value }))} 
                         placeholder="유광/무광 등" 
                     />
                 </div>
@@ -168,8 +215,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 <div className="field col-12 md:col-4">
                     <label className="font-bold">각인 문구</label>
                     <InputText 
-                        value={createOrderForm.engravingText} 
-                        onChange={(e) => setCreateOrderForm({ ...createOrderForm, engravingText: e.target.value })} 
+                        value={createOrderForm.engravingText || ''} 
+                        onChange={(e) => setCreateOrderForm((prev: any) => ({ ...prev, engravingText: e.target.value }))} 
                         placeholder="각인 텍스트" 
                     />
                 </div>
@@ -177,8 +224,8 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 <div className="field col-12 md:col-4">
                     <label className="font-bold">각인 위치</label>
                     <InputText 
-                        value={createOrderForm.engravingLocation} 
-                        onChange={(e) => setCreateOrderForm({ ...createOrderForm, engravingLocation: e.target.value })} 
+                        value={createOrderForm.engravingLocation || ''} 
+                        onChange={(e) => setCreateOrderForm((prev: any) => ({ ...prev, engravingLocation: e.target.value }))} 
                         placeholder="반지 안쪽 등" 
                     />
                 </div>
@@ -187,7 +234,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                     <label className="font-bold">소비자가 (₩)</label>
                     <InputNumber 
                         value={createOrderForm.finalConsumerPrice} 
-                        onValueChange={(e) => setCreateOrderForm({ ...createOrderForm, finalConsumerPrice: e.value || 0 })} 
+                        onValueChange={(e) => setCreateOrderForm((prev: any) => ({ ...prev, finalConsumerPrice: e.value || 0 }))} 
                         mode="currency" 
                         currency="KRW" 
                         locale="ko-KR" 
@@ -204,12 +251,13 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                     style={{ width: 'auto' }} 
                 />
                 <Button 
-                    label="주문 등록" 
+                    label={hasTemplates ? "주문 등록" : "공정 템플릿 필요"} 
                     icon="pi pi-check" 
                     onClick={submitCreateOrder} 
+                    disabled={!hasTemplates}
                     className="p-button-primary" 
                     style={{ width: 'auto' }} 
-                    autoFocus 
+                    autoFocus={hasTemplates} 
                 />
             </div>
         </Dialog>

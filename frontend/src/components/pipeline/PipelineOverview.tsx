@@ -10,8 +10,10 @@ interface PipelineOverviewProps {
 export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipelineSteps, templates }) => {
     const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
 
-    const activeTemplate = templates && templates.length > 0
-        ? (selectedTemplateId ? templates.find(t => t.id === selectedTemplateId) || templates[0] : (templates.find(t => t.isDefault) || templates[0]))
+    const validTemplates = (templates || []).filter(t => t && t.templateName && t.templateName.trim() !== '');
+
+    const activeTemplate = validTemplates.length > 0
+        ? (selectedTemplateId ? validTemplates.find(t => t.id === selectedTemplateId) || validTemplates[0] : (validTemplates.find(t => t.isDefault) || validTemplates[0]))
         : null;
 
     const stepsToRender = activeTemplate?.steps && activeTemplate.steps.length > 0
@@ -24,12 +26,12 @@ export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipe
                 <h4 className="m-0 text-600 font-medium flex align-items-center gap-2">
                     <i className="pi pi-sitemap text-primary"></i> 실시간 공정 현황 (Pipeline)
                 </h4>
-                {templates && templates.length > 1 && (
+                {validTemplates.length > 1 && (
                     <div className="flex align-items-center gap-2" style={{ minWidth: '220px' }}>
                         <span className="text-xs text-500 font-bold white-space-nowrap">템플릿 필터:</span>
                         <Dropdown 
                             value={activeTemplate?.id} 
-                            options={templates.map(t => ({ label: `${t.templateName}${t.isDefault ? ' (기본)' : ''}`, value: t.id }))} 
+                            options={validTemplates.map(t => ({ label: `${t.templateName}${t.isDefault ? ' (기본)' : ''}`, value: t.id }))} 
                             onChange={(e) => setSelectedTemplateId(e.value)} 
                             className="p-inputtext-sm font-bold text-xs" 
                             style={{ height: '32px' }} 

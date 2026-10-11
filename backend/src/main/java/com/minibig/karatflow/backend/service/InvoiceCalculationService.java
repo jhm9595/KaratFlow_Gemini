@@ -33,15 +33,15 @@ public class InvoiceCalculationService {
         List<SubcontractTask> subcontracts = subcontractTaskRepository.findByOrderId(orderId);
         double totalSubcontractFee = subcontracts.stream()
                 .filter(t -> "RECEIVED".equals(t.getStatus()))
-                .mapToDouble(SubcontractTask::getAgreedLaborFee)
+                .mapToDouble(t -> t.getAgreedLaborFee() != null ? t.getAgreedLaborFee().doubleValue() : 0.0)
                 .sum();
 
         // defaults
-        double completedWeight = order.getCompletedWeightG() != null ? order.getCompletedWeightG() : 3.75;
-        double stoneWeight = order.getStoneWeightG() != null ? order.getStoneWeightG() : 0.0;
-        double lossRate = order.getLossRatePercent() != null ? order.getLossRatePercent() : 10.0;
-        double baseLaborFee = order.getBaseLaborFee() != null ? order.getBaseLaborFee() : 50000.0;
-        double stoneFee = order.getStoneFee() != null ? order.getStoneFee() : 0.0;
+        double completedWeight = order.getCompletedWeightG() != null ? order.getCompletedWeightG().doubleValue() : 3.75;
+        double stoneWeight = order.getStoneWeightG() != null ? order.getStoneWeightG().doubleValue() : 0.0;
+        double lossRate = order.getLossRatePercent() != null ? order.getLossRatePercent().doubleValue() : 10.0;
+        double baseLaborFee = order.getBaseLaborFee() != null ? order.getBaseLaborFee().doubleValue() : 50000.0;
+        double stoneFee = order.getStoneFee() != null ? order.getStoneFee().doubleValue() : 0.0;
 
         // 1. 순수 금 중량 = 완제품 실측 중량 - 스톤 중량
         double pureGoldWeight = completedWeight - stoneWeight;

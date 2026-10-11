@@ -14,7 +14,7 @@ public class ProcessTemplate {
     @Column(name = "template_code", unique = true)
     private String templateCode; // e.g. TEMPLATE_CASTING_STANDARD
     
-    @Column(name = "template_name")
+    @Column(name = "template_name", nullable = false)
     private String templateName; // e.g. 주물 표준
     
     @Column(name = "description")
@@ -27,4 +27,10 @@ public class ProcessTemplate {
     @Column(name = "is_default")
     @Builder.Default
     private Boolean isDefault = false;
+
+    @Column(name = "user_id")
+    private Long userId;
+
+    @Column(name = "company_id")
+    private Long companyId;
 }

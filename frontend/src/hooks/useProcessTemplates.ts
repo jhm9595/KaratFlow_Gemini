@@ -34,7 +34,7 @@ export function useProcessTemplates() {
             if (!res.ok) throw new Error('공정 템플릿 정보를 가져오는데 실패했습니다.');
             const data = await res.json();
             if (Array.isArray(data)) {
-                setTemplates(data);
+                setTemplates(data.filter((t: ProcessTemplate) => t && t.templateName && t.templateName.trim() !== ''));
             }
         } catch (err: any) {
             console.error('Failed to fetch process templates:', err);

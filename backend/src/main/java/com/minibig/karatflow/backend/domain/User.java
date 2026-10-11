@@ -18,4 +18,8 @@ public class User {
     private String profileImageUrl;
     
     private String role; // "ROLE_USER", "ROLE_ADMIN", "ROLE_VENDOR"
+
+    private String googleProviderId;
+    private String kakaoProviderId;
+    private String kakaoBotUserKey;
 }

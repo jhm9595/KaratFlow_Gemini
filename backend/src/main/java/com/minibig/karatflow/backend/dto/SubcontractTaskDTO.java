@@ -2,6 +2,7 @@ package com.minibig.karatflow.backend.dto;
 
 import lombok.Data;
 import lombok.Builder;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -13,10 +14,10 @@ public class SubcontractTaskDTO {
     private Long orderId;
     private String taskName;
     private String subcontractorName;
-    private Double dispatchedWeightG;
-    private Double receivedWeightG;
-    private Double lossWeightG;
-    private Double agreedLaborFee;
+    private BigDecimal dispatchedWeightG;
+    private BigDecimal receivedWeightG;
+    private BigDecimal lossWeightG;
+    private BigDecimal agreedLaborFee;
     private String status;
     private LocalDateTime dispatchedAt;
     private LocalDateTime receivedAt;

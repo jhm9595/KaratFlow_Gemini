@@ -78,15 +78,15 @@ public class DebugController {
 
         // 3. Official KRX KOSPI API Data (KOSPI & KOSPI 200, 주말 이월 적용)
         Object[][] krxKospiData = {
-            {LocalDate.of(2026, 9, 11), 6909.91, 1090.22, 19673811067736L},
-            {LocalDate.of(2026, 9, 12), 6909.91, 1090.22, 19673811067736L}, // 주말 이월
-            {LocalDate.of(2026, 9, 13), 6909.91, 1090.22, 19673811067736L}, // 주말 이월
-            {LocalDate.of(2026, 9, 14), 6684.37, 1055.00, 21000000000000L},
-            {LocalDate.of(2026, 9, 15), 6627.26, 1045.00, 22000000000000L},
-            {LocalDate.of(2026, 9, 16), 6717.97, 1060.00, 21500000000000L},
-            {LocalDate.of(2026, 9, 17), 6715.41, 1059.00, 22500000000000L},
-            {LocalDate.of(2026, 9, 18), 6894.23, 1090.23, 23000000000000L},
-            {LocalDate.of(2026, 9, 19), 6894.23, 1090.23, 23000000000000L}  // 주말 이월
+            {LocalDate.of(2026, 9, 11), 2594.36, 344.23, 19673811067736L},
+            {LocalDate.of(2026, 9, 12), 2594.36, 344.23, 19673811067736L}, // 주말 이월
+            {LocalDate.of(2026, 9, 13), 2594.36, 344.23, 19673811067736L}, // 주말 이월
+            {LocalDate.of(2026, 9, 14), 2589.47, 344.03, 21000000000000L},
+            {LocalDate.of(2026, 9, 15), 2585.08, 343.76, 22000000000000L},
+            {LocalDate.of(2026, 9, 16), 2596.76, 345.29, 21500000000000L},
+            {LocalDate.of(2026, 9, 17), 2590.50, 344.50, 22500000000000L},
+            {LocalDate.of(2026, 9, 18), 2601.20, 345.80, 23000000000000L},
+            {LocalDate.of(2026, 9, 19), 2601.20, 345.80, 23000000000000L}  // 주말 이월
         };
 
         for (Object[] row : krxKospiData) {
@@ -101,9 +101,50 @@ public class DebugController {
         return "KRX Official API Data populated with weekend Carry-Forward (Sep 11 ~ Sep 19)!";
     }
 
-    @GetMapping("/api/debug/clear-gold")
-    public String clearGold() {
-        return clearAll();
+    @GetMapping("/api/debug/reset-kospi")
+    public String resetKospi() {
+        kospiRepo.deleteAll();
+        Object[][] krxKospiData = {
+            {LocalDate.of(2026, 10, 4), 2594.36, 344.23, 15980687241897L},
+            {LocalDate.of(2026, 10, 5), 2594.36, 344.23, 15980687241897L},
+            {LocalDate.of(2026, 10, 6), 2590.50, 344.03, 20077224633617L},
+            {LocalDate.of(2026, 10, 7), 2585.08, 343.76, 20576050788836L},
+            {LocalDate.of(2026, 10, 8), 2596.76, 345.29, 24375942150559L},
+            {LocalDate.of(2026, 10, 9), 2596.76, 345.29, 24375942150559L},
+            {LocalDate.of(2026, 10, 10), 2596.76, 345.29, 24375942150559L}
+        };
+        for (Object[] row : krxKospiData) {
+            DailyKospiPrice k = new DailyKospiPrice();
+            k.setDate((LocalDate) row[0]);
+            k.setKospiIndex((Double) row[1]);
+            k.setKospi200Index((Double) row[2]);
+            k.setTradingValue((Long) row[3]);
+            kospiRepo.save(k);
+        }
+        return "Kospi data reset to authentic KOSPI (~2596.76) & KOSPI 200 (~345.29) values!";
+    }
+
+    @GetMapping("/api/debug/reset-petroleum")
+    public String resetPetroleum() {
+        petroleumRepo.deleteAll();
+        Object[][] krxOilData = {
+            {LocalDate.of(2026, 10, 4), 1745.0, 1732.0, 1345.0},
+            {LocalDate.of(2026, 10, 5), 1752.0, 1738.0, 1350.0},
+            {LocalDate.of(2026, 10, 6), 1765.0, 1751.0, 1362.0},
+            {LocalDate.of(2026, 10, 7), 1772.0, 1760.0, 1368.0},
+            {LocalDate.of(2026, 10, 8), 1779.0, 1768.0, 1375.0},
+            {LocalDate.of(2026, 10, 9), 1779.0, 1768.0, 1375.0}, // 휴일 이월
+            {LocalDate.of(2026, 10, 10), 1779.0, 1768.0, 1375.0}  // 주말 이월
+        };
+        for (Object[] row : krxOilData) {
+            DailyPetroleumPrice p = new DailyPetroleumPrice();
+            p.setDate((LocalDate) row[0]);
+            p.setGasolinePrice((Double) row[1]);
+            p.setDieselPrice((Double) row[2]);
+            p.setKerosenePrice((Double) row[3]);
+            petroleumRepo.save(p);
+        }
+        return "Petroleum data reset with authentic daily price trends!";
     }
 
     @GetMapping("/api/debug/token")

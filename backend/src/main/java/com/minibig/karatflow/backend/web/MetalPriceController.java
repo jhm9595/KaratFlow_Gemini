@@ -28,23 +28,27 @@ public class MetalPriceController {
         // Trigger non-blocking async catch-up sync if today's data is missing in DB
         krxMarketDataSyncService.triggerSyncIfNecessary();
 
-        // Limit response to recent 90 days to prevent huge payloads while supporting chart views
         List<DailyMetalPrice> recentDesc = dailyMetalPriceRepository.findTop90ByMetalTypeOrderByPriceDateDesc("GOLD_24K");
+        if (recentDesc == null || recentDesc.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+
         List<DailyMetalPrice> recentAsc = new ArrayList<>(recentDesc);
         Collections.reverse(recentAsc);
 
         List<MetalPriceResponseDTO> responseList = new ArrayList<>();
-        double runningGram = 107645.0; // Fallback g-unit price
-        double runningVol = 215000.0;
-        double runningVal = 41000000000.0;
+        double runningGram = 0.0;
+        double runningVol = 0.0;
+        double runningVal = 0.0;
 
         for (DailyMetalPrice p : recentAsc) {
             double gram = p.getEffectiveGramPrice();
             if (gram <= 0) {
                 gram = p.getEffective375gPrice() > 0 ? (p.getEffective375gPrice() / 3.75) : runningGram;
-            } else {
-                runningGram = gram;
             }
+            if (gram <= 0) continue; // Skip invalid record if no gram price available
+            
+            runningGram = gram;
 
             if (p.getTradingVolume() != null && p.getTradingVolume() > 0) runningVol = p.getTradingVolume();
             if (p.getTradingValue() != null && p.getTradingValue() > 0) runningVal = p.getTradingValue();

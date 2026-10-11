@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import PrintView from './components/print/PrintView';
@@ -14,121 +13,22 @@ import { AppModals } from './components/AppModals';
 import { useGoldPrices } from './hooks/useGoldPrices';
 import { useProcessTemplates } from './hooks/useProcessTemplates';
 import { Client } from '@stomp/stompjs';
-import i18n from './i18n';
+import { AppSidebar } from './components/navigation/AppSidebar';
+import { CustomerAdminPage } from './pages/CustomerAdminPage';
+import { KakaoGuidePage } from './pages/KakaoGuidePage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { OrderAdminPage } from './pages/OrderAdminPage';
+import { UserAccountPage } from './pages/UserAccountPage';
+import { compressImage } from './utils/imageCompressor';
 
-
-
-const formatElapsed = (start: string | null, end: string | null) => {
-    if (!start || !end) return '';
-    const d1 = new Date(start);
-    const d2 = new Date(end);
-    if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return '';
-    const diff = Math.max(0, d2.getTime() - d1.getTime());
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    const mins = Math.floor((diff / 1000 / 60) % 60);
-    let str = '+';
-    if (days > 0) str += `${days}일 `;
-    if (hours > 0) str += `${hours}시간 `;
-    if (mins > 0 || str === '+') str += `${mins}분`;
-    return str;
-};
-
-const getTimelineEvents = (rowData: any) => {
-    if (!rowData) return [];
-    const events = [
-        { stage: '주문 생성', date: rowData.createdAt, icon: 'pi pi-file', color: '#9E9E9E' },
-        { stage: '접수', date: rowData.pendingCompletedAt, icon: 'pi pi-check', color: '#64748B' },
-        { stage: 'CAD', date: rowData.cadCompletedAt, icon: 'pi pi-desktop', color: '#3B82F6' },
-        { stage: '주물 (Casting)', date: rowData.castingCompletedAt, icon: 'pi pi-box', color: '#F97316' },
-        { stage: '세공 (Polishing)', date: rowData.polishingCompletedAt, icon: 'pi pi-star', color: '#EAB308' },
-        { stage: '도금/검수', date: rowData.platingCompletedAt, icon: 'pi pi-eye', color: '#22C55E' }
-    ];
-    
-    let validEvents = events.filter(e => e.date);
-    
-    // Calculate elapsed
-    return validEvents.map((ev, i) => {
-        let elapsed = '';
-        if (i > 0) {
-            elapsed = formatElapsed(validEvents[i-1].date, ev.date);
-        }
-        return { ...ev, elapsed };
-    });
-};
-
-const customizedMarker = (item: any) => {
-
-    return (
-        <span className="flex w-2rem h-2rem align-items-center justify-content-center text-white border-circle z-1 shadow-1" style={{ backgroundColor: item.color }}>
-            <i className={item.icon}></i>
-        </span>
-    );
-};
-
-const customizedContent = (item: any) => {
-    return (
-        <div className="mb-4">
-            <div className="font-bold text-700">{item.stage}</div>
-            <div className="text-500 text-sm">{new Date(item.date).toLocaleString()}</div>
-            {item.elapsed && <div className="text-pink-500 font-bold text-sm mt-1">{item.elapsed}</div>}
-        </div>
-    );
-};
 
 function App() {
     const { goldPriceData, todayGold, yesterdayGold, delta24k } = useGoldPrices();
     const { templates } = useProcessTemplates();
     const [feedViewMode, setFeedViewMode] = useState<'list' | 'card'>('list');
-
-    const getEventBorderColor = (msg: string) => {
-        if (!msg) return '#3B82F6';
-        if (msg.includes('접수') || msg.includes('신규')) return '#64748B';
-        if (msg.includes('CAD')) return '#3B82F6';
-        if (msg.includes('주물')) return '#F59E0B';
-        if (msg.includes('세공')) return '#EF4444';
-        if (msg.includes('완성')) return '#22C55E';
-        if (msg.includes('보류') || msg.includes('HOLD')) return '#EAB308';
-        return '#3B82F6';
-    };
-
-    const getEventStageInfo = (msg: string) => {
-        if (!msg) return { stageName: '알림', colorHex: '#3B82F6', colorGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', bgColor: '#eff6ff' };
-        
-        let matchedStep = (pipelineSteps && pipelineSteps.length > 0) 
-            ? pipelineSteps.find((step: any) => step.stageName && msg.includes(step.stageName)) 
-            : null;
-
-        if (!matchedStep) {
-            if (msg.includes('접수') || msg.includes('신규')) {
-                matchedStep = { stageName: '접수', colorHex: '#38BDF8', colorGradient: 'linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%)', bgColor: '#f0f9ff' };
-            } else if (msg.includes('CAD')) {
-                matchedStep = { stageName: 'CAD', colorHex: '#C084FC', colorGradient: 'linear-gradient(135deg, #e879f9 0%, #c084fc 100%)', bgColor: '#fdf4ff' };
-            } else if (msg.includes('주물')) {
-                matchedStep = { stageName: '주물', colorHex: '#F59E0B', colorGradient: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)', bgColor: '#fffbeb' };
-            } else if (msg.includes('세공')) {
-                matchedStep = { stageName: '세공', colorHex: '#EF4444', colorGradient: 'linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)', bgColor: '#fef2f2' };
-            } else if (msg.includes('완료') || msg.includes('완성')) {
-                matchedStep = { stageName: '완료', colorHex: '#22C55E', colorGradient: 'linear-gradient(135deg, #86efac 0%, #22c55e 100%)', bgColor: '#f0fdf4' };
-            } else if (msg.includes('보류') || msg.includes('HOLD')) {
-                matchedStep = { stageName: '보류', colorHex: '#EAB308', colorGradient: 'linear-gradient(135deg, #fde047 0%, #eab308 100%)', bgColor: '#fefce8' };
-            }
-        }
-
-        if (matchedStep) {
-            return {
-                stageName: matchedStep.stageName || '공정',
-                colorHex: matchedStep.colorHex || '#3B82F6',
-                colorGradient: matchedStep.colorGradient || 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                bgColor: matchedStep.bgColor || '#f8fafc'
-            };
-        }
-
-        return { stageName: '알림', colorHex: '#3B82F6', colorGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', bgColor: '#eff6ff' };
-    };
-
-    const { t } = useTranslation();
     const toast = useRef<any>(null);
+    const [sidebarVisible, setSidebarVisible] = useState(false);
+    const [activeMenu, setActiveMenu] = useState('dashboard');
     const [changeModalVisible, setChangeModalVisible] = useState(false);
     const navigate = useNavigate();
     const [orders, setOrders] = useState<any[]>([]);
@@ -180,13 +80,49 @@ function App() {
         setFilteredProducts(filtered);
     };
 
-    const handleFileUpload = (e: any) => {
-        if (e.files && e.files[0]) {
-            setCreateOrderForm({...createOrderForm, imageUrl: '/uploads/mock.png'});
+    const [selectedOrderFile, setSelectedOrderFile] = useState<File | null>(null);
+    const [localImagePreview, setLocalImagePreview] = useState<string | null>(null);
+
+    const handleFileUpload = async (e: any) => {
+        const file = e.target?.files?.[0] || e.files?.[0];
+        if (!file) return;
+
+        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+        if (file.size > MAX_FILE_SIZE) {
+            toast.current?.show({ 
+                severity: 'warn', 
+                summary: '파일 용량 초과', 
+                detail: `선택하신 파일(${(file.size / (1024 * 1024)).toFixed(1)}MB)이 10MB를 초과합니다. 10MB 이하의 이미지 파일만 첨부 가능합니다.`, 
+                life: 4000 
+            });
+            if (e.target) e.target.value = '';
+            return;
+        }
+
+        try {
+            // Compress image client-side before upload
+            const compressed = await compressImage(file, 1024, 1024, 0.82);
+            setSelectedOrderFile(compressed);
+
+            if (localImagePreview) {
+                URL.revokeObjectURL(localImagePreview);
+            }
+            const previewUrl = URL.createObjectURL(compressed);
+            setLocalImagePreview(previewUrl);
+
+            toast.current?.show({ 
+                severity: 'info', 
+                summary: '이미지 선택 완료', 
+                detail: `이미지 미리보기가 적용되었습니다. (최적화 용량: ${(compressed.size / 1024).toFixed(0)}KB)`, 
+                life: 3000 
+            });
+        } catch (err) {
+            console.error('Failed to process image locally', err);
+            toast.current?.show({ severity: 'error', summary: '이미지 처리 실패', detail: '이미지 최적화 중 오류가 발생했습니다.', life: 3000 });
         }
     };
 
-        const [orderDetailVisible, setOrderDetailVisible] = useState(false);
+    const [orderDetailVisible, setOrderDetailVisible] = useState(false);
     const [orderDetailData, setOrderDetailData] = useState<any>(null);
 
     const openOrderDetail = (orderId: number) => {
@@ -204,12 +140,7 @@ function App() {
     };
     
     const [_liveEvents, _setLiveEvents] = useState<any[]>([]);
-    const [_dashboardStats, setDashboardStats] = useState({
-        totalRevenue: 0,
-        activeOrders: 0,
-        totalOrders: 0,
-        cancellationRate: 0
-    });
+
     
     const [createOrderForm, setCreateOrderForm] = useState<any>({
         orderType: 'B2C',
@@ -268,18 +199,61 @@ function App() {
             });
     };
 
-    const submitCreateOrder = () => {
+    const submitCreateOrder = async () => {
+        let finalImageUrl = createOrderForm.imageUrl || '';
+
+        // If user attached a local file, upload it now upon submitting the order (Pattern B)
+        if (selectedOrderFile) {
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedOrderFile);
+                const token = localStorage.getItem('access_token') || localStorage.getItem('jwtToken');
+                const headers: Record<string, string> = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const uploadRes = await fetch('http://localhost:8888/api/uploads', {
+                    method: 'POST',
+                    headers,
+                    body: formData
+                });
+
+                if (uploadRes.ok) {
+                    const uploadData = await uploadRes.json();
+                    finalImageUrl = uploadData.url;
+                } else {
+                    console.error('Image upload failed during submit', uploadRes.status);
+                    toast.current?.show({ severity: 'error', summary: '이미지 업로드 실패', detail: `이미지 저장 실패 (${uploadRes.status})`, life: 3000 });
+                }
+            } catch (err) {
+                console.error('Image upload network error', err);
+            }
+        }
+
+        const payload = {
+            ...createOrderForm,
+            imageUrl: finalImageUrl
+        };
+
         fetch('http://localhost:8888/api/orders', {
             method: 'POST',
             headers: getAuthHeaders(),
-            body: JSON.stringify(createOrderForm)
+            body: JSON.stringify(payload)
         })
         .then(res => res.json())
         .then(() => {
             fetchOrders();
             setCreateOrderModalVisible(false);
+            setSelectedOrderFile(null);
+            if (localImagePreview) {
+                URL.revokeObjectURL(localImagePreview);
+                setLocalImagePreview(null);
+            }
             setCreateOrderForm({ orderType: 'B2C', customerName: '', customerPhone: '', designId: 1, engravingText: '', engravingLocation: '', surfaceFinish: '유광', finalConsumerPrice: 0 });
             toast.current?.show({ severity: 'success', summary: '주문 생성 완료', detail: '새로운 주문이 시스템에 등록되었습니다.', life: 3000 });
+        })
+        .catch(err => {
+            console.error('Order creation failed', err);
+            toast.current?.show({ severity: 'error', summary: '주문 생성 실패', detail: '주문 등록 중 오류가 발생했습니다.', life: 3000 });
         });
     };
 
@@ -433,22 +407,6 @@ function App() {
                 setOrders(mappedData);
             })
             .catch((_err) => console.error('Error fetching orders:', _err));
-            
-        fetch('http://localhost:8888/api/orders/stats', { headers: getAuthHeaders() })
-            .then(res => {
-                if (res.status === 401 || res.redirected || (res.url && res.url.includes('/login'))) {
-                    throw new Error('Unauthorized');
-                }
-                return res.text();
-            })
-            .then(text => {
-                if (text.trim().startsWith('<')) {
-                    throw new Error('Unauthorized html');
-                }
-                return JSON.parse(text);
-            })
-            .then(data => setDashboardStats(data))
-            .catch((_err) => console.error('Error fetching stats:', _err));
     };
 
     const fetchNotifications = () => {
@@ -528,56 +486,6 @@ function App() {
     };
 
 
-    const statusBodyTemplate = (rowData: any) => {
-        if (rowData.status === 'CANCELLED') {
-            return (
-                <div className="flex flex-column gap-1">
-                    <span className="p-badge p-badge-secondary">취소됨</span>
-                    {rowData.cancellationFee > 0 && <small className="text-red-500 font-bold">위약금 ₩{rowData.cancellationFee.toLocaleString()}</small>}
-                </div>
-            );
-        }
-        
-        let rawStage = rowData.stage || rowData.stageName || '접수';
-        if (rawStage === 'PENDING') rawStage = '접수';
-        else if (rawStage === 'CASTING') rawStage = '주물';
-        else if (rawStage === 'POLISHING') rawStage = '세공';
-        else if (rawStage === 'COMPLETED' || rawStage === 'DONE' || rowData.status === 'COMPLETED') {
-            const lastStage = (pipelineStages && pipelineStages.length > 0) ? pipelineStages[pipelineStages.length - 1] : '완료';
-            rawStage = (rowData.stage && rowData.stage !== 'COMPLETED' && rowData.stage !== 'DONE') ? rowData.stage : lastStage;
-        }
-
-        let matchedStep = (pipelineSteps && pipelineSteps.length > 0) ? pipelineSteps.find((step: any) => step.stageName === rawStage) : null;
-        if (!matchedStep && pipelineSteps && pipelineSteps.length > 0) {
-            matchedStep = pipelineSteps.find((step: any) => 
-                step.stageName && step.stageName.trim().toLowerCase() === rawStage.trim().toLowerCase()
-            );
-        }
-        if (!matchedStep && pipelineSteps && pipelineSteps.length > 0) {
-            if (rawStage === 'COMPLETED' || rawStage === 'DONE' || rawStage === '완성') {
-                matchedStep = pipelineSteps.find((step: any) => step.stageName === '완료' || step.stageName === 'COMPLETED');
-            } else if (rawStage === 'PENDING') {
-                matchedStep = pipelineSteps.find((step: any) => step.stageName === '접수' || step.stageName === 'PENDING');
-            }
-        }
-
-        const bg = matchedStep ? (matchedStep.colorGradient || matchedStep.colorHex) : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
-
-        return (
-            <span 
-                className="px-3 py-1 text-white font-bold border-round text-xs shadow-1 inline-block"
-                style={{ background: bg }}
-            >
-                {rawStage}
-            </span>
-        );
-    };
-
-    const toggleLanguage = () => {
-        const currentLang = i18n.language || window.localStorage.getItem('i18nextLng') || 'ko';
-        const nextLang = currentLang.startsWith('ko') ? 'en' : 'ko';
-        i18n.changeLanguage(nextLang);
-    };
 
     
     
@@ -586,88 +494,144 @@ function App() {
     
     
 
-    const dailyProcessData = [
-        { date: '08/17', CAD: 2.1, 주물: 4.5, 세공: 8.2 },
-        { date: '08/18', CAD: 2.4, 주물: 4.2, 세공: 9.1 },
-        { date: '08/19', CAD: 1.8, 주물: 5.0, 세공: 12.5 }, 
-        { date: '08/20', CAD: 2.5, 주물: 4.1, 세공: 10.8 },
-        { date: '08/21', CAD: 2.0, 주물: 4.8, 세공: 8.5 },
-        { date: '08/22', CAD: 2.2, 주물: 4.4, 세공: 8.0 },
-        { date: '08/23', CAD: 1.9, 주물: 4.0, 세공: 7.5 }
-    ];
+
 
     return (
         <>
             <Toast ref={toast} />
+
+            {/* Left Collapsible Drawer Navigation Sidebar */}
+            <AppSidebar 
+                visible={sidebarVisible} 
+                onHide={() => setSidebarVisible(false)} 
+                activeMenu={activeMenu} 
+                onSelectMenu={(menuKey) => setActiveMenu(menuKey)} 
+            />
+
             <div className="flex flex-column h-screen surface-ground no-print">
-                {/* APM Header */}
+                {/* Header */}
                 <div className="flex justify-content-between align-items-center px-4 py-3 surface-0 border-bottom-1 border-300 shadow-2">
                     <div className="flex align-items-center gap-3">
+                        <Button 
+                            icon="pi pi-bars" 
+                            className="p-button-text p-button-plain p-button-lg text-800" 
+                            onClick={() => setSidebarVisible(true)} 
+                            tooltip="메뉴 열기" 
+                            tooltipOptions={{ position: 'bottom' }} 
+                        />
                         <img src="/logo.png" alt="KaratFlow Logo" style={{ width: '32px', height: '32px' }} />
-                        <h2 className="m-0 text-xl font-bold text-900 tracking-tight">KaratFlow Gemini <span className="text-500 font-normal text-lg ml-2">통합 모니터링 대시보드</span></h2>
+                        <h2 className="m-0 text-xl font-bold text-900 tracking-tight cursor-pointer" onClick={() => setActiveMenu('dashboard')}>
+                            KaratFlow
+                        </h2>
                     </div>
-                    <div className="flex gap-2">
-                        <Button label="새 주문 생성" icon="pi pi-plus" className="p-button-primary p-button-sm shadow-1" onClick={() => { setCreateOrderModalVisible(true); loadAllProducts(); }} />
+                    <div className="flex gap-2 align-items-center">
+                        <Button 
+                            label="새 주문 생성" 
+                            icon="pi pi-plus" 
+                            className="p-button-primary p-button-sm shadow-1" 
+                            onClick={() => { 
+                                setSelectedOrderFile(null);
+                                if (localImagePreview) setLocalImagePreview(null);
+                                setCreateOrderForm({ orderType: 'B2C', customerName: '', customerPhone: '', designId: 1, engravingText: '', engravingLocation: '', surfaceFinish: '유광', finalConsumerPrice: 0, quantity: 1, unmappedBrandName: '', unmappedProductName: '', imageUrl: '' });
+                                setSelectedProduct(null);
+                                setCreateOrderModalVisible(true); 
+                                loadAllProducts(); 
+                            }} 
+                        />
                         <Button label="협력사 초대" icon="pi pi-users" className="p-button-outlined p-button-info p-button-sm" onClick={openHandshakeModal} />
                         <Button label="공정 관리" icon="pi pi-sitemap" className="p-button-outlined p-button-help p-button-sm" onClick={() => setProcessManagerVisible(true)} tooltip="공장 공정 단계를 커스터마이징합니다" tooltipOptions={{position: "bottom"}} />
                         
                         <div className="flex align-items-center gap-2 border-left-1 border-300 pl-3 ml-1">
-                            <div className="w-2rem h-2rem border-circle bg-primary flex align-items-center justify-content-center text-white font-bold text-sm">
+                            <div 
+                                onClick={() => setActiveMenu('account')} 
+                                className="w-2rem h-2rem border-circle bg-primary flex align-items-center justify-content-center text-white font-bold text-sm cursor-pointer shadow-1"
+                                title="계정 및 소셜 연동 관리"
+                            >
                                 <i className="pi pi-user"></i>
                             </div>
-                            <span className="text-700 font-bold text-sm">로그인됨</span>
+                            <span className="text-700 font-bold text-sm cursor-pointer" onClick={() => setActiveMenu('account')}>로그인됨</span>
                             <Button icon="pi pi-sign-out" className="p-button-rounded p-button-text p-button-danger ml-2" aria-label="Logout" tooltip="로그아웃" tooltipOptions={{position: 'bottom'}} onClick={() => { localStorage.removeItem('jwtToken'); window.location.href = '/login'; }} />
                         </div>
                     </div>
                 </div>
 
-                {/* APM Main Content */}
-                <div className="flex-1 flex overflow-hidden p-3 gap-3">
-                    {/* Left Panel: Metrics & Charts */}
-                    <DashboardSidebar 
-                        orders={orders}
-                        todayGold={todayGold}
-                        yesterdayGold={yesterdayGold}
-                        delta24k={delta24k}
-                        goldPriceData={goldPriceData}
-                        onOpenGoldTools={() => setGoldToolsVisible(true)}
-                    />
-
-                    {/* Right Panel: Pipeline & Data Table */}
-                    <div className="flex-1 flex flex-column gap-3 overflow-hidden">
-                        
-                        {/* Pipeline Visualizer */}
-                        <PipelineOverview 
+                {/* Main Content Area based on activeMenu */}
+                {activeMenu === 'dashboard' && (
+                    <div className="flex-1 flex overflow-hidden p-3 gap-3">
+                        {/* Left Panel: Metrics & Charts */}
+                        <DashboardSidebar 
                             orders={orders}
-                            pipelineSteps={pipelineSteps}
-                            templates={templates}
+                            todayGold={todayGold}
+                            yesterdayGold={yesterdayGold}
+                            delta24k={delta24k}
+                            goldPriceData={goldPriceData}
+                            onOpenGoldTools={() => setGoldToolsVisible(true)}
                         />
 
-                        {/* Enhanced Data Table */}
-                        <div className="surface-0 p-3 border-round shadow-1 flex-1 flex flex-column overflow-hidden">
-                            <h4 className="m-0 mb-3 text-600 font-medium">상세 주문 모니터링</h4>
-                            <div className="flex-1 overflow-auto custom-dark-table pb-3">
-                                <OrderTable 
-                                    orders={orders}
-                                    selectedOrderId={selectedOrderId}
-                                    onSelectOrder={(id) => setSelectedOrderId(id)}
-                                    onOpenOrderDetail={(id) => openOrderDetail(id)}
-                                    pipelineSteps={pipelineSteps}
-                                    pipelineStages={pipelineStages}
-                                />
+                        {/* Right Panel: Pipeline & Data Table */}
+                        <div className="flex-1 flex flex-column gap-3 overflow-hidden">
+                            {(!templates || templates.length === 0) && (
+                                <div className="surface-0 p-2.5 px-3 border-round-lg border-1 border-amber-300 bg-amber-50 flex align-items-center justify-content-between shadow-1">
+                                    <div className="flex align-items-center gap-2">
+                                        <i className="pi pi-sitemap text-amber-600 text-base font-bold"></i>
+                                        <span className="font-semibold text-amber-900 text-sm">공정 템플릿이 없습니다. 주문 등록 전 템플릿을 먼저 추가해 주세요.</span>
+                                    </div>
+                                    <Button 
+                                        label="+ 템플릿 등록" 
+                                        icon="pi pi-plus" 
+                                        className="p-button-warning p-button-xs font-bold text-xs shadow-1" 
+                                        style={{ height: '28px', padding: '0 10px' }}
+                                        onClick={() => setProcessManagerVisible(true)} 
+                                    />
+                                </div>
+                            )}
+                            
+                            {/* Pipeline Visualizer */}
+                            <PipelineOverview 
+                                orders={orders}
+                                pipelineSteps={pipelineSteps}
+                                templates={templates}
+                            />
+
+                            {/* Enhanced Data Table */}
+                            <div className="surface-0 p-3 border-round shadow-1 flex-1 flex flex-column overflow-hidden">
+                                <h4 className="m-0 mb-3 text-600 font-medium">상세 주문 모니터링</h4>
+                                <div className="flex-1 overflow-auto custom-dark-table pb-3">
+                                    <OrderTable 
+                                        orders={orders}
+                                        selectedOrderId={selectedOrderId}
+                                        onSelectOrder={(id) => setSelectedOrderId(id)}
+                                        onOpenOrderDetail={(id) => openOrderDetail(id)}
+                                        pipelineSteps={pipelineSteps}
+                                        pipelineStages={pipelineStages}
+                                    />
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Right Panel: Live Feed */}
-                    <LiveEventFeed 
-                        events={_liveEvents}
-                        feedViewMode={feedViewMode}
-                        onFeedViewModeChange={(mode) => setFeedViewMode(mode)}
-                        onEventClick={(ev) => handleNotificationClick(ev)}
-                        pipelineSteps={pipelineSteps}
+                        {/* Right Panel: Live Feed */}
+                        <LiveEventFeed 
+                            events={_liveEvents}
+                            feedViewMode={feedViewMode}
+                            onFeedViewModeChange={(mode) => setFeedViewMode(mode)}
+                            onEventClick={(ev) => handleNotificationClick(ev)}
+                            pipelineSteps={pipelineSteps}
+                        />
+                    </div>
+                )}
+
+                {activeMenu === 'customer' && <CustomerAdminPage />}
+                {activeMenu === 'orders' && (
+                    <OrderAdminPage 
+                        orders={orders} 
+                        onOpenOrderDetail={(id) => openOrderDetail(id)} 
+                        pipelineSteps={pipelineSteps} 
+                        pipelineStages={pipelineStages} 
                     />
-                </div>
+                )}
+                {activeMenu === 'analytics' && <AnalyticsPage />}
+                {activeMenu === 'kakao-guide' && <KakaoGuidePage companyId={101} />}
+                {activeMenu === 'account' && <UserAccountPage />}
             </div>
 
             <AppModals 
@@ -681,6 +645,7 @@ function App() {
                 searchProduct={searchProduct}
                 handleFileUpload={handleFileUpload}
                 submitCreateOrder={submitCreateOrder}
+                localImagePreview={localImagePreview}
 
                 changeModalVisible={changeModalVisible}
                 setChangeModalVisible={setChangeModalVisible}

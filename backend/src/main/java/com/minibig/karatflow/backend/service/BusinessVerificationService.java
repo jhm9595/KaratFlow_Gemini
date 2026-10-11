@@ -21,9 +21,13 @@ public class BusinessVerificationService {
     public Map<String, Object> verifyBusinessNumber(String businessNumber) {
         String sanitizedNumber = businessNumber.replaceAll("[^0-9]", "");
         
-        // Mock logic for local testing when real API key is not present
-        if ("mock-key".equals(irsApiKey) || irsApiKey.isEmpty()) {
-            return mockVerification(sanitizedNumber);
+        if ("mock-key".equals(irsApiKey) || irsApiKey == null || irsApiKey.trim().isEmpty()) {
+            Map<String, Object> errResult = new HashMap<>();
+            errResult.put("businessNumber", sanitizedNumber);
+            errResult.put("statusCode", "ERROR");
+            errResult.put("statusName", "API 키 미설정");
+            errResult.put("taxType", "국세청 사업자 검증 API 키(irs.api.key)가 설정되지 않았습니다.");
+            return errResult;
         }
 
         RestTemplate restTemplate = new RestTemplate();
@@ -56,25 +60,11 @@ public class BusinessVerificationService {
             e.printStackTrace();
         }
 
-        return mockVerification(sanitizedNumber); // Fallback to mock on error
-    }
-
-    private Map<String, Object> mockVerification(String number) {
-        Map<String, Object> mockResult = new HashMap<>();
-        mockResult.put("businessNumber", number);
-        
-        // Let's make "1234567890" act as a closed business for testing
-        if ("1234567890".equals(number)) {
-            mockResult.put("statusCode", "03");
-            mockResult.put("statusName", "폐업자");
-            mockResult.put("taxType", "부가가치세 면세사업자");
-        } else {
-            mockResult.put("statusCode", "01");
-            mockResult.put("statusName", "계속사업자");
-            mockResult.put("taxType", "부가가치세 일반과세자");
-        }
-        
-        mockResult.put("isMock", true);
-        return mockResult;
+        Map<String, Object> failResult = new HashMap<>();
+        failResult.put("businessNumber", sanitizedNumber);
+        failResult.put("statusCode", "ERROR");
+        failResult.put("statusName", "검증 실패");
+        failResult.put("taxType", "국세청 API 조회가 실패했습니다. 사업자번호를 확인해 주세요.");
+        return failResult;
     }
 }

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Tag } from 'primereact/tag';
+import { formatImageUrl } from '../utils/image';
 
 interface OrderDetailModalProps {
     visible: boolean;
@@ -40,6 +41,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     visible, onHide, order, orderDetailData, pipelineStages = ['접수', 'CAD', '주물', '세공', '완료'], pipelineSteps = [], advanceStage, openSubcontractModal, 
     openChangeModal, openCancelModal, handlePrint, statusBodyTemplate 
 }) => {
+    const [imageZoomVisible, setImageZoomVisible] = useState<boolean>(false);
+
     if (!order) return null;
     const rowData = order;
 
@@ -187,15 +190,44 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                                     <span className="font-bold text-700">{orderDetailData?.quantity || rowData.quantity || 1}개</span>
                                 </div>
                                 <div className="flex gap-4 align-items-start">
-                                    {(orderDetailData?.imageUrl || rowData.imageUrl) && (
-                                        <img 
-                                            src={orderDetailData?.imageUrl || rowData.imageUrl} 
-                                            alt="제품 이미지" 
-                                            className="border-round shadow-2 border-1 border-300"
-                                            style={{ width: '84px', height: '84px', objectFit: 'cover' }} 
-                                            onError={(e: any) => { e.target.src = '/logo.png'; }}
-                                        />
-                                    )}
+                                    {(() => {
+                                        const rawUrl = orderDetailData?.imageUrl || rowData.imageUrl;
+                                        const imgSrc = formatImageUrl(rawUrl);
+                                        return (
+                                            <div className="flex align-items-center justify-content-center">
+                                                {imgSrc ? (
+                                                    <div 
+                                                        className="relative border-round shadow-2 border-1 border-300 cursor-pointer overflow-hidden flex align-items-center justify-content-center transition-all transition-duration-150 hover:shadow-4 surface-100"
+                                                        style={{ width: '84px', height: '84px' }}
+                                                        onClick={() => setImageZoomVisible(true)}
+                                                        title="클릭하여 이미지 크게 보기"
+                                                    >
+                                                        <img 
+                                                            src={imgSrc} 
+                                                            alt="제품 이미지" 
+                                                            style={{ width: '84px', height: '84px', objectFit: 'cover' }} 
+                                                            onError={(e: any) => { 
+                                                                e.target.style.display = 'none';
+                                                                if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                                                            }}
+                                                        />
+                                                        <div 
+                                                            className="absolute bottom-0 right-0 bg-black-alpha-70 text-white flex align-items-center justify-content-center border-top-left-radius-md"
+                                                            style={{ width: '22px', height: '22px' }}
+                                                        >
+                                                            <i className="pi pi-search-plus text-xs" />
+                                                        </div>
+                                                    </div>
+                                                ) : null}
+                                                <div 
+                                                    className="border-round shadow-2 border-1 border-300 bg-surface-100 align-items-center justify-content-center text-400" 
+                                                    style={{ width: '84px', height: '84px', display: imgSrc ? 'none' : 'flex' }}
+                                                >
+                                                    <i className="pi pi-image text-3xl" />
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                     <div className="flex-1 flex flex-column gap-3">
                                         <div className="flex justify-content-between align-items-center">
                                             <span className="text-600 text-sm">브랜드</span>
@@ -330,6 +362,57 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </div>
 
             </div>
+
+            {/* Image Zoom Lightbox Dialog */}
+            <Dialog
+                visible={imageZoomVisible}
+                onHide={() => setImageZoomVisible(false)}
+                header={
+                    <div className="flex align-items-center gap-2 text-white font-bold">
+                        <i className="pi pi-search-plus text-orange-400 text-xl" />
+                        <span>제품 이미지 상세 확대 보기</span>
+                    </div>
+                }
+                dismissableMask
+                modal
+                style={{ width: '90vw', maxWidth: '640px', backgroundColor: '#0f172a', borderRadius: '12px', overflow: 'hidden' }}
+                maskStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' }}
+                headerStyle={{ backgroundColor: '#0f172a', color: '#ffffff', borderBottom: '1px solid #1e293b', padding: '1rem 1.5rem' }}
+                contentStyle={{ backgroundColor: '#0f172a', color: '#ffffff', padding: '1.5rem' }}
+                contentClassName="flex flex-column align-items-center justify-content-center"
+            >
+                {(() => {
+                    const rawUrl = orderDetailData?.imageUrl || rowData.imageUrl;
+                    const imgSrc = formatImageUrl(rawUrl);
+                    const productName = orderDetailData?.productName || rowData.unmappedProductName || rowData.design || '제품 이미지';
+                    return (
+                        <div className="flex flex-column align-items-center justify-content-center w-full gap-3">
+                            {imgSrc ? (
+                                <div className="w-full flex align-items-center justify-content-center p-3 border-round-lg" style={{ backgroundColor: '#1e293b', border: '1px solid #334155' }}>
+                                    <img 
+                                        src={imgSrc} 
+                                        alt={productName} 
+                                        className="border-round shadow-4"
+                                        style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain' }}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="text-white-alpha-70 py-5 text-center">
+                                    <i className="pi pi-image text-5xl mb-2 block text-400" />
+                                    <span>등록된 고화질 이미지가 없습니다.</span>
+                                </div>
+                            )}
+                            <div className="text-white-alpha-90 text-sm font-medium flex align-items-center gap-2 px-3 py-2 border-round w-full justify-content-between" style={{ backgroundColor: '#1e293b', border: '1px solid #334155' }}>
+                                <span className="flex align-items-center gap-2">
+                                    <i className="pi pi-tag text-orange-400" />
+                                    <strong>{productName}</strong>
+                                </span>
+                                <span className="text-xs text-400">클릭 또는 ESC키로 닫기</span>
+                            </div>
+                        </div>
+                    );
+                })()}
+            </Dialog>
         </Dialog>
     );
 };
