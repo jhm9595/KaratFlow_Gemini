@@ -55,9 +55,9 @@ export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipe
                     <i className="pi pi-sitemap text-primary"></i> 실시간 공정 현황 (Pipeline)
                 </h4>
                 <div className="flex align-items-center gap-2">
-                    {validTemplates.length > 1 && (
+                    {validTemplates.length > 0 && (
                         <div className="flex align-items-center gap-2" style={{ minWidth: '220px' }}>
-                            <span className="text-xs text-500 font-bold white-space-nowrap">템플릿 필터:</span>
+                            <span className="text-xs text-500 font-bold white-space-nowrap">템플릿:</span>
                             <Dropdown 
                                 value={activeTemplate?.id} 
                                 options={validTemplates.map(t => ({ label: `${t.templateName}${t.isDefault ? ' (기본)' : ''}`, value: t.id }))} 
