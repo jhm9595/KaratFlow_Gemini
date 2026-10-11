@@ -529,7 +529,6 @@ function App() {
                             }} 
                         />
                         <Button label="협력사 초대" icon="pi pi-users" className="p-button-outlined p-button-info p-button-sm" onClick={openHandshakeModal} />
-                        <Button label="금 계산기" icon="pi pi-calculator" className="p-button-outlined p-button-warning p-button-sm" onClick={() => openModal('goldTools')} tooltip="금 시세 계산 및 분석 도구" tooltipOptions={{ position: "bottom" }} />
                         
                         <div className="flex align-items-center gap-2 border-left-1 border-300 pl-3 ml-1">
                             <div 
