@@ -218,6 +218,39 @@ public class OrderService {
                 .build();
     }
 
+    @Transactional
+    public OrderResponseDTO changeOrderTemplate(Long orderId, Long newTemplateId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다: " + orderId));
+
+        if ("COMPLETED".equalsIgnoreCase(order.getStatus()) || "CANCELLED".equalsIgnoreCase(order.getStatus())) {
+            throw new IllegalStateException("이미 완료되었거나 취소된 주문은 공정 템플릿을 변경할 수 없습니다.");
+        }
+
+        ProcessTemplate newTemplate = templateRepository.findById(newTemplateId)
+                .orElseThrow(() -> new IllegalArgumentException("선택한 공정 템플릿이 존재하지 않습니다: " + newTemplateId));
+
+        if (newTemplate.getSteps() == null || newTemplate.getSteps().isEmpty()) {
+            throw new IllegalArgumentException("선택한 공정 템플릿에 등록된 공정 단계가 없습니다.");
+        }
+
+        List<WorkOrder> wos = workOrderRepository.findAllByOrderId(orderId);
+        for (WorkOrder wo : wos) {
+            String currentStage = wo.getCurrentStage();
+            boolean hasSameStage = newTemplate.getSteps().stream()
+                    .anyMatch(s -> s.getStageName() != null && s.getStageName().equalsIgnoreCase(currentStage));
+
+            String targetStage = hasSameStage ? currentStage : newTemplate.getSteps().get(0).getStageName();
+            wo.setTemplate(newTemplate);
+            wo.setCurrentStage(targetStage);
+            workOrderRepository.save(wo);
+
+            recordHistory(wo, "공정 템플릿 변경 -> " + newTemplate.getTemplateName() + " (" + targetStage + ")");
+        }
+
+        return getOrderById(orderId);
+    }
+
     // ─── Detail ───────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)

@@ -18,4 +18,10 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Long> {
                    "JOIN order_items oi ON w.order_item_id = oi.order_item_id " +
                    "WHERE oi.order_id = :orderId", nativeQuery = true)
     java.util.List<WorkOrder> findAllByOrderId(@Param("orderId") Long orderId);
+
+    @Query("SELECT count(w) FROM WorkOrder w WHERE w.template.id = :templateId")
+    long countByTemplateId(@Param("templateId") Long templateId);
+
+    @Query("SELECT count(w) FROM WorkOrder w WHERE w.template.id = :templateId AND w.completedAt IS NULL")
+    long countActiveByTemplateId(@Param("templateId") Long templateId);
 }

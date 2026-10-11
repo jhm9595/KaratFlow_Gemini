@@ -115,4 +115,14 @@ public class OrderController {
 
         return ResponseEntity.ok(res);
     }
+
+    @PostMapping("/{orderId}/change-template/{templateId}")
+    public ResponseEntity<OrderResponseDTO> changeTemplate(@PathVariable Long orderId, @PathVariable Long templateId) {
+        OrderResponseDTO updated = orderService.changeOrderTemplate(orderId, templateId);
+        String msg = "주문 #" + orderId + "의 공정 템플릿이 [" + updated.getTemplateName() + "]로 변경되었습니다.";
+        EventNotification notif = new EventNotification(securityUtils.getCurrentUserId(), orderId, updated.getOrderNo(), msg, updated.getStage());
+        EventNotification savedNotif = eventNotificationRepository.save(notif);
+        messagingTemplate.convertAndSend("/topic/process-alerts", savedNotif);
+        return ResponseEntity.ok(updated);
+    }
 }

@@ -19,6 +19,7 @@ public class ProcessTemplateService {
 
     private final ProcessTemplateRepository processTemplateRepository;
     private final ProcessTemplateStepRepository processTemplateStepRepository;
+    private final com.minibig.karatflow.backend.repository.WorkOrderRepository workOrderRepository;
     private final SecurityUtils securityUtils;
 
     private static final String[][] PASTEL_PRESET_GRADIENTS = {
@@ -52,12 +53,6 @@ public class ProcessTemplateService {
         List<ProcessTemplate> list = processTemplateRepository.findAll().stream()
                 .filter(t -> t.getTemplateName() != null && !t.getTemplateName().trim().isEmpty())
                 .filter(t -> {
-                    boolean isSystemDefault = Boolean.TRUE.equals(t.getIsDefault()) || 
-                                              "STANDARD_5".equals(t.getTemplateCode()) || 
-                                              "SIMPLE_3".equals(t.getTemplateCode());
-                    if (isSystemDefault) {
-                        return true;
-                    }
                     if (isDemo) {
                         return t.getUserId() == null || t.getUserId().equals(currentUserId);
                     } else {
@@ -78,16 +73,30 @@ public class ProcessTemplateService {
 
     @Transactional
     public ProcessTemplate createTemplate(ProcessTemplate template) {
-        if (template.getTemplateName() == null || template.getTemplateName().trim().isEmpty()) {
-            throw new IllegalArgumentException("공정 템플릿 이름은 필수 입력 항목입니다.");
-        }
+        validateTemplateStructure(template);
+
         Long currentUserId = securityUtils.getCurrentUserId();
         template.setUserId(currentUserId);
+
+        // Ensure unique templateCode (TPL_timestamp format)
+        if (template.getTemplateCode() == null || template.getTemplateCode().trim().isEmpty()) {
+            template.setTemplateCode("TPL_" + System.currentTimeMillis());
+        }
+        if (processTemplateRepository.existsByTemplateCode(template.getTemplateCode())) {
+            template.setTemplateCode("TPL_" + System.currentTimeMillis() + "_" + java.util.UUID.randomUUID().toString().substring(0, 4).toUpperCase());
+        }
+
+        // If this is the user's very first template, make it the default template automatically
+        long existingCount = getAllTemplates().size();
+        if (existingCount == 0) {
+            template.setIsDefault(true);
+        }
 
         ProcessTemplate saved = processTemplateRepository.save(template);
         if (template.getSteps() != null) {
             for (int i = 0; i < template.getSteps().size(); i++) {
                 ProcessTemplateStep step = template.getSteps().get(i);
+                step.setStepOrder(i + 1); // 1-based sequential normalization
                 applyDefaultColorsIfNeeded(step, i);
                 step.setTemplate(saved);
                 processTemplateStepRepository.save(step);
@@ -98,24 +107,19 @@ public class ProcessTemplateService {
 
     @Transactional
     public ProcessTemplate updateTemplate(Long id, ProcessTemplate updatedTemplate) {
-        if (updatedTemplate.getTemplateName() == null || updatedTemplate.getTemplateName().trim().isEmpty()) {
-            throw new IllegalArgumentException("공정 템플릿 이름은 필수 입력 항목입니다.");
-        }
+        validateTemplateStructure(updatedTemplate);
+
         Long currentUserId = securityUtils.getCurrentUserId();
         Optional<ProcessTemplate> existingOpt = processTemplateRepository.findById(id);
-        if (existingOpt.isEmpty()) throw new RuntimeException("Template not found");
+        if (existingOpt.isEmpty()) throw new IllegalArgumentException("해당 공정 템플릿을 찾을 수 없습니다. (ID: " + id + ")");
         
         ProcessTemplate existing = existingOpt.get();
-        boolean isSystemDefault = Boolean.TRUE.equals(existing.getIsDefault()) || 
-                                  "STANDARD_5".equals(existing.getTemplateCode()) || 
-                                  "SIMPLE_3".equals(existing.getTemplateCode());
-        if (!isSystemDefault && existing.getUserId() != null && !existing.getUserId().equals(currentUserId)) {
+        if (existing.getUserId() != null && !existing.getUserId().equals(currentUserId)) {
             throw new SecurityException("다른 사용자의 공정 템플릿은 수정할 수 없습니다.");
         }
 
         existing.setTemplateName(updatedTemplate.getTemplateName());
         existing.setDescription(updatedTemplate.getDescription());
-        existing.setUserId(currentUserId);
         
         processTemplateStepRepository.deleteAll(existing.getSteps());
         existing.getSteps().clear();
@@ -123,6 +127,7 @@ public class ProcessTemplateService {
         if (updatedTemplate.getSteps() != null) {
             for (int i = 0; i < updatedTemplate.getSteps().size(); i++) {
                 ProcessTemplateStep step = updatedTemplate.getSteps().get(i);
+                step.setStepOrder(i + 1); // 1-based sequential normalization
                 applyDefaultColorsIfNeeded(step, i);
                 step.setId(null);
                 step.setTemplate(existing);
@@ -137,37 +142,68 @@ public class ProcessTemplateService {
     public void deleteTemplate(Long id) {
         Long currentUserId = securityUtils.getCurrentUserId();
         Optional<ProcessTemplate> existingOpt = processTemplateRepository.findById(id);
-        if (existingOpt.isPresent()) {
-            ProcessTemplate t = existingOpt.get();
-            boolean isSystemDefault = Boolean.TRUE.equals(t.getIsDefault()) || 
-                                      "STANDARD_5".equals(t.getTemplateCode()) || 
-                                      "SIMPLE_3".equals(t.getTemplateCode());
-            if (isSystemDefault) {
-                throw new SecurityException("시스템 기본 공정 템플릿은 삭제할 수 없습니다.");
-            }
-            if (t.getUserId() != null && !t.getUserId().equals(currentUserId)) {
-                throw new SecurityException("다른 사용자의 공정 템플릿은 삭제할 수 없습니다.");
-            }
-            processTemplateRepository.deleteById(id);
+        if (existingOpt.isEmpty()) return;
+
+        ProcessTemplate t = existingOpt.get();
+        if (t.getUserId() != null && !t.getUserId().equals(currentUserId)) {
+            throw new SecurityException("다른 사용자의 공정 템플릿은 삭제할 수 없습니다.");
         }
+
+        // Situation 1: Check active work orders linked to this template
+        long activeCount = workOrderRepository.countActiveByTemplateId(id);
+        if (activeCount > 0) {
+            throw new IllegalStateException("현재 진행 중인 작업(" + activeCount + "건)이 이 공정 템플릿을 사용하고 있어 삭제할 수 없습니다. 관련 작업을 마감하거나 템플릿을 변경한 후 삭제해 주세요.");
+        }
+
+        long totalCount = workOrderRepository.countByTemplateId(id);
+        if (totalCount > 0) {
+            throw new IllegalStateException("이 공정 템플릿과 연결된 작업 이력(" + totalCount + "건)이 존재하여 삭제할 수 없습니다.");
+        }
+
+        processTemplateRepository.deleteById(id);
     }
 
     @Transactional
     public ProcessTemplate setDefaultTemplate(Long id) {
         Long currentUserId = securityUtils.getCurrentUserId();
-        List<ProcessTemplate> all = getAllTemplates();
+        Optional<ProcessTemplate> targetOpt = processTemplateRepository.findById(id);
+        if (targetOpt.isEmpty()) throw new IllegalArgumentException("해당 공정 템플릿을 찾을 수 없습니다.");
 
-        ProcessTemplate target = null;
+        ProcessTemplate target = targetOpt.get();
+        if (target.getUserId() != null && !target.getUserId().equals(currentUserId)) {
+            throw new SecurityException("다른 사용자의 공정 템플릿은 기본 공정으로 지정할 수 없습니다.");
+        }
+        if (target.getSteps() == null || target.getSteps().isEmpty()) {
+            throw new IllegalArgumentException("공정 단계가 등록되지 않은 템플릿은 기본 공정으로 지정할 수 없습니다.");
+        }
+
+        // Situation 3: Exactly one default template per user (atomic switch)
+        List<ProcessTemplate> all = getAllTemplates();
         for (ProcessTemplate t : all) {
-            if (t.getId().equals(id)) {
-                t.setIsDefault(true);
-                target = t;
-            } else {
-                t.setIsDefault(false);
-            }
+            t.setIsDefault(t.getId().equals(id));
             processTemplateRepository.save(t);
         }
-        if (target == null) throw new RuntimeException("Template not found");
         return target;
+    }
+
+    private void validateTemplateStructure(ProcessTemplate template) {
+        if (template.getTemplateName() == null || template.getTemplateName().trim().isEmpty()) {
+            throw new IllegalArgumentException("공정 템플릿 이름은 필수 입력 항목입니다.");
+        }
+        if (template.getSteps() == null || template.getSteps().isEmpty()) {
+            throw new IllegalArgumentException("공정 템플릿은 최소 1개 이상의 공정 단계를 포함해야 합니다.");
+        }
+
+        // Check for duplicate or empty stage names
+        java.util.Set<String> seenNames = new java.util.HashSet<>();
+        for (ProcessTemplateStep s : template.getSteps()) {
+            String name = s.getStageName() != null ? s.getStageName().trim() : "";
+            if (name.isEmpty()) {
+                throw new IllegalArgumentException("공정 단계 이름은 비워둘 수 없습니다.");
+            }
+            if (!seenNames.add(name)) {
+                throw new IllegalArgumentException("동일한 공정 단계 이름('" + name + "')이 중복으로 포함될 수 없습니다.");
+            }
+        }
     }
 }

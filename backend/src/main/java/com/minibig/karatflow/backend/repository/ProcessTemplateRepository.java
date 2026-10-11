@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.List;
 public interface ProcessTemplateRepository extends JpaRepository<ProcessTemplate, Long> {
     Optional<ProcessTemplate> findByTemplateCode(String templateCode);
+    boolean existsByTemplateCode(String templateCode);
     List<ProcessTemplate> findByUserIdOrIsDefaultTrue(Long userId);
     List<ProcessTemplate> findByCompanyIdOrIsDefaultTrue(Long companyId);
 }

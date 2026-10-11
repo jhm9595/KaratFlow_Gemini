@@ -130,16 +130,28 @@ export const ProcessManager: React.FC<ProcessManagerProps> = ({ visible, onHide 
 
     const saveTemplate = () => {
         if (!formName.trim() || formStages.length === 0) {
-            toast.current?.show({ severity: 'warn', summary: '입력 오류', detail: '이름과 공정 단계를 입력하세요.' });
+            toast.current?.show({ severity: 'warn', summary: '입력 오류', detail: '템플릿 이름과 최소 1개 이상의 공정 단계를 입력해 주세요.' });
+            return;
+        }
+
+        const stageNames = formStages.map(s => s.stageName.trim());
+        if (stageNames.some(name => !name)) {
+            toast.current?.show({ severity: 'warn', summary: '입력 오류', detail: '공정 단계 이름은 비워둘 수 없습니다.' });
+            return;
+        }
+
+        const hasDuplicate = new Set(stageNames).size !== stageNames.length;
+        if (hasDuplicate) {
+            toast.current?.show({ severity: 'warn', summary: '중복 오류', detail: '동일한 공정 단계 이름이 중복되어 있습니다.' });
             return;
         }
 
         const payload = {
             templateName: formName,
             description: formDesc,
-            templateCode: "TEMPLATE_" + new Date().getTime(),
+            templateCode: isEdit ? undefined : ("TPL_" + new Date().getTime()),
             steps: formStages.map((s, idx) => ({
-                stageName: s.stageName,
+                stageName: s.stageName.trim(),
                 stepOrder: idx + 1,
                 colorHex: s.colorHex,
                 colorGradient: s.colorGradient
@@ -153,28 +165,42 @@ export const ProcessManager: React.FC<ProcessManagerProps> = ({ visible, onHide 
             method,
             headers: getAuthHeaders(),
             body: JSON.stringify(payload)
-        }).then(res => {
+        }).then(async res => {
             if (res.ok) {
                 toast.current?.show({ severity: 'success', summary: '성공', detail: '템플릿이 저장되었습니다.' });
                 setFormVisible(false);
                 loadTemplates();
                 window.location.reload();
             } else {
-                toast.current?.show({ severity: 'error', summary: '오류', detail: '저장에 실패했습니다.' });
+                const err = await res.json().catch(() => ({}));
+                toast.current?.show({ 
+                    severity: 'error', 
+                    summary: '저장 실패', 
+                    detail: err.message || '템플릿 저장에 실패했습니다.',
+                    life: 4000
+                });
             }
         });
     };
 
     const deleteTemplate = (id: number) => {
-        if (!window.confirm('정말로 이 템플릿을 삭제하시겠습니까?')) return;
+        if (!window.confirm('정말로 이 공정 템플릿을 삭제하시겠습니까?')) return;
         
         fetch(`${apiUrl}/api/process-templates/${id}`, {
             method: 'DELETE',
             headers: getAuthHeaders()
-        }).then(res => {
+        }).then(async res => {
             if (res.ok) {
                 toast.current?.show({ severity: 'info', summary: '삭제 완료', detail: '템플릿이 삭제되었습니다.' });
                 loadTemplates();
+            } else {
+                const err = await res.json().catch(() => ({}));
+                toast.current?.show({ 
+                    severity: 'error', 
+                    summary: '삭제 불가', 
+                    detail: err.message || '현재 진행 중인 작업이 연결되어 있는 공정 템플릿은 삭제할 수 없습니다.',
+                    life: 5000
+                });
             }
         });
     };
