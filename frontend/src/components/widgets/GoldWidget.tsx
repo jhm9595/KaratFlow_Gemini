@@ -130,26 +130,6 @@ const GoldWidget: React.FC<GoldWidgetProps> = ({
                             <span>전체</span>
                         </button>
                     </div>
-
-                    {/* Harmonized Calculator Pill Button */}
-                    {onOpenCalculator && (
-                        <button
-                            type="button"
-                            onClick={onOpenCalculator}
-                            title="금 시세 계산 도구"
-                            className="border-none cursor-pointer flex align-items-center justify-content-center transition-all transition-duration-200"
-                            style={{
-                                width: '24px',
-                                height: '24px',
-                                borderRadius: '9999px',
-                                backgroundColor: '#fff7ed',
-                                color: '#d97706',
-                                border: '1px solid #fed7aa'
-                            }}
-                        >
-                            <i className="pi pi-calculator text-xs" />
-                        </button>
-                    )}
                 </div>
             </div>
             

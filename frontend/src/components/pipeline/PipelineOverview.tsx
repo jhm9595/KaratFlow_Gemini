@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Dropdown } from 'primereact/dropdown';
+import { Button } from 'primereact/button';
+import { useModal } from '../../hooks/useModal';
 
 interface PipelineOverviewProps {
     orders: any[];
@@ -8,6 +10,7 @@ interface PipelineOverviewProps {
 }
 
 export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipelineSteps, templates }) => {
+    const { openModal } = useModal();
     const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
 
     const validTemplates = (templates || []).filter(t => t && t.templateName && t.templateName.trim() !== '');
@@ -27,11 +30,19 @@ export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipe
                     <h4 className="m-0 text-600 font-medium flex align-items-center gap-2">
                         <i className="pi pi-sitemap text-primary"></i> 실시간 공정 현황 (Pipeline)
                     </h4>
+                    <Button 
+                        icon="pi pi-cog" 
+                        className="p-button-rounded p-button-text p-button-secondary p-button-sm" 
+                        style={{ width: '32px', height: '32px' }}
+                        onClick={() => openModal('processManager')} 
+                        tooltip="공정 템플릿 관리" 
+                        tooltipOptions={{ position: 'bottom' }} 
+                    />
                 </div>
                 <div className="flex flex-column align-items-center justify-content-center py-4 surface-50 border-round border-1 border-dashed border-300">
                     <i className="pi pi-sitemap text-400 text-4xl mb-2"></i>
                     <h5 className="m-0 mb-1 text-700 font-bold">등록된 공정 템플릿 단계가 없습니다</h5>
-                    <p className="text-500 text-sm m-0">상단의 [공정 관리]에서 템플릿을 등록하면 사업장 고유의 실시간 공정 파이프라인이 표시됩니다.</p>
+                    <p className="text-500 text-sm m-0">우측 상단의 공정 관리(설정 아이콘)에서 템플릿을 등록하면 사업장 고유의 실시간 공정 파이프라인이 표시됩니다.</p>
                 </div>
             </div>
         );
@@ -43,18 +54,28 @@ export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipe
                 <h4 className="m-0 text-600 font-medium flex align-items-center gap-2">
                     <i className="pi pi-sitemap text-primary"></i> 실시간 공정 현황 (Pipeline)
                 </h4>
-                {validTemplates.length > 1 && (
-                    <div className="flex align-items-center gap-2" style={{ minWidth: '220px' }}>
-                        <span className="text-xs text-500 font-bold white-space-nowrap">템플릿 필터:</span>
-                        <Dropdown 
-                            value={activeTemplate?.id} 
-                            options={validTemplates.map(t => ({ label: `${t.templateName}${t.isDefault ? ' (기본)' : ''}`, value: t.id }))} 
-                            onChange={(e) => setSelectedTemplateId(e.value)} 
-                            className="p-inputtext-sm font-bold text-xs" 
-                            style={{ height: '32px' }} 
-                        />
-                    </div>
-                )}
+                <div className="flex align-items-center gap-2">
+                    {validTemplates.length > 1 && (
+                        <div className="flex align-items-center gap-2" style={{ minWidth: '220px' }}>
+                            <span className="text-xs text-500 font-bold white-space-nowrap">템플릿 필터:</span>
+                            <Dropdown 
+                                value={activeTemplate?.id} 
+                                options={validTemplates.map(t => ({ label: `${t.templateName}${t.isDefault ? ' (기본)' : ''}`, value: t.id }))} 
+                                onChange={(e) => setSelectedTemplateId(e.value)} 
+                                className="p-inputtext-sm font-bold text-xs" 
+                                style={{ height: '32px' }} 
+                            />
+                        </div>
+                    )}
+                    <Button 
+                        icon="pi pi-cog" 
+                        className="p-button-rounded p-button-text p-button-secondary p-button-sm" 
+                        style={{ width: '32px', height: '32px' }}
+                        onClick={() => openModal('processManager')} 
+                        tooltip="공정 템플릿 관리" 
+                        tooltipOptions={{ position: 'bottom' }} 
+                    />
+                </div>
             </div>
 
             <div className="flex justify-content-between align-items-center px-4 relative">
