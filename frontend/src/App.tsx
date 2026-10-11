@@ -20,20 +20,19 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { OrderAdminPage } from './pages/OrderAdminPage';
 import { UserAccountPage } from './pages/UserAccountPage';
 import { compressImage } from './utils/imageCompressor';
+import { useModal } from './hooks/useModal';
 
 
 function App() {
+    const { openModal, closeModal } = useModal();
     const { goldPriceData, todayGold, yesterdayGold, delta24k } = useGoldPrices();
     const { templates } = useProcessTemplates();
     const [feedViewMode, setFeedViewMode] = useState<'list' | 'card'>('list');
     const toast = useRef<any>(null);
     const [sidebarVisible, setSidebarVisible] = useState(false);
     const [activeMenu, setActiveMenu] = useState('dashboard');
-    const [changeModalVisible, setChangeModalVisible] = useState(false);
     const navigate = useNavigate();
     const [orders, setOrders] = useState<any[]>([]);
-    const [partnerModalVisible, setPartnerModalVisible] = useState(false);
-    const [createOrderModalVisible, setCreateOrderModalVisible] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
     const [allProducts, setAllProducts] = useState<any[]>([]);
@@ -122,7 +121,6 @@ function App() {
         }
     };
 
-    const [orderDetailVisible, setOrderDetailVisible] = useState(false);
     const [orderDetailData, setOrderDetailData] = useState<any>(null);
 
     const openOrderDetail = (orderId: number) => {
@@ -131,11 +129,11 @@ function App() {
             .then(res => res.json())
             .then(data => {
                 setOrderDetailData(data);
-                setOrderDetailVisible(true);
+                openModal('orderDetail', { orderId });
             })
             .catch(err => {
                 console.error('Failed to fetch details', err);
-                setOrderDetailVisible(true);
+                openModal('orderDetail', { orderId });
             });
     };
     
@@ -160,14 +158,7 @@ function App() {
     const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
     const { printOrder, printMode, handlePrint } = useOrderPrint(getAuthHeaders);
 
-    const [cancelModalVisible, setCancelModalVisible] = useState(false);
     const [cancelEstimate, setCancelEstimate] = useState<number | null>(null);
-
-    const [subcontractModalVisible, setSubcontractModalVisible] = useState(false);
-        const [processManagerVisible, setProcessManagerVisible] = useState(false);
-    const [goldToolsVisible, setGoldToolsVisible] = useState(false);
-    
-
     const [subcontracts, setSubcontracts] = useState<any[]>([]);
     const [scForm, setScForm] = useState({ taskName: '', subcontractorName: '', dispatchedWeightG: 0, agreedLaborFee: 0 });
     const [receiveForm, setReceiveForm] = useState<{ [key: number]: number }>({});
@@ -178,14 +169,12 @@ function App() {
     const [businessNumber, setBusinessNumber] = useState('');
     const [businessResult, setBusinessResult] = useState<any>(null);
 
-
-
     const openHandshakeModal = () => {
         fetch('http://localhost:8888/api/handshake', { headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => {
                 setHandshakes(data);
-                setPartnerModalVisible(true);
+                openModal('partnerHandshake');
             });
     };
 
@@ -242,7 +231,7 @@ function App() {
         .then(res => res.json())
         .then(() => {
             fetchOrders();
-            setCreateOrderModalVisible(false);
+            closeModal('createOrder');
             setSelectedOrderFile(null);
             if (localImagePreview) {
                 URL.revokeObjectURL(localImagePreview);
@@ -299,7 +288,7 @@ function App() {
             .then(res => res.json())
             .then(data => {
                 setSubcontracts(data);
-                setSubcontractModalVisible(true);
+                openModal('subcontract', { orderId });
             });
     };
 
@@ -340,7 +329,7 @@ function App() {
             .then(res => res.json())
             .then(data => {
                 setCancelEstimate(data.estimatedFee);
-                setCancelModalVisible(true);
+                openModal('cancelOrder', { orderId });
             });
     };
 
@@ -350,7 +339,7 @@ function App() {
             .then(res => res.json())
             .then(data => {
                 toast.current?.show({ severity: 'success', summary: '주문 취소 완료', detail: `수수료: ₩${data.cancellationFee}`, life: 5000 });
-                setCancelModalVisible(false);
+                closeModal('cancelOrder');
                 fetchOrders();
             });
     };
@@ -366,7 +355,7 @@ function App() {
                         detail: '공정 진행을 위해 템플릿 등록이 필요합니다. [공정 관리] 모달을 엽니다.', 
                         life: 4000 
                     });
-                    setProcessManagerVisible(true);
+                    openModal('processManager');
                 } else {
                     fetchOrders();
                     openOrderDetail(orderId);
@@ -379,7 +368,7 @@ function App() {
                     detail: '유효한 공정 템플릿을 찾을 수 없습니다. [공정 관리]에서 새로운 템플릿을 추가해 주세요.', 
                     life: 4000 
                 });
-                setProcessManagerVisible(true);
+                openModal('processManager');
             });
     };
 
@@ -481,7 +470,7 @@ function App() {
         if (!selectedOrderId) return;
         fetch(`http://localhost:8888/api/orders/${selectedOrderId}/hold`, { method: 'POST', headers: getAuthHeaders() })
             .then(() => {
-                setChangeModalVisible(false);
+                closeModal('changeRequest');
             });
     };
 
@@ -534,12 +523,12 @@ function App() {
                                 if (localImagePreview) setLocalImagePreview(null);
                                 setCreateOrderForm({ orderType: 'B2C', customerName: '', customerPhone: '', designId: 1, engravingText: '', engravingLocation: '', surfaceFinish: '유광', finalConsumerPrice: 0, quantity: 1, unmappedBrandName: '', unmappedProductName: '', imageUrl: '' });
                                 setSelectedProduct(null);
-                                setCreateOrderModalVisible(true); 
+                                openModal('createOrder'); 
                                 loadAllProducts(); 
                             }} 
                         />
                         <Button label="협력사 초대" icon="pi pi-users" className="p-button-outlined p-button-info p-button-sm" onClick={openHandshakeModal} />
-                        <Button label="공정 관리" icon="pi pi-sitemap" className="p-button-outlined p-button-help p-button-sm" onClick={() => setProcessManagerVisible(true)} tooltip="공장 공정 단계를 커스터마이징합니다" tooltipOptions={{position: "bottom"}} />
+                        <Button label="공정 관리" icon="pi pi-sitemap" className="p-button-outlined p-button-help p-button-sm" onClick={() => openModal('processManager')} tooltip="공장 공정 단계를 커스터마이징합니다" tooltipOptions={{position: "bottom"}} />
                         
                         <div className="flex align-items-center gap-2 border-left-1 border-300 pl-3 ml-1">
                             <div 
@@ -565,7 +554,7 @@ function App() {
                             yesterdayGold={yesterdayGold}
                             delta24k={delta24k}
                             goldPriceData={goldPriceData}
-                            onOpenGoldTools={() => setGoldToolsVisible(true)}
+                            onOpenGoldTools={() => openModal('goldTools')}
                         />
 
                         {/* Right Panel: Pipeline & Data Table */}
@@ -581,7 +570,7 @@ function App() {
                                         icon="pi pi-plus" 
                                         className="p-button-warning p-button-xs font-bold text-xs shadow-1" 
                                         style={{ height: '28px', padding: '0 10px' }}
-                                        onClick={() => setProcessManagerVisible(true)} 
+                                        onClick={() => openModal('processManager')} 
                                     />
                                 </div>
                             )}
@@ -635,8 +624,6 @@ function App() {
             </div>
 
             <AppModals 
-                createOrderModalVisible={createOrderModalVisible}
-                setCreateOrderModalVisible={setCreateOrderModalVisible}
                 createOrderForm={createOrderForm}
                 setCreateOrderForm={setCreateOrderForm}
                 selectedProduct={selectedProduct}
@@ -647,17 +634,11 @@ function App() {
                 submitCreateOrder={submitCreateOrder}
                 localImagePreview={localImagePreview}
 
-                changeModalVisible={changeModalVisible}
-                setChangeModalVisible={setChangeModalVisible}
                 submitChangeRequest={submitChangeRequest}
 
-                cancelModalVisible={cancelModalVisible}
-                setCancelModalVisible={setCancelModalVisible}
                 cancelEstimate={cancelEstimate}
                 submitCancelOrder={submitCancelOrder}
 
-                partnerModalVisible={partnerModalVisible}
-                setPartnerModalVisible={setPartnerModalVisible}
                 handshakes={handshakes}
                 handshakePin={handshakePin}
                 setHandshakePin={setHandshakePin}
@@ -669,8 +650,6 @@ function App() {
                 verifyBusiness={verifyBusiness}
                 businessResult={businessResult}
 
-                subcontractModalVisible={subcontractModalVisible}
-                setSubcontractModalVisible={setSubcontractModalVisible}
                 subcontracts={subcontracts}
                 scForm={scForm}
                 setScForm={setScForm}
@@ -681,8 +660,6 @@ function App() {
 
                 selectedOrderId={selectedOrderId}
                 orders={orders}
-                orderDetailVisible={orderDetailVisible}
-                setOrderDetailVisible={setOrderDetailVisible}
                 orderDetailData={orderDetailData}
                 pipelineStages={pipelineStages}
                 pipelineSteps={pipelineSteps}
@@ -691,13 +668,9 @@ function App() {
                 openCancelModal={openCancelModal}
                 handlePrint={handlePrint}
 
-                processManagerVisible={processManagerVisible}
-                setProcessManagerVisible={setProcessManagerVisible}
                 fetchOrders={fetchOrders}
                 fetchPipelineStages={fetchPipelineStages}
 
-                goldToolsVisible={goldToolsVisible}
-                setGoldToolsVisible={setGoldToolsVisible}
                 goldPriceData={goldPriceData}
                 templates={templates}
             />

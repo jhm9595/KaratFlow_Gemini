@@ -9,10 +9,10 @@ import { MultiOrderDetailModal } from './MultiOrderDetailModal';
 import { ProcessManager } from '../ProcessManager';
 import { GoldToolsModal } from '../GoldToolsModal';
 import { PipelineStatusBadge } from './pipeline/PipelineStatusBadge';
+import { useModal } from '../hooks/useModal';
 
-interface AppModalsProps {
-    createOrderModalVisible: boolean;
-    setCreateOrderModalVisible: (v: boolean) => void;
+export interface AppModalsProps {
+    // Create Order Modal props
     createOrderForm: any;
     setCreateOrderForm: (f: any) => void;
     selectedProduct: any;
@@ -23,17 +23,14 @@ interface AppModalsProps {
     submitCreateOrder: () => void;
     localImagePreview?: string | null;
 
-    changeModalVisible: boolean;
-    setChangeModalVisible: (v: boolean) => void;
+    // Change Request Modal props
     submitChangeRequest: () => void;
 
-    cancelModalVisible: boolean;
-    setCancelModalVisible: (v: boolean) => void;
+    // Cancel Order Modal props
     cancelEstimate: number | null;
     submitCancelOrder: () => void;
 
-    partnerModalVisible: boolean;
-    setPartnerModalVisible: (v: boolean) => void;
+    // Partner Handshake Modal props
     handshakes: any[];
     handshakePin: string;
     setHandshakePin: (p: string) => void;
@@ -45,8 +42,7 @@ interface AppModalsProps {
     verifyBusiness: () => void;
     businessResult: any;
 
-    subcontractModalVisible: boolean;
-    setSubcontractModalVisible: (v: boolean) => void;
+    // Subcontract Modal props
     subcontracts: any[];
     scForm: any;
     setScForm: (f: any) => void;
@@ -55,10 +51,9 @@ interface AppModalsProps {
     handleDispatchSubcontract: () => void;
     handleReceiveSubcontract: (id: number) => void;
 
+    // Order Detail Modal props
     selectedOrderId: number | null;
     orders: any[];
-    orderDetailVisible: boolean;
-    setOrderDetailVisible: (v: boolean) => void;
     orderDetailData: any;
     pipelineStages: string[];
     pipelineSteps: any[];
@@ -67,20 +62,16 @@ interface AppModalsProps {
     openCancelModal: (id: number) => void;
     handlePrint: (order: any, mode: 'label' | 'invoice') => void;
 
-    processManagerVisible: boolean;
-    setProcessManagerVisible: (v: boolean) => void;
+    // Process Manager callbacks
     fetchOrders: () => void;
     fetchPipelineStages: () => void;
 
-    goldToolsVisible: boolean;
-    setGoldToolsVisible: (v: boolean) => void;
+    // Gold Tools props
     goldPriceData: any[];
     templates?: any[];
 }
 
 export const AppModals: React.FC<AppModalsProps> = ({
-    createOrderModalVisible,
-    setCreateOrderModalVisible,
     createOrderForm,
     setCreateOrderForm,
     selectedProduct,
@@ -91,17 +82,11 @@ export const AppModals: React.FC<AppModalsProps> = ({
     submitCreateOrder,
     localImagePreview,
 
-    changeModalVisible,
-    setChangeModalVisible,
     submitChangeRequest,
 
-    cancelModalVisible,
-    setCancelModalVisible,
     cancelEstimate,
     submitCancelOrder,
 
-    partnerModalVisible,
-    setPartnerModalVisible,
     handshakes,
     handshakePin,
     setHandshakePin,
@@ -113,8 +98,6 @@ export const AppModals: React.FC<AppModalsProps> = ({
     verifyBusiness,
     businessResult,
 
-    subcontractModalVisible,
-    setSubcontractModalVisible,
     subcontracts,
     scForm,
     setScForm,
@@ -125,8 +108,6 @@ export const AppModals: React.FC<AppModalsProps> = ({
 
     selectedOrderId,
     orders,
-    orderDetailVisible,
-    setOrderDetailVisible,
     orderDetailData,
     pipelineStages,
     pipelineSteps,
@@ -135,16 +116,14 @@ export const AppModals: React.FC<AppModalsProps> = ({
     openCancelModal,
     handlePrint,
 
-    processManagerVisible,
-    setProcessManagerVisible,
     fetchOrders,
     fetchPipelineStages,
 
-    goldToolsVisible,
-    setGoldToolsVisible,
     goldPriceData,
     templates,
 }) => {
+    const { isOpen, openModal, closeModal } = useModal();
+
     const currentOrder = selectedOrderId ? orders.find(o => o.id === selectedOrderId) : null;
     const isMultiItem = Boolean(
         (currentOrder?.quantity && currentOrder.quantity > 1) || 
@@ -158,8 +137,8 @@ export const AppModals: React.FC<AppModalsProps> = ({
     return (
         <>
             <CreateOrderModal
-                visible={createOrderModalVisible}
-                onHide={() => setCreateOrderModalVisible(false)}
+                visible={isOpen('createOrder')}
+                onHide={() => closeModal('createOrder')}
                 createOrderForm={createOrderForm}
                 setCreateOrderForm={setCreateOrderForm}
                 selectedProduct={selectedProduct}
@@ -170,25 +149,25 @@ export const AppModals: React.FC<AppModalsProps> = ({
                 submitCreateOrder={submitCreateOrder}
                 templates={templates}
                 localImagePreview={localImagePreview}
-                onOpenProcessManager={() => setProcessManagerVisible(true)}
+                onOpenProcessManager={() => openModal('processManager')}
             />
 
             <ChangeRequestModal
-                visible={changeModalVisible}
-                onHide={() => setChangeModalVisible(false)}
+                visible={isOpen('changeRequest')}
+                onHide={() => closeModal('changeRequest')}
                 submitChangeRequest={submitChangeRequest}
             />
 
             <CancelOrderModal
-                visible={cancelModalVisible}
-                onHide={() => setCancelModalVisible(false)}
+                visible={isOpen('cancelOrder')}
+                onHide={() => closeModal('cancelOrder')}
                 cancelEstimate={cancelEstimate}
                 submitCancelOrder={submitCancelOrder}
             />
 
             <PartnerHandshakeModal
-                visible={partnerModalVisible}
-                onHide={() => setPartnerModalVisible(false)}
+                visible={isOpen('partnerHandshake')}
+                onHide={() => closeModal('partnerHandshake')}
                 handshakes={handshakes}
                 handshakePin={handshakePin}
                 setHandshakePin={setHandshakePin}
@@ -202,8 +181,8 @@ export const AppModals: React.FC<AppModalsProps> = ({
             />
 
             <SubcontractModal
-                visible={subcontractModalVisible}
-                onHide={() => setSubcontractModalVisible(false)}
+                visible={isOpen('subcontract')}
+                onHide={() => closeModal('subcontract')}
                 subcontracts={subcontracts}
                 scForm={scForm}
                 setScForm={setScForm}
@@ -216,31 +195,31 @@ export const AppModals: React.FC<AppModalsProps> = ({
             {selectedOrderId && currentOrder && (
                 isMultiItem ? (
                     <MultiOrderDetailModal
-                        visible={orderDetailVisible}
-                        onHide={() => setOrderDetailVisible(false)}
+                        visible={isOpen('orderDetail')}
+                        onHide={() => closeModal('orderDetail')}
                         order={currentOrder}
                         orderDetailData={orderDetailData}
                         pipelineStages={pipelineStages}
                         pipelineSteps={pipelineSteps}
                         advanceStage={advanceStage}
-                        openSubcontractModal={(id) => { setOrderDetailVisible(false); openSubcontractModal(id); }}
-                        openChangeModal={() => { setOrderDetailVisible(false); setChangeModalVisible(true); }}
-                        openCancelModal={(id) => { setOrderDetailVisible(false); openCancelModal(id); }}
+                        openSubcontractModal={(id) => { closeModal('orderDetail'); openSubcontractModal(id); }}
+                        openChangeModal={() => { closeModal('orderDetail'); openModal('changeRequest'); }}
+                        openCancelModal={(id) => { closeModal('orderDetail'); openCancelModal(id); }}
                         handlePrint={handlePrint}
                         statusBodyTemplate={renderStatusBadge}
                     />
                 ) : (
                     <OrderDetailModal
-                        visible={orderDetailVisible}
-                        onHide={() => setOrderDetailVisible(false)}
+                        visible={isOpen('orderDetail')}
+                        onHide={() => closeModal('orderDetail')}
                         order={currentOrder}
                         orderDetailData={orderDetailData}
                         pipelineStages={pipelineStages}
                         pipelineSteps={pipelineSteps}
                         advanceStage={advanceStage}
-                        openSubcontractModal={(id) => { setOrderDetailVisible(false); openSubcontractModal(id); }}
-                        openChangeModal={() => { setOrderDetailVisible(false); setChangeModalVisible(true); }}
-                        openCancelModal={(id) => { setOrderDetailVisible(false); openCancelModal(id); }}
+                        openSubcontractModal={(id) => { closeModal('orderDetail'); openSubcontractModal(id); }}
+                        openChangeModal={() => { closeModal('orderDetail'); openModal('changeRequest'); }}
+                        openCancelModal={(id) => { closeModal('orderDetail'); openCancelModal(id); }}
                         handlePrint={handlePrint}
                         statusBodyTemplate={renderStatusBadge}
                     />
@@ -248,17 +227,17 @@ export const AppModals: React.FC<AppModalsProps> = ({
             )}
 
             <ProcessManager 
-                visible={processManagerVisible} 
+                visible={isOpen('processManager')} 
                 onHide={() => {
-                    setProcessManagerVisible(false);
+                    closeModal('processManager');
                     fetchOrders();
                     fetchPipelineStages();
                 }} 
             />
 
             <GoldToolsModal 
-                visible={goldToolsVisible} 
-                onHide={() => setGoldToolsVisible(false)} 
+                visible={isOpen('goldTools')} 
+                onHide={() => closeModal('goldTools')} 
                 recentPrices={goldPriceData} 
             />
         </>
