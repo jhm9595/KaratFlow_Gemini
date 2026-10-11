@@ -1,13 +1,13 @@
-import { getAuthHeaders } from './client';
+import { getAuthHeaders, API_BASE_URL } from './client';
 
 export async function getSubcontracts(orderId: number) {
-    const res = await fetch(`http://localhost:8888/api/orders/${orderId}/subcontracts`, { headers: getAuthHeaders() });
+    const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/subcontracts`, { headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to fetch subcontracts');
     return res.json();
 }
 
 export async function createSubcontract(payload: any) {
-    const res = await fetch('http://localhost:8888/api/subcontracts', {
+    const res = await fetch(`${API_BASE_URL}/api/subcontracts`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
@@ -16,7 +16,7 @@ export async function createSubcontract(payload: any) {
 }
 
 export async function receiveSubcontract(subcontractId: number, receivedWeightG: number) {
-    const res = await fetch(`http://localhost:8888/api/subcontracts/${subcontractId}/receive`, {
+    const res = await fetch(`${API_BASE_URL}/api/subcontracts/${subcontractId}/receive`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ receivedWeightG }),

@@ -88,12 +88,23 @@ public class OrderController {
     public ResponseEntity<Map<String, Object>> advanceStage(@PathVariable Long orderId) {
         Map<String, Object> res = orderService.advanceOrderStage(orderId);
         String newStage = String.valueOf(res.getOrDefault("newStage", "진행"));
+        String itemLabel = String.valueOf(res.getOrDefault("itemLabel", "#" + orderId));
+        String orderNo = String.valueOf(res.getOrDefault("orderNo", "ORD-" + orderId));
+        Boolean allFinished = Boolean.TRUE.equals(res.get("allFinished"));
 
-        String msg = "주문 #" + orderId + " 공정이 [" + newStage + "] 단계로 이동했습니다.";
-        EventNotification notif = new EventNotification(securityUtils.getCurrentUserId(), orderId, "KF-" + orderId, msg, newStage);
+        // 1. Individual item stage change notification
+        String msg = "물건 " + itemLabel + " [" + newStage + "] 단계로 이동했습니다.";
+        EventNotification notif = new EventNotification(securityUtils.getCurrentUserId(), orderId, orderNo, msg, newStage);
         EventNotification savedNotif = eventNotificationRepository.save(notif);
-
         messagingTemplate.convertAndSend("/topic/process-alerts", savedNotif);
+
+        // 2. If all items in the order are completed, announce order completion
+        if (allFinished) {
+            String orderMsg = "주문 #" + orderId + " 완료되었습니다.";
+            EventNotification orderNotif = new EventNotification(securityUtils.getCurrentUserId(), orderId, orderNo, orderMsg, "완료");
+            EventNotification savedOrderNotif = eventNotificationRepository.save(orderNotif);
+            messagingTemplate.convertAndSend("/topic/process-alerts", savedOrderNotif);
+        }
 
         return ResponseEntity.ok(res);
     }

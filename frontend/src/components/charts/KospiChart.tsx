@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import { API_BASE_URL } from '../../config/apiConfig';
 
 export const KospiChart: React.FC = () => {
     const [kospiData, setKospiData] = useState<any[]>([]);
@@ -7,7 +8,7 @@ export const KospiChart: React.FC = () => {
     useEffect(() => {
         const fetchHistory = async () => {
             try {
-                const kosRes = await fetch('http://localhost:8888/api/global-metrics/kospi/history');
+                const kosRes = await fetch(`${API_BASE_URL}/api/global-metrics/kospi/history`);
                 if (kosRes.ok) {
                     const kosData = await kosRes.json();
                     setKospiData(kosData.map((d: any) => ({

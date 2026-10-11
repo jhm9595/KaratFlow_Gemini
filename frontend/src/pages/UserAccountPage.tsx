@@ -3,6 +3,7 @@ import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
 import { Tag } from 'primereact/tag';
 import { Toast } from 'primereact/toast';
+import { getAuthHeaders, API_BASE_URL } from '../api/client';
 
 export const UserAccountPage: React.FC = () => {
     const toast = useRef<Toast>(null);
@@ -16,7 +17,7 @@ export const UserAccountPage: React.FC = () => {
     });
 
     useEffect(() => {
-        fetch('http://localhost:8888/api/users/me')
+        fetch(`${API_BASE_URL}/api/users/me`, { headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => setProfile(data))
             .catch(() => {});
@@ -24,9 +25,9 @@ export const UserAccountPage: React.FC = () => {
 
     const linkSocialProvider = (provider: string) => {
         if (provider === 'kakao') {
-            window.location.href = 'http://localhost:8888/oauth2/authorization/kakao';
+            window.location.href = `${API_BASE_URL}/oauth2/authorization/kakao`;
         } else if (provider === 'google') {
-            window.location.href = 'http://localhost:8888/oauth2/authorization/google';
+            window.location.href = `${API_BASE_URL}/oauth2/authorization/google`;
         }
     };
 

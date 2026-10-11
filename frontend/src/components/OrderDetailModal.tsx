@@ -5,6 +5,7 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Tag } from 'primereact/tag';
 import { formatImageUrl } from '../utils/image';
+import { PipelineStatusBadge } from './pipeline/PipelineStatusBadge';
 
 interface OrderDetailModalProps {
     visible: boolean;
@@ -81,7 +82,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         ? orderDetailData.workOrders
         : [{
             id: rowData.id,
-            workOrderNo: rowData.orderNo || `WO-${rowData.id}`,
+            workOrderNo: rowData.orderNo ? `${rowData.orderNo}-01` : `ORD-${rowData.id}-01`,
             stage: currentStage,
             createdAt: rowData.createdAt || rowData.date
         }];
@@ -89,23 +90,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     const getStepBgColor = (stageName: string) => {
         if (!stepsToUse || stepsToUse.length === 0) return null;
         
-        // 1. Exact match by stageName
         let matched = stepsToUse.find((step: any) => step.stageName === stageName);
-        
-        // 2. Case insensitive / trim match
         if (!matched) {
-            matched = pipelineSteps.find((step: any) => 
+            matched = stepsToUse.find((step: any) => 
                 step.stageName && step.stageName.trim().toLowerCase() === stageName.trim().toLowerCase()
             );
-        }
-
-        // 3. Fallback alias match only if no exact match
-        if (!matched) {
-            if (stageName === 'COMPLETED' || stageName === 'DONE' || stageName === '완성') {
-                matched = pipelineSteps.find((step: any) => step.stageName === '완료' || step.stageName === 'COMPLETED');
-            } else if (stageName === 'PENDING') {
-                matched = pipelineSteps.find((step: any) => step.stageName === '접수' || step.stageName === 'PENDING');
-            }
         }
 
         return matched ? (matched.colorGradient || matched.colorHex) : null;
@@ -119,7 +108,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         <i className="pi pi-box text-primary text-2xl"></i>
                         <div>
                             <span className="text-xl font-bold text-900">주문 상세 정보</span>
-                            <span className="text-500 text-sm ml-2">({rowData.orderNo || `KF-${rowData.id}`})</span>
+                            <span className="text-500 text-sm ml-2 font-mono">({rowData.orderNo || `KF-${rowData.id}`})</span>
                         </div>
                     </div>
                     <div className="flex gap-2 mr-4">
@@ -156,12 +145,41 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                                     <h3 className="m-0 text-800 text-base font-bold flex align-items-center gap-2">
                                         <i className="pi pi-info-circle text-primary"></i> 주문 기본 정보
                                     </h3>
-                                    {statusBodyTemplate(rowData)}
+                                    <div className="flex align-items-center gap-2">
+                                        <PipelineStatusBadge 
+                                            rowData={{ ...rowData, stage: currentStage, templateSteps: stepsToUse }} 
+                                            pipelineSteps={stepsToUse} 
+                                            pipelineStages={stagesList} 
+                                        />
+                                    </div>
                                 </div>
                                 <div className="flex flex-column gap-3">
                                     <div className="flex justify-content-between align-items-center">
-                                        <span className="text-600 text-sm">주문 번호</span>
-                                        <span className="text-900 font-bold font-mono">{rowData.orderNo || `KF-${rowData.id}`}</span>
+                                        <span className="text-600 text-sm">주문 No.</span>
+                                        <span className="text-primary font-bold font-mono text-base">#{rowData.id}</span>
+                                    </div>
+                                    <div className="flex justify-content-between align-items-center">
+                                        <span className="text-600 text-sm">주문 접수일시</span>
+                                        <span className="text-800 font-medium text-sm">
+                                            {(() => {
+                                                const rawDt = orderDetailData?.createdAt || rowData.createdAt;
+                                                if (rawDt) {
+                                                    const d = new Date(rawDt);
+                                                    if (!isNaN(d.getTime())) {
+                                                        const yyyy = d.getFullYear();
+                                                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                                                        const dd = String(d.getDate()).padStart(2, '0');
+                                                        let hours = d.getHours();
+                                                        const period = hours < 12 ? '오전' : '오후';
+                                                        hours = hours % 12;
+                                                        if (hours === 0) hours = 12;
+                                                        const min = String(d.getMinutes()).padStart(2, '0');
+                                                        return `${yyyy}-${mm}-${dd} ${period} ${hours}:${min}`;
+                                                    }
+                                                }
+                                                return orderDetailData?.orderDate || rowData.date || '-';
+                                            })()}
+                                        </span>
                                     </div>
                                     <div className="flex justify-content-between align-items-center">
                                         <span className="text-600 text-sm">고객명</span>
@@ -242,7 +260,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                                             <span className="text-900 font-medium">{orderDetailData?.productName || rowData.unmappedProductName || rowData.design || '-'}</span>
                                         </div>
                                         <div className="flex justify-content-between align-items-center">
-                                            <span className="text-600 text-sm">소비자가</span>
+                                            <span className="text-600 text-sm">가격</span>
                                             <span className="text-green-600 font-bold">
                                                 {rowData.finalConsumerPrice ? `₩${rowData.finalConsumerPrice.toLocaleString()}` : '-'}
                                             </span>
@@ -256,42 +274,76 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
                 {/* 2. Process Timeline Section */}
                 <div className="surface-0 border-1 border-300 border-round p-4 shadow-1">
-                    <h3 className="m-0 mb-4 text-800 text-base font-bold flex align-items-center gap-2">
-                        <i className="pi pi-sliders-h text-purple-500"></i> 공정 진행 타임라인
-                    </h3>
+                    <div className="flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                        <h3 className="m-0 text-800 text-base font-bold flex align-items-center gap-2">
+                            <i className="pi pi-sliders-h text-purple-500"></i> 공정 진행 타임라인
+                        </h3>
+                        {(orderDetailData?.templateName || rowData.templateName) && (
+                            <div className="flex align-items-center gap-1.5 text-xs bg-gray-100 border-round-2xl px-3 py-1">
+                                <i className="pi pi-sitemap text-primary text-xs"></i>
+                                <span className="text-500 font-normal">적용 템플릿</span>
+                                <span className="text-400 font-normal">·</span>
+                                <span className="text-800 font-bold">{orderDetailData?.templateName || rowData.templateName}</span>
+                            </div>
+                        )}
+                    </div>
                     
-                    <div className="flex flex-wrap align-items-center justify-content-between gap-3 px-2 py-2 surface-50 border-round border-1 border-200">
-                        {timelineEvents.map((ev: any, idx: number) => {
-                            const isCompleted = idx <= currentStageIdx;
-                            const stepBg = getStepBgColor(ev.stage) || (isCompleted ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#e2e8f0');
+                    <div className="w-full flex justify-content-center align-items-center py-3 px-3 surface-50 border-round border-1 border-200 overflow-x-auto">
+                        <div className="flex align-items-center gap-4">
+                            {timelineEvents.map((ev: any, idx: number) => {
+                                const isCompleted = idx <= currentStageIdx;
+                                const stepBg = getStepBgColor(ev.stage) || (isCompleted ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#e2e8f0');
+                                const isLast = idx === timelineEvents.length - 1;
 
-                            return (
-                                <React.Fragment key={idx}>
-                                    <div className="flex flex-column align-items-center p-2 text-center" style={{ minWidth: '100px' }}>
-                                        <div 
-                                            className="w-3rem h-3rem border-circle flex align-items-center justify-content-center shadow-2 mb-2 transition-transform transform hover:scale-110"
-                                            style={{ background: isCompleted ? stepBg : '#e2e8f0' }}
-                                        >
-                                            <i className={`${isCompleted ? (ev.icon || 'pi pi-check') : 'pi pi-circle'} text-lg ${isCompleted ? 'text-white font-bold' : 'text-400'}`}></i>
-                                        </div>
-                                        <div className={`font-bold text-sm ${isCompleted ? 'text-900' : 'text-500'}`}>{ev.stage}</div>
-                                        <div className="text-xs text-500 mt-1">
-                                            {ev.date ? new Date(ev.date).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
-                                        </div>
-                                        {ev.elapsed && (
-                                            <span className="bg-pink-100 text-pink-700 px-2 py-1 border-round font-bold text-xs mt-1">
-                                                {ev.elapsed}
+                                return (
+                                    <React.Fragment key={idx}>
+                                        <div className="flex flex-column align-items-center text-center" style={{ minWidth: '90px' }}>
+                                            <div 
+                                                className="border-circle flex align-items-center justify-content-center mb-2 transition-transform transform hover:scale-105"
+                                                style={{ 
+                                                    width: '52px',
+                                                    height: '52px',
+                                                    background: isCompleted ? stepBg : '#f1f5f9',
+                                                    boxShadow: isCompleted ? '0 4px 12px rgba(0,0,0,0.15)' : 'none',
+                                                    border: isCompleted ? '2.5px solid #ffffff' : '2px dashed #cbd5e1'
+                                                }}
+                                            >
+                                                <i className={`${isCompleted ? (ev.icon || 'pi pi-check') : 'pi pi-circle'} text-lg ${isCompleted ? 'text-white font-bold' : 'text-400'}`}></i>
+                                            </div>
+                                            <span className={`font-bold text-xs px-2.5 py-0.5 border-round shadow-1 bg-white ${isCompleted ? 'text-900' : 'text-500'}`}>
+                                                {ev.stage}
                                             </span>
-                                        )}
-                                    </div>
-                                    {idx < timelineEvents.length - 1 && (
-                                        <div className="flex-1 flex align-items-center justify-content-center" style={{ minWidth: '30px' }}>
-                                            <i className="pi pi-chevron-right text-400 text-lg"></i>
+                                            <div className="text-xs text-500 mt-1" style={{ whiteSpace: 'nowrap' }}>
+                                                {ev.date ? (() => {
+                                                    try {
+                                                        const d = new Date(ev.date);
+                                                        const month = d.getMonth() + 1;
+                                                        const day = d.getDate();
+                                                        const hours = d.getHours();
+                                                        const minutes = String(d.getMinutes()).padStart(2, '0');
+                                                        const ampm = hours < 12 ? '오전' : '오후';
+                                                        const h12 = hours % 12 === 0 ? 12 : hours % 12;
+                                                        return `${month}. ${day}. ${ampm} ${h12}:${minutes}`;
+                                                    } catch {
+                                                        return '-';
+                                                    }
+                                                })() : '-'}
+                                            </div>
+                                            {ev.elapsed && (
+                                                <span className="bg-pink-100 text-pink-700 px-2 py-0.5 border-round font-bold text-xs mt-1">
+                                                    {ev.elapsed}
+                                                </span>
+                                            )}
                                         </div>
-                                    )}
-                                </React.Fragment>
-                            );
-                        })}
+                                        {!isLast && (
+                                            <div className="flex align-items-center justify-content-center px-1 mb-4 text-400">
+                                                <i className="pi pi-chevron-right font-bold text-xl text-primary" style={{ opacity: 0.75 }} />
+                                            </div>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
@@ -316,14 +368,20 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                             header="물건 ID" 
                             body={(r: any) => (
                                 <div className="flex align-items-center gap-2 font-mono font-bold text-primary">
-                                    <i className="pi pi-file"></i> {r.workOrderNo || `WO-${r.id}`}
+                                    <i className="pi pi-file"></i> {r.workOrderNo || (rowData.orderNo ? `${rowData.orderNo}-01` : `ORD-${r.id}-01`)}
                                 </div>
                             )}
                         />
                         <Column 
                             field="stage" 
                             header="현재 공정 상태" 
-                            body={(r: any) => statusBodyTemplate(r)}
+                            body={(r: any) => (
+                                <PipelineStatusBadge 
+                                    rowData={{ ...r, templateSteps: stepsToUse }} 
+                                    pipelineSteps={stepsToUse} 
+                                    pipelineStages={stagesList} 
+                                />
+                            )}
                         />
                         <Column 
                             field="createdAt" 

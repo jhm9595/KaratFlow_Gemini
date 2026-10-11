@@ -22,15 +22,8 @@ public class EventNotificationController {
     @GetMapping
     public ResponseEntity<List<EventNotification>> getNotifications() {
         Long currentUserId = securityUtils.getCurrentUserId();
-        boolean isDemo = securityUtils.isDemoSession();
         List<EventNotification> list = eventNotificationRepository.findAll().stream()
-                .filter(n -> {
-                    if (isDemo) {
-                        return n.getUserId() == null || n.getUserId().equals(currentUserId);
-                    } else {
-                        return n.getUserId() != null && n.getUserId().equals(currentUserId);
-                    }
-                })
+                .filter(n -> n.getUserId() != null && currentUserId != null && n.getUserId().equals(currentUserId))
                 .sorted((a, b) -> {
                     if (a.getCreatedAt() == null || b.getCreatedAt() == null) return 0;
                     return b.getCreatedAt().compareTo(a.getCreatedAt());
@@ -54,20 +47,20 @@ public class EventNotificationController {
     @Transactional
     public ResponseEntity<Map<String, Object>> markAllAsRead() {
         Long currentUserId = securityUtils.getCurrentUserId();
-        boolean isDemo = securityUtils.isDemoSession();
         List<EventNotification> all = eventNotificationRepository.findAll().stream()
-                .filter(n -> {
-                    if (isDemo) {
-                        return n.getUserId() == null || n.getUserId().equals(currentUserId);
-                    } else {
-                        return n.getUserId() != null && n.getUserId().equals(currentUserId);
-                    }
-                })
+                .filter(n -> n.getUserId() != null && currentUserId != null && n.getUserId().equals(currentUserId))
                 .toList();
         for (EventNotification n : all) {
             n.setIsRead(true);
         }
         eventNotificationRepository.saveAll(all);
         return ResponseEntity.ok(Map.of("status", "success", "count", all.size()));
+    }
+
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity<Void> deleteNotification(@PathVariable Long id) {
+        eventNotificationRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }

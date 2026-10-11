@@ -30,8 +30,9 @@ public class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
+            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/kakao/webhook/**", "/ws-alerts/**", "/ws-alerts-raw/**", "/error", "/oauth2/**", "/api/uploads/**", "/api/debug/**", "/api/metal-prices/**", "/api/global-metrics/**").permitAll()
+                .requestMatchers("/h2-console/**", "/api/kakao/webhook/**", "/ws-alerts/**", "/ws-alerts-raw/**", "/error", "/oauth2/**", "/api/uploads/**", "/api/debug/**", "/api/metal-prices/**", "/api/global-metrics/**").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2

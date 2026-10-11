@@ -23,7 +23,7 @@ public class SubcontractTask extends BaseEntity {
     private Order order;
 
     @Column(nullable = false)
-    private String taskName; // e.g. "도금", "레이저각인", "주물"
+    private String taskName; 
 
     @Column(nullable = false)
     private String subcontractorName;
@@ -41,7 +41,7 @@ public class SubcontractTask extends BaseEntity {
     private BigDecimal agreedLaborFee;
 
     @Column(nullable = false)
-    private String status; // "DISPATCHED", "RECEIVED"
+    private String status; 
 
     private LocalDateTime dispatchedAt;
     

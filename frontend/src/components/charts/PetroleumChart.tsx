@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import { API_BASE_URL } from '../../config/apiConfig';
 
 export const PetroleumChart: React.FC = () => {
     const [petroleumData, setPetroleumData] = useState<any[]>([]);
@@ -7,7 +8,7 @@ export const PetroleumChart: React.FC = () => {
     useEffect(() => {
         const fetchHistory = async () => {
             try {
-                const petRes = await fetch('http://localhost:8888/api/global-metrics/petroleum/history');
+                const petRes = await fetch(`${API_BASE_URL}/api/global-metrics/petroleum/history`);
                 if (petRes.ok) {
                     const petData = await petRes.json();
                     setPetroleumData(petData.map((d: any) => ({

@@ -1,6 +1,6 @@
-import { getAuthHeaders } from './client';
+import { getAuthHeaders, API_BASE_URL } from './client';
 
-const BASE_URL = 'http://localhost:8888/api/orders';
+const BASE_URL = `${API_BASE_URL}/api/orders`;
 
 export async function getOrders() {
     const res = await fetch(BASE_URL, { headers: getAuthHeaders() });

@@ -3,17 +3,10 @@ package com.minibig.karatflow.backend.service;
 import com.minibig.karatflow.backend.domain.*;
 import com.minibig.karatflow.backend.dto.*;
 import com.minibig.karatflow.backend.repository.*;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
-
 import com.minibig.karatflow.backend.security.SecurityUtils;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -60,52 +54,129 @@ public class OrderService {
 
     public List<OrderResponseDTO> getDashboardOrders() {
         Long currentUserId = securityUtils.getCurrentUserId();
-        boolean isDemo = securityUtils.isDemoSession();
         List<Map<String, Object>> rows = orderRepository.findDashboardOrders();
-        return rows.stream()
+
+        List<ProcessTemplate> userTemplates = templateRepository.findAll().stream()
+                .filter(t -> t.getUserId() != null && currentUserId != null && t.getUserId().equals(currentUserId))
+                .toList();
+        ProcessTemplate defaultTpl = userTemplates.stream()
+                .filter(t -> Boolean.TRUE.equals(t.getIsDefault()))
+                .findFirst()
+                .orElse(userTemplates.isEmpty() ? null : userTemplates.get(0));
+        Map<Long, ProcessTemplate> templateMap = templateRepository.findAll().stream()
+                .collect(Collectors.toMap(ProcessTemplate::getId, t -> t, (a, b) -> a));
+
+        // Group rows by order ID to ensure 1 entry per order (주문 기준)
+        Map<Long, List<Map<String, Object>>> groupedByOrder = rows.stream()
                 .filter(row -> {
                     Object uid = row.get("USERID");
-                    if (isDemo) {
-                        return uid == null || ((Number) uid).longValue() == currentUserId;
-                    } else {
-                        return uid != null && ((Number) uid).longValue() == currentUserId;
-                    }
+                    return uid != null && currentUserId != null && ((Number) uid).longValue() == currentUserId;
                 })
-                .map(row -> OrderResponseDTO.builder()
-                .id(row.get("ID") != null ? ((Number) row.get("ID")).longValue() : null)
-                .workOrderId(row.get("WORKORDERID") != null ? ((Number) row.get("WORKORDERID")).longValue() : null)
-                .templateId(row.get("TEMPLATEID") != null ? ((Number) row.get("TEMPLATEID")).longValue() : null)
-                .templateName((String) row.get("TEMPLATENAME"))
-                .orderNo((String) row.get("ORDERNO"))
-                .shortCode((String) row.get("SHORTCODE"))
-                .design((String) row.get("DESIGN"))
-                .brand((String) row.get("BRAND"))
-                .imageUrl((String) row.get("IMAGEURL"))
-                .quantity(row.get("QUANTITY") != null ? ((Number) row.get("QUANTITY")).intValue() : null)
-                .unmappedProductName((String) row.get("UNMAPPEDPRODUCTNAME"))
-                .date(row.get("DATE") != null ? row.get("DATE").toString() : null)
-                .stage((String) row.get("STAGE"))
-                .isHold((Boolean) row.get("ISHOLD"))
-                .engravingText((String) row.get("ENGRAVINGTEXT"))
-                .engravingLocation((String) row.get("ENGRAVINGLOCATION"))
-                .surfaceFinish((String) row.get("SURFACEFINISH"))
-                .orderType((String) row.get("ORDERTYPE"))
-                .customerName((String) row.get("CUSTOMERNAME"))
-                .customerPhone((String) row.get("CUSTOMERPHONE"))
-                .finalConsumerPrice(row.get("FINALCONSUMERPRICE") != null
-                        ? ((Number) row.get("FINALCONSUMERPRICE")).doubleValue() : null)
-                .status((String) row.get("STATUS"))
-                .cancellationFee(row.get("CANCELLATIONFEE") != null
-                        ? ((Number) row.get("CANCELLATIONFEE")).doubleValue() : null)
-                .createdAt(row.get("CREATEDAT") != null ? row.get("CREATEDAT").toString() : null)
-                .pendingCompletedAt(row.get("PENDINGCOMPLETEDAT") != null ? row.get("PENDINGCOMPLETEDAT").toString() : null)
-                .cadCompletedAt(row.get("CADCOMPLETEDAT") != null ? row.get("CADCOMPLETEDAT").toString() : null)
-                .castingCompletedAt(row.get("CASTINGCOMPLETEDAT") != null ? row.get("CASTINGCOMPLETEDAT").toString() : null)
-                .polishingCompletedAt(row.get("POLISHINGCOMPLETEDAT") != null ? row.get("POLISHINGCOMPLETEDAT").toString() : null)
-                .platingCompletedAt(row.get("PLATINGCOMPLETEDAT") != null ? row.get("PLATINGCOMPLETEDAT").toString() : null)
-                .completedAt(row.get("COMPLETEDAT") != null ? row.get("COMPLETEDAT").toString() : null)
-                .build()
-        ).collect(Collectors.toList());
+                .collect(Collectors.groupingBy(
+                        row -> ((Number) row.get("ID")).longValue(),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        return groupedByOrder.entrySet().stream()
+                .map(entry -> {
+                    Long orderId = entry.getKey();
+                    List<Map<String, Object>> orderRows = entry.getValue();
+                    Map<String, Object> firstRow = orderRows.get(0);
+
+                    Long tplId = firstRow.get("TEMPLATEID") != null ? ((Number) firstRow.get("TEMPLATEID")).longValue() : null;
+                    ProcessTemplate tpl = tplId != null ? templateMap.get(tplId) : defaultTpl;
+                    if (tpl == null) tpl = defaultTpl;
+                    List<ProcessTemplateStep> steps = (tpl != null && tpl.getSteps() != null) ? tpl.getSteps() : Collections.emptyList();
+
+                    String status = (String) firstRow.get("STATUS");
+                    boolean isHold = orderRows.stream().anyMatch(r -> Boolean.TRUE.equals(r.get("ISHOLD")));
+
+                    // Determine effective stage of the order across all its work orders
+                    String stage;
+                    if (OrderStatus.isCancelled(status)) {
+                        stage = "취소";
+                    } else if (OrderStatus.isCompleted(status)) {
+                        stage = "완료";
+                    } else {
+                        boolean allCompleted = !steps.isEmpty() && orderRows.stream().allMatch(r -> {
+                            String s = (String) r.get("STAGE");
+                            if (s == null) return false;
+                            String lastStageName = steps.get(steps.size() - 1).getStageName();
+                            return s.trim().equalsIgnoreCase(lastStageName.trim()) || OrderStatus.isCompleted(s);
+                        });
+                        if (allCompleted) {
+                            stage = "완료";
+                        } else {
+                            // Find the bottleneck stage (earliest uncompleted step in the template sequence)
+                            int minStepIdx = Integer.MAX_VALUE;
+                            String minStageName = null;
+                            for (Map<String, Object> r : orderRows) {
+                                String rStage = (String) r.get("STAGE");
+                                int stepIdx = -1;
+                                for (int i = 0; i < steps.size(); i++) {
+                                    ProcessTemplateStep step = steps.get(i);
+                                    if (step.getStageName() != null && step.getStageName().equalsIgnoreCase(rStage)) {
+                                        stepIdx = i;
+                                        break;
+                                    }
+                                }
+                                if (stepIdx >= 0 && stepIdx < minStepIdx) {
+                                    minStepIdx = stepIdx;
+                                    minStageName = steps.get(stepIdx).getStageName();
+                                }
+                            }
+                            if (minStageName != null) {
+                                stage = minStageName;
+                            } else if (!steps.isEmpty()) {
+                                stage = steps.get(0).getStageName();
+                            } else {
+                                stage = (String) firstRow.get("STAGE");
+                            }
+                        }
+                    }
+
+                    // Total quantity: count of work orders or maximum of orderItem quantity
+                    int itemQty = firstRow.get("QUANTITY") != null ? ((Number) firstRow.get("QUANTITY")).intValue() : 1;
+                    int quantity = Math.max(orderRows.size(), itemQty);
+
+                    return OrderResponseDTO.builder()
+                            .id(orderId)
+                            .workOrderId(firstRow.get("WORKORDERID") != null ? ((Number) firstRow.get("WORKORDERID")).longValue() : null)
+                            .templateId(tpl != null ? tpl.getId() : tplId)
+                            .templateName(tpl != null ? tpl.getTemplateName() : (String) firstRow.get("TEMPLATENAME"))
+                            .templateSteps(steps)
+                            .orderNo((String) firstRow.get("ORDERNO"))
+                            .shortCode((String) firstRow.get("SHORTCODE"))
+                            .design((String) firstRow.get("DESIGN"))
+                            .brand((String) firstRow.get("BRAND"))
+                            .imageUrl((String) firstRow.get("IMAGEURL"))
+                            .quantity(quantity)
+                            .unmappedProductName((String) firstRow.get("UNMAPPEDPRODUCTNAME"))
+                            .date(firstRow.get("DATE") != null ? firstRow.get("DATE").toString() : null)
+                            .stage(stage)
+                            .isHold(isHold)
+                            .engravingText((String) firstRow.get("ENGRAVINGTEXT"))
+                            .engravingLocation((String) firstRow.get("ENGRAVINGLOCATION"))
+                            .surfaceFinish((String) firstRow.get("SURFACEFINISH"))
+                            .orderType((String) firstRow.get("ORDERTYPE"))
+                            .customerName((String) firstRow.get("CUSTOMERNAME"))
+                            .customerPhone((String) firstRow.get("CUSTOMERPHONE"))
+                            .finalConsumerPrice(firstRow.get("FINALCONSUMERPRICE") != null
+                                    ? ((Number) firstRow.get("FINALCONSUMERPRICE")).doubleValue() : null)
+                            .status(status)
+                            .cancellationFee(firstRow.get("CANCELLATIONFEE") != null
+                                    ? ((Number) firstRow.get("CANCELLATIONFEE")).doubleValue() : null)
+                            .createdAt(firstRow.get("CREATEDAT") != null ? firstRow.get("CREATEDAT").toString() : null)
+                            .pendingCompletedAt(firstRow.get("PENDINGCOMPLETEDAT") != null ? firstRow.get("PENDINGCOMPLETEDAT").toString() : null)
+                            .cadCompletedAt(firstRow.get("CADCOMPLETEDAT") != null ? firstRow.get("CADCOMPLETEDAT").toString() : null)
+                            .castingCompletedAt(firstRow.get("CASTINGCOMPLETEDAT") != null ? firstRow.get("CASTINGCOMPLETEDAT").toString() : null)
+                            .polishingCompletedAt(firstRow.get("POLISHINGCOMPLETEDAT") != null ? firstRow.get("POLISHINGCOMPLETEDAT").toString() : null)
+                            .platingCompletedAt(firstRow.get("PLATINGCOMPLETEDAT") != null ? firstRow.get("PLATINGCOMPLETEDAT").toString() : null)
+                            .completedAt(firstRow.get("COMPLETEDAT") != null ? firstRow.get("COMPLETEDAT").toString() : null)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     public OrderResponseDTO getOrderById(Long orderId) {
@@ -159,16 +230,18 @@ public class OrderService {
 
         ProcessTemplate selectedTemplate = null;
         if (dto.getProcessTemplateId() != null && dto.getProcessTemplateId() > 0) {
-            selectedTemplate = templateRepository.findById(dto.getProcessTemplateId()).orElse(null);
+            selectedTemplate = templateRepository.findById(dto.getProcessTemplateId())
+                    .filter(t -> currentUserId == null || currentUserId.equals(t.getUserId()))
+                    .orElse(null);
         }
-        if (selectedTemplate == null) {
-            selectedTemplate = templateRepository.findAll().stream()
+        if (selectedTemplate == null && currentUserId != null) {
+            List<ProcessTemplate> userTemplates = templateRepository.findAll().stream()
+                    .filter(t -> currentUserId.equals(t.getUserId()))
+                    .toList();
+            selectedTemplate = userTemplates.stream()
                     .filter(t -> Boolean.TRUE.equals(t.getIsDefault()))
-                    .findFirst().orElse(null);
-        }
-        if (selectedTemplate == null) {
-            List<ProcessTemplate> all = templateRepository.findAll();
-            selectedTemplate = all.isEmpty() ? null : all.get(0);
+                    .findFirst()
+                    .orElse(userTemplates.isEmpty() ? null : userTemplates.get(0));
         }
         if (selectedTemplate == null) {
             throw new IllegalArgumentException("등록된 공정 템플릿이 없습니다. [공정 관리]에서 먼저 공정 템플릿을 생성해야 주문을 등록할 수 있습니다.");
@@ -189,7 +262,7 @@ public class OrderService {
                     .isHold(false)
                     .build();
             wo = workOrderRepository.save(wo);
-            wo.setWorkOrderNo(WorkOrder.generateWorkOrderNo(wo.getId()));
+            wo.setWorkOrderNo(WorkOrder.generateWorkOrderNo(order.getOrderNo(), i + 1));
             workOrderRepository.save(wo);
         }
 
@@ -197,6 +270,7 @@ public class OrderService {
                 .id(order.getId())
                 .templateId(selectedTemplate != null ? selectedTemplate.getId() : null)
                 .templateName(selectedTemplate != null ? selectedTemplate.getTemplateName() : null)
+                .templateSteps(selectedTemplate != null ? selectedTemplate.getSteps() : null)
                 .orderNo(order.getOrderNo())
                 .shortCode(order.getShortCode())
                 .design(design != null ? design.getDesignCode() : null)
@@ -306,7 +380,7 @@ public class OrderService {
             woDTOs = wos.stream().map(w ->
                     OrderDetailDTO.WorkOrderDTO.builder()
                             .id(w.getId())
-                            .workOrderNo(w.getWorkOrderNo() != null ? w.getWorkOrderNo() : "WO-" + w.getId())
+                            .workOrderNo(w.getWorkOrderNo() != null ? w.getWorkOrderNo() : WorkOrder.generateWorkOrderNo(order.getOrderNo(), 1))
                             .templateId(w.getTemplate() != null ? w.getTemplate().getId() : (template != null ? template.getId() : null))
                             .templateName(w.getTemplate() != null ? w.getTemplate().getTemplateName() : (template != null ? template.getTemplateName() : null))
                             .stage(w.getCurrentStage())
@@ -320,7 +394,7 @@ public class OrderService {
                     : "대기";
             woDTOs.add(OrderDetailDTO.WorkOrderDTO.builder()
                     .id(order.getId())
-                    .workOrderNo(order.getOrderNo() != null ? order.getOrderNo() : "WO-" + order.getId())
+                    .workOrderNo(WorkOrder.generateWorkOrderNo(order.getOrderNo(), 1))
                     .templateId(template != null ? template.getId() : null)
                     .templateName(template != null ? template.getTemplateName() : null)
                     .stage(currStep != null ? (currStep.getStageName() != null ? currStep.getStageName() : currStep.getStageCode()) : defaultStage)
@@ -339,6 +413,7 @@ public class OrderService {
                 .customerPhone(order.getCustomerPhone())
                 .orderType(order.getOrderType())
                 .orderDate(order.getOrderDate() != null ? order.getOrderDate().toString() : null)
+                .createdAt(order.getCreatedAt() != null ? order.getCreatedAt().toString() : null)
                 .brand(d != null ? d.getBrand() : (oi != null ? oi.getUnmappedBrandName() : null))
                 .designCode(d != null ? d.getDesignCode() : null)
                 .productName(d != null ? d.getName() : (oi != null ? oi.getUnmappedProductName() : null))
@@ -374,13 +449,13 @@ public class OrderService {
                     .isHold(false)
                     .build();
             wo = workOrderRepository.save(wo);
-            wo.setWorkOrderNo(WorkOrder.generateWorkOrderNo(wo.getId()));
+            wo.setWorkOrderNo(WorkOrder.generateWorkOrderNo(order.getOrderNo(), 1));
             workOrderRepository.save(wo);
             wos = List.of(wo);
         }
 
         WorkOrder target = wos.stream()
-                .filter(w -> !"COMPLETED".equalsIgnoreCase(w.getCurrentStage()) && !"완성".equalsIgnoreCase(w.getCurrentStage()) && !"완료".equalsIgnoreCase(w.getCurrentStage()))
+                .filter(w -> !isWorkOrderCompleted(w))
                 .findFirst().orElse(wos.get(0));
 
         ProcessTemplate effT = getEffectiveTemplate(target);
@@ -388,25 +463,44 @@ public class OrderService {
             target.setTemplate(effT);
         }
 
+        String prevStage = target.getCurrentStage() != null ? target.getCurrentStage() : "접수";
         String newStage = nextStage(target);
         target.setCurrentStage(newStage);
         recordHistory(target, newStage);
         workOrderRepository.save(target);
 
-        if (effT != null && effT.getSteps() != null && !effT.getSteps().isEmpty()) {
-            ProcessTemplateStep lastStep = effT.getSteps().get(effT.getSteps().size() - 1);
-            String lastName = lastStep.getStageName() != null ? lastStep.getStageName() : lastStep.getStageCode();
-            if (newStage.equalsIgnoreCase(lastName) || "COMPLETED".equalsIgnoreCase(newStage) || "완성".equalsIgnoreCase(newStage) || "완료".equalsIgnoreCase(newStage)) {
-                order.setStatus("COMPLETED");
-                orderRepository.save(order);
+        // Check if all work orders in the order are now completed
+        boolean allFinished = !wos.isEmpty() && wos.stream().allMatch(w -> {
+            if (w.getId().equals(target.getId())) {
+                return isWorkOrderCompleted(target, newStage);
             }
+            return isWorkOrderCompleted(w);
+        });
+        if (allFinished) {
+            order.setStatus(OrderStatus.COMPLETED.name());
+            orderRepository.save(order);
         }
+
+        List<WorkOrder> sortedWos = new ArrayList<>(wos);
+        sortedWos.sort(Comparator.comparing(WorkOrder::getId));
+        int targetIdx = sortedWos.indexOf(target);
+        String seq = String.format("%02d", targetIdx >= 0 ? targetIdx + 1 : 1);
+        String itemLabel = "#" + orderId + "-" + seq;
+
+        OrderItem oi = target.getOrderItem();
+        Design d = oi != null ? oi.getDesign() : null;
+        String prodName = d != null ? (d.getName() != null ? d.getName() : d.getDesignCode()) : (oi != null ? (oi.getUnmappedProductName() != null ? oi.getUnmappedProductName() : "제품") : "제품");
 
         Map<String, Object> res = new HashMap<>();
         res.put("workOrderId", target.getId());
+        res.put("prevStage", prevStage);
         res.put("newStage", newStage);
+        res.put("productName", prodName);
+        res.put("itemLabel", itemLabel);
         res.put("orderId", orderId);
+        res.put("orderNo", order.getOrderNo());
         res.put("status", order.getStatus());
+        res.put("allFinished", allFinished);
         return res;
     }
 
@@ -414,10 +508,6 @@ public class OrderService {
     public OrderResponseDTO advanceStage(Long workOrderId) {
         WorkOrder wo = workOrderRepository.findById(workOrderId)
                 .orElseThrow(() -> new IllegalArgumentException("WorkOrder not found: " + workOrderId));
-        String newStage = nextStage(wo);
-        wo.setCurrentStage(newStage);
-        recordHistory(wo, newStage);
-        workOrderRepository.save(wo);
 
         OrderItem oi = wo.getOrderItem();
         if (oi == null) {
@@ -427,6 +517,47 @@ public class OrderService {
         Order order = oi != null ? oi.getOrder() : null;
         Design d = oi != null ? oi.getDesign() : null;
         List<WorkOrder> all = order != null ? workOrderRepository.findAllByOrderId(order.getId()) : List.of();
+
+        List<WorkOrder> sortedAll = new ArrayList<>(all);
+        sortedAll.sort(Comparator.comparing(WorkOrder::getId));
+        int woIdx = sortedAll.indexOf(wo);
+        String seq = String.format("%02d", woIdx >= 0 ? woIdx + 1 : 1);
+        String itemLabel = "#" + (order != null ? order.getId() : "") + "-" + seq;
+
+        // Guard: If this work order is already completed, do not advance further
+        if (isWorkOrderCompleted(wo)) {
+            return OrderResponseDTO.builder()
+                    .id(order != null ? order.getId() : null).orderNo(order != null ? order.getOrderNo() : null).shortCode(order != null ? order.getShortCode() : null)
+                    .design(d != null ? d.getDesignCode() : null)
+                    .brand(d != null ? d.getBrand() : (oi != null ? oi.getUnmappedBrandName() : null))
+                    .imageUrl(oi != null ? oi.getImageUrl() : null)
+                    .quantity(oi != null ? oi.getQuantity() : 1).unmappedProductName(oi != null ? oi.getUnmappedProductName() : null)
+                    .date(order != null && order.getOrderDate() != null ? order.getOrderDate().toString() : null).stage(wo.getCurrentStage())
+                    .itemStage(wo.getCurrentStage()).itemLabel(itemLabel).allFinished(false)
+                    .isHold(all.stream().anyMatch(w -> Boolean.TRUE.equals(w.getIsHold())))
+                    .orderType(order != null ? order.getOrderType() : null).customerName(order != null ? order.getCustomerName() : null)
+                    .customerPhone(order != null ? order.getCustomerPhone() : null).status(order != null ? order.getStatus() : null)
+                    .build();
+        }
+
+        String prevStage = wo.getCurrentStage() != null ? wo.getCurrentStage() : "접수";
+        String newStage = nextStage(wo);
+        wo.setCurrentStage(newStage);
+        recordHistory(wo, newStage);
+        workOrderRepository.save(wo);
+
+        // Check if all work orders in the order are now completed
+        boolean allFinished = !all.isEmpty() && all.stream().allMatch(w -> {
+            if (w.getId().equals(wo.getId())) {
+                return isWorkOrderCompleted(wo, newStage);
+            }
+            return isWorkOrderCompleted(w);
+        });
+        if (allFinished && order != null) {
+            order.setStatus(OrderStatus.COMPLETED.name());
+            orderRepository.save(order);
+        }
+
         String rep = newStage;
         WorkOrder minWo = null;
         int minIdx = 999;
@@ -440,13 +571,19 @@ public class OrderService {
         if (minWo != null && minWo.getCurrentStage() != null) {
             rep = minWo.getCurrentStage();
         }
+
+        String prodName = d != null ? (d.getName() != null ? d.getName() : d.getDesignCode()) : (oi != null ? (oi.getUnmappedProductName() != null ? oi.getUnmappedProductName() : "제품") : "제품");
+
         return OrderResponseDTO.builder()
                 .id(order != null ? order.getId() : null).orderNo(order != null ? order.getOrderNo() : null).shortCode(order != null ? order.getShortCode() : null)
                 .design(d != null ? d.getDesignCode() : null)
                 .brand(d != null ? d.getBrand() : (oi != null ? oi.getUnmappedBrandName() : null))
                 .imageUrl(oi != null ? oi.getImageUrl() : null)
                 .quantity(oi != null ? oi.getQuantity() : 1).unmappedProductName(oi != null ? oi.getUnmappedProductName() : null)
+                .productName(prodName)
                 .date(order != null && order.getOrderDate() != null ? order.getOrderDate().toString() : null).stage(rep)
+                .prevStage(prevStage)
+                .itemStage(newStage).itemLabel(itemLabel).allFinished(allFinished)
                 .isHold(all.stream().anyMatch(w -> Boolean.TRUE.equals(w.getIsHold())))
                 .orderType(order != null ? order.getOrderType() : null).customerName(order != null ? order.getCustomerName() : null)
                 .customerPhone(order != null ? order.getCustomerPhone() : null).status(order != null ? order.getStatus() : null)
@@ -511,6 +648,13 @@ public class OrderService {
         order.setStatus("CANCELLED");
         order.setCancellationFee(fee != null ? BigDecimal.valueOf(fee) : null);
         orderRepository.save(order);
+
+        List<WorkOrder> wos = workOrderRepository.findAllByOrderId(orderId);
+        for (WorkOrder w : wos) {
+            w.setCurrentStage("취소");
+            workOrderRepository.save(w);
+        }
+
         Map<String, Object> res = new HashMap<>();
         res.put("orderId", orderId);
         res.put("cancellationFee", fee);
@@ -521,22 +665,58 @@ public class OrderService {
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private ProcessTemplate getEffectiveTemplate(WorkOrder wo) {
-        if (wo != null && wo.getTemplate() != null && wo.getTemplate().getSteps() != null && !wo.getTemplate().getSteps().isEmpty()) {
-            return wo.getTemplate();
-        }
-        ProcessTemplate def = templateRepository.findAll().stream()
+        Long currentUserId = securityUtils.getCurrentUserId();
+        List<ProcessTemplate> userTemplates = templateRepository.findAll().stream()
+                .filter(t -> t.getUserId() != null && currentUserId != null && t.getUserId().equals(currentUserId))
+                .toList();
+        ProcessTemplate def = userTemplates.stream()
                 .filter(t -> Boolean.TRUE.equals(t.getIsDefault()))
                 .findFirst()
-                .orElseGet(() -> {
-                    List<ProcessTemplate> all = templateRepository.findAll();
-                    return all.isEmpty() ? null : all.get(0);
-                });
+                .orElseGet(() -> userTemplates.isEmpty() ? null : userTemplates.get(0));
+
+        if (wo != null && wo.getTemplate() != null && templateRepository.existsById(wo.getTemplate().getId())) {
+            ProcessTemplate tpl = wo.getTemplate();
+            if (tpl.getSteps() != null && !tpl.getSteps().isEmpty()) {
+                return tpl;
+            }
+        }
 
         if (wo != null && def != null) {
             wo.setTemplate(def);
+            if (def.getSteps() != null && !def.getSteps().isEmpty()) {
+                boolean hasStage = def.getSteps().stream()
+                        .anyMatch(s -> s.getStageName() != null && s.getStageName().equalsIgnoreCase(wo.getCurrentStage()));
+                if (!hasStage && !isWorkOrderCompleted(wo)) {
+                    wo.setCurrentStage(def.getSteps().get(0).getStageName());
+                }
+            }
             workOrderRepository.save(wo);
         }
         return def;
+    }
+
+    public boolean isLastStageOfTemplate(WorkOrder wo, String stage) {
+        if (wo == null || stage == null) return false;
+        ProcessTemplate template = getEffectiveTemplate(wo);
+        if (template == null || template.getSteps() == null || template.getSteps().isEmpty()) {
+            return OrderStatus.isCompleted(stage);
+        }
+        List<ProcessTemplateStep> steps = template.getSteps();
+        ProcessTemplateStep last = steps.get(steps.size() - 1);
+        String lastStageName = last.getStageName() != null ? last.getStageName() : last.getStageCode();
+        return stage.trim().equalsIgnoreCase(lastStageName.trim()) || OrderStatus.isCompleted(stage);
+    }
+
+    public boolean isWorkOrderCompleted(WorkOrder wo) {
+        if (wo == null) return false;
+        if (wo.getCompletedAt() != null) return true;
+        return isLastStageOfTemplate(wo, wo.getCurrentStage());
+    }
+
+    public boolean isWorkOrderCompleted(WorkOrder wo, String stage) {
+        if (wo == null) return false;
+        if (wo.getCompletedAt() != null && stage != null && stage.trim().equalsIgnoreCase(wo.getCurrentStage())) return true;
+        return isLastStageOfTemplate(wo, stage);
     }
 
     private ProcessTemplateStep getCurrentStep(WorkOrder wo) {
@@ -596,7 +776,7 @@ public class OrderService {
                 .build();
         historyRepository.save(history);
 
-        if ("COMPLETED".equalsIgnoreCase(stage) || "완성".equalsIgnoreCase(stage) || "완료".equalsIgnoreCase(stage)) {
+        if (isWorkOrderCompleted(wo, stage)) {
             wo.setCompletedAt(LocalDateTime.now());
         }
     }

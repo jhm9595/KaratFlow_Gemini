@@ -7,6 +7,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { Calendar } from 'primereact/calendar';
 import { SelectButton } from 'primereact/selectbutton';
 import { Toast } from 'primereact/toast';
+import { API_BASE_URL } from '../config/apiConfig';
 
 export const AnalyticsPage: React.FC = () => {
     const toast = useRef<Toast>(null);
@@ -36,7 +37,7 @@ export const AnalyticsPage: React.FC = () => {
 
     React.useEffect(() => {
         const token = localStorage.getItem('jwt_token');
-        fetch('http://localhost:8888/api/orders', {
+        fetch(`${API_BASE_URL}/api/orders`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(res => res.json())

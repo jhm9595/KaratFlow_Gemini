@@ -39,7 +39,7 @@ export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipe
 
     if (stepsToRender.length === 0) {
         return (
-            <div className="surface-0 p-4 border-round shadow-1">
+            <div className="surface-0 p-3 border-round shadow-1">
                 <div className="flex justify-content-between align-items-center mb-3">
                     <h4 className="m-0 text-600 font-medium flex align-items-center gap-2">
                         <i className="pi pi-sitemap text-primary"></i> 실시간 공정 현황 (Pipeline)
@@ -53,10 +53,20 @@ export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipe
                         tooltipOptions={{ position: 'bottom' }} 
                     />
                 </div>
-                <div className="flex flex-column align-items-center justify-content-center py-4 surface-50 border-round border-1 border-dashed border-300">
-                    <i className="pi pi-sitemap text-400 text-4xl mb-2"></i>
-                    <h5 className="m-0 mb-1 text-700 font-bold">등록된 공정 템플릿 단계가 없습니다</h5>
-                    <p className="text-500 text-sm m-0">우측 상단의 공정 관리(설정 아이콘)에서 템플릿을 등록하면 사업장 고유의 실시간 공정 파이프라인이 표시됩니다.</p>
+                <div className="flex flex-column align-items-center justify-content-center py-4 px-3 surface-50 border-round border-1 border-dashed border-300 text-center">
+                    <div className="w-3rem h-3rem border-circle bg-amber-50 text-amber-600 flex align-items-center justify-content-center mb-2 shadow-1">
+                        <i className="pi pi-sitemap text-xl font-bold"></i>
+                    </div>
+                    <h5 className="m-0 mb-1 text-800 font-bold text-base">등록된 공정 템플릿이 없습니다</h5>
+                    <p className="text-500 text-sm m-0 mb-3" style={{ maxWidth: '440px', lineHeight: '1.5' }}>
+                        사업장에 맞는 공정 단계를 등록하시면 주문 제작 과정의 실시간 공정 파이프라인이 활성화됩니다.
+                    </p>
+                    <Button 
+                        label="공정 템플릿 등록하기" 
+                        icon="pi pi-plus" 
+                        className="p-button-primary p-button-sm font-bold shadow-1" 
+                        onClick={() => openModal('processManager')} 
+                    />
                 </div>
             </div>
         );

@@ -58,6 +58,7 @@ export interface AppModalsProps {
     pipelineStages: string[];
     pipelineSteps: any[];
     advanceStage: (id: number) => void;
+    advanceWorkOrderStage?: (workOrderId: number) => void;
     openSubcontractModal: (id: number) => void;
     openCancelModal: (id: number) => void;
     handlePrint: (order: any, mode: 'label' | 'invoice') => void;
@@ -112,6 +113,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
     pipelineStages,
     pipelineSteps,
     advanceStage,
+    advanceWorkOrderStage,
     openSubcontractModal,
     openCancelModal,
     handlePrint,
@@ -202,6 +204,7 @@ export const AppModals: React.FC<AppModalsProps> = ({
                         pipelineStages={pipelineStages}
                         pipelineSteps={pipelineSteps}
                         advanceStage={advanceStage}
+                        advanceWorkOrderStage={advanceWorkOrderStage}
                         openSubcontractModal={(id) => { closeModal('orderDetail'); openSubcontractModal(id); }}
                         openChangeModal={() => { closeModal('orderDetail'); openModal('changeRequest'); }}
                         openCancelModal={(id) => { closeModal('orderDetail'); openCancelModal(id); }}

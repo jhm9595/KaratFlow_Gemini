@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getAuthHeaders } from '../api/client';
+import { getAuthHeaders, API_BASE_URL } from '../api/client';
 
 export interface ProcessTemplateStep {
     id?: number;
@@ -30,7 +30,7 @@ export function useProcessTemplates() {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch('http://localhost:8888/api/process-templates', { headers: getAuthHeaders() });
+            const res = await fetch(`${API_BASE_URL}/api/process-templates`, { headers: getAuthHeaders() });
             if (!res.ok) throw new Error('공정 템플릿 정보를 가져오는데 실패했습니다.');
             const data = await res.json();
             if (Array.isArray(data)) {

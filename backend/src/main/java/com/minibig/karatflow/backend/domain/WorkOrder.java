@@ -40,8 +40,16 @@ public class WorkOrder extends BaseEntity {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    public static String generateWorkOrderNo(String orderNo, int sequence) {
+        if (orderNo == null || orderNo.trim().isEmpty()) {
+            String date = DateTimeFormatter.ofPattern("yyMMdd").format(LocalDateTime.now());
+            return "ORD-" + date + "-000-" + String.format("%02d", sequence);
+        }
+        return orderNo + "-" + String.format("%02d", sequence);
+    }
+
     public static String generateWorkOrderNo(Long id) {
         String date = DateTimeFormatter.ofPattern("yyMMdd").format(LocalDateTime.now());
-        return "WO-" + date + "-" + String.format("%05d", id % 100000);
+        return "ORD-" + date + "-" + String.format("%03d", id % 1000) + "-01";
     }
 }

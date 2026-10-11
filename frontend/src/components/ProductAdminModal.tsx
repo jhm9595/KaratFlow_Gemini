@@ -5,6 +5,7 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { formatImageUrl } from '../utils/image';
+import { API_BASE_URL } from '../config/apiConfig';
 
 
 export const ProductAdminModal = ({ visible, onHide, toast, getAuthHeaders }: any) => {
@@ -12,12 +13,12 @@ export const ProductAdminModal = ({ visible, onHide, toast, getAuthHeaders }: an
     const [candidates, setCandidates] = useState([]);
 
     const loadData = () => {
-        fetch('http://localhost:8888/api/products', { headers: getAuthHeaders() })
+        fetch(`${API_BASE_URL}/api/products`, { headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => setProducts(data))
             .catch(console.error);
         
-        fetch('http://localhost:8888/api/products/candidates', { headers: getAuthHeaders() })
+        fetch(`${API_BASE_URL}/api/products/candidates`, { headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => setCandidates(data))
             .catch(console.error);
@@ -34,7 +35,7 @@ export const ProductAdminModal = ({ visible, onHide, toast, getAuthHeaders }: an
             name: candidate.unmappedProductName,
             baseLaborFee: 10000
         };
-        fetch(`http://localhost:8888/api/products/candidates/${candidate.id}/confirm`, {
+        fetch(`${API_BASE_URL}/api/products/candidates/${candidate.id}/confirm`, {
             method: 'POST',
             headers: {
                 ...getAuthHeaders(),

@@ -5,6 +5,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Configuration
@@ -61,6 +63,37 @@ public class DatabaseCleanupConfig {
                     // Column might not exist or already cleaned up
                     log.debug("Schema cleanup query skipped or failed: {} - {}", query, e.getMessage());
                 }
+            }
+
+            // Seed permanent DEMO User if not existing
+            try {
+                List<Map<String, Object>> demoUserList = jdbcTemplate.queryForList(
+                        "SELECT id FROM users WHERE oauth_provider_id = 'demo_account' OR username = 'DEMO' LIMIT 1"
+                );
+                Long demoUserId;
+                if (demoUserList.isEmpty()) {
+                    jdbcTemplate.update(
+                            "INSERT INTO users (oauth_provider_id, username, email, role, profile_image_url) " +
+                            "VALUES ('demo_account', 'DEMO', 'demo@karatflow.com', 'ROLE_USER', NULL)"
+                    );
+                    List<Map<String, Object>> created = jdbcTemplate.queryForList(
+                            "SELECT id FROM users WHERE oauth_provider_id = 'demo_account' LIMIT 1"
+                    );
+                    demoUserId = ((Number) created.get(0).get("id")).longValue();
+                    log.info("Provisioned permanent DEMO user with ID: {}", demoUserId);
+                } else {
+                    demoUserId = ((Number) demoUserList.get(0).get("id")).longValue();
+                    jdbcTemplate.update(
+                            "UPDATE users SET oauth_provider_id = 'demo_account', username = 'DEMO', email = 'demo@karatflow.com' WHERE id = ?",
+                            demoUserId
+                    );
+                    log.info("Existing DEMO user found with ID: {}", demoUserId);
+                }
+
+                // Integrity fix for work_orders #578 and #579 was executed successfully.
+                // Keeping clean so subsequent restarts preserve user actions.
+            } catch (Exception e) {
+                log.warn("Notice during permanent DEMO user initialization: {}", e.getMessage());
             }
         };
     }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
@@ -22,13 +22,17 @@ export const OrderTable: React.FC<OrderTableProps> = ({
     pipelineSteps,
     pipelineStages,
 }) => {
+    const [first, setFirst] = useState(0);
+
     return (
         <div className="flex-1 flex flex-column justify-content-between overflow-hidden h-full">
             <DataTable 
                 value={orders} 
                 size="small" 
                 paginator 
-                rows={15} 
+                rows={10} 
+                first={first}
+                onPage={(e) => setFirst(e.first)}
                 scrollable 
                 scrollHeight="flex" 
                 selectionMode="single" 
@@ -44,6 +48,19 @@ export const OrderTable: React.FC<OrderTableProps> = ({
                 className="p-datatable-sm cursor-pointer flex-1 flex flex-column justify-content-between h-full" 
                 rowClassName={(row: any) => row.isHold ? 'hold-pulse-row' : 'surface-0 text-900 hover:surface-50 transition-colors transition-duration-200'}
             >
+                <Column 
+                    header="No." 
+                    style={{ width: '50px', textAlign: 'center' }} 
+                    body={(row: any, options: any) => {
+                        const idx = orders.findIndex(o => o.id === row.id);
+                        const displayIndex = idx !== -1 ? idx + 1 : (first + (options?.rowIndex ?? 0) + 1);
+                        return (
+                            <span className="text-500 font-semibold text-xs text-center block">
+                                {displayIndex}
+                            </span>
+                        );
+                    }} 
+                />
                 <Column header="" style={{ width: '52px' }} body={(row: any) => {
                     const imgUrl = formatImageUrl(row.imageUrl);
                     return imgUrl ? (
@@ -61,9 +78,42 @@ export const OrderTable: React.FC<OrderTableProps> = ({
                         </div>
                     ) : <span className="pi pi-image text-300" />;
                 }} />
-                <Column header="주문 번호" body={(r) => <span className="font-bold text-primary">#{r.orderNo || r.id}</span>} style={{ minWidth: '120px' }} />
-                <Column header="수량" style={{ width: '72px' }} body={(row: any) => <span className="font-bold text-700">{row.quantity ?? 1}건</span>} />
-                <Column field="design" header="Design" />
+                <Column 
+                    header="주문일자" 
+                    field="date" 
+                    style={{ width: '105px' }} 
+                    body={(r) => <span className="text-600 text-sm">{r.date || '-'}</span>} 
+                />
+                <Column 
+                    header="주문 No." 
+                    field="id" 
+                    style={{ width: '85px' }} 
+                    body={(r) => (
+                        <span className="font-bold text-primary font-mono" title={r.orderNo}>
+                            #{r.id}
+                        </span>
+                    )} 
+                />
+                <Column 
+                    field="design" 
+                    header="Design" 
+                    body={(r) => {
+                        const title = r.design || r.unmappedProductName || '-';
+                        return (
+                            <div className="flex align-items-center gap-2">
+                                <span className="font-medium text-800">{title}</span>
+                                {r.quantity && r.quantity > 1 && (
+                                    <span 
+                                        className="px-2 py-0 border-round bg-blue-50 text-blue-700 text-xs font-semibold border-1 border-blue-200"
+                                        title={`총 ${r.quantity}개 물건`}
+                                    >
+                                        {r.quantity}개
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    }} 
+                />
                 <Column field="customerName" header="고객명" />
                 <Column 
                     field="stage" 

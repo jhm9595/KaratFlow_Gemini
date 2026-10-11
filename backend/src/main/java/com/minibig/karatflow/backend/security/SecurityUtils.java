@@ -18,16 +18,21 @@ public class SecurityUtils {
     public Optional<User> getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-            // Default demo fallback user if no auth token is provided
-            return userRepository.findAll().stream().findFirst();
+            return Optional.empty();
         }
 
         String principal = auth.getName();
         if (principal == null || principal.isBlank()) {
-            return userRepository.findAll().stream().findFirst();
+            return Optional.empty();
         }
 
         Optional<User> userOpt = userRepository.findByOauthProviderId(principal);
+        if (userOpt.isPresent()) return userOpt;
+
+        userOpt = userRepository.findByOauthProviderId("kakao_" + principal);
+        if (userOpt.isPresent()) return userOpt;
+
+        userOpt = userRepository.findByOauthProviderId("google_" + principal);
         if (userOpt.isPresent()) return userOpt;
 
         userOpt = userRepository.findAll().stream()
@@ -46,11 +51,6 @@ public class SecurityUtils {
     }
 
     public Long getCurrentUserId() {
-        return getCurrentUser().map(User::getId).orElse(1L);
-    }
-
-    public boolean isDemoSession() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal());
+        return getCurrentUser().map(User::getId).orElse(null);
     }
 }

@@ -8,6 +8,7 @@ public class OrderResponseDTO {
     private Long workOrderId;
     private Long templateId;
     private String templateName;
+    private java.util.List<com.minibig.karatflow.backend.domain.ProcessTemplateStep> templateSteps;
     private String orderNo;
     private String shortCode;
     private String design;
@@ -17,6 +18,11 @@ public class OrderResponseDTO {
     private String unmappedProductName;
     private String date;
     private String stage;
+    private String prevStage;
+    private String productName;
+    private String itemStage;
+    private String itemLabel;
+    private Boolean allFinished;
     private Boolean isHold;
     private String engravingText;
     private String engravingLocation;

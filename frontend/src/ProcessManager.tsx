@@ -5,6 +5,7 @@ import { InputText } from 'primereact/inputtext';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Toast } from 'primereact/toast';
+import { API_BASE_URL } from './config/apiConfig';
 
 interface ProcessManagerProps {
     visible: boolean;
@@ -40,10 +41,9 @@ export const ProcessManager: React.FC<ProcessManagerProps> = ({ visible, onHide 
     const [formDesc, setFormDesc] = useState('');
     const [formStages, setFormStages] = useState<StageItem[]>([]);
     const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
-    const [activeColorIdx, setActiveColorIdx] = useState<number | null>(null);
     
     const toast = React.useRef<Toast>(null);
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8888';
+    const apiUrl = API_BASE_URL;
 
     const getAuthHeaders = () => {
         const token = localStorage.getItem('access_token') || localStorage.getItem('jwtToken');
@@ -233,7 +233,13 @@ export const ProcessManager: React.FC<ProcessManagerProps> = ({ visible, onHide 
     };
 
     return (
-        <Dialog header={header} visible={visible} style={{ width: '65vw' }} onHide={onHide}>
+        <Dialog 
+            header={header} 
+            visible={visible} 
+            style={{ width: '960px', maxWidth: '95vw', minWidth: '760px' }} 
+            breakpoints={{ '960px': '85vw', '641px': '95vw' }}
+            onHide={onHide}
+        >
             <Toast ref={toast} />
             <div className="p-fluid">
                 <div className="flex justify-content-between mb-3 align-items-center">
@@ -259,7 +265,13 @@ export const ProcessManager: React.FC<ProcessManagerProps> = ({ visible, onHide 
                 </DataTable>
             </div>
 
-            <Dialog header={isEdit ? "공정 템플릿 & 색상 커스터마이징" : "새 공정 템플릿 추가"} visible={formVisible} style={{ width: '520px' }} onHide={() => setFormVisible(false)}>
+            <Dialog 
+                header={isEdit ? "공정 템플릿 & 색상 커스터마이징" : "새 공정 템플릿 추가"} 
+                visible={formVisible} 
+                style={{ width: '620px', maxWidth: '95vw', minWidth: '480px' }} 
+                breakpoints={{ '641px': '95vw' }}
+                onHide={() => setFormVisible(false)}
+            >
                 <div className="p-fluid mt-2">
                     <div className="field mb-3">
                         <label className="font-bold">템플릿 이름</label>
@@ -271,7 +283,7 @@ export const ProcessManager: React.FC<ProcessManagerProps> = ({ visible, onHide 
                     </div>
                     <div className="field mb-3">
                         <label className="font-bold mb-2 block">공정 단계 및 유니크 색상 커스텀</label>
-                        <div className="text-xs text-500 mb-2">각 공정의 색상을 직접 선택하거나 아래 그라데이션 팔레트를 클릭하여 유니크한 색상을 지정하세요.</div>
+                        <div className="text-xs text-500 mb-2">각 공정의 색상을 직접 선택하거나 추천 컬러 팔레트에서 원클릭으로 지정하세요.</div>
                         
                         {formStages.map((stage, idx) => (
                             <div 
@@ -296,96 +308,65 @@ export const ProcessManager: React.FC<ProcessManagerProps> = ({ visible, onHide 
                                     setFormStages(newStages);
                                     setDraggedIdx(null);
                                 }}
-                                className="flex flex-column gap-2 mb-2 p-2 border-round surface-0 shadow-1"
+                                className="flex align-items-center mb-2 gap-2 p-2 border-round surface-0 shadow-1"
                             >
-                                <div className="flex align-items-center gap-2">
-                                    <i className="pi pi-bars text-400 cursor-move" title="드래그해서 순서 변경" style={{ fontSize: '1.1rem' }} />
-                                    <span className="text-500 font-bold text-right" style={{ width: '18px' }}>{idx + 1}.</span>
-                                    
-                                    {/* Color Preview & Color Picker Button */}
-                                    <div className="relative flex align-items-center">
-                                        <label 
-                                            className="w-2rem h-2rem border-circle border-1 border-white shadow-2 cursor-pointer inline-block flex align-items-center justify-content-center"
-                                            style={{ background: stage.colorGradient || stage.colorHex }}
-                                            title="색상 선택 (클릭)"
-                                        >
-                                            <input 
-                                                type="color" 
-                                                value={stage.colorHex} 
-                                                onChange={(e) => {
-                                                    const hex = e.target.value;
-                                                    const updated = [...formStages];
-                                                    updated[idx] = {
-                                                        ...updated[idx],
-                                                        colorHex: hex,
-                                                        colorGradient: `linear-gradient(135deg, ${hex} 0%, #1e293b 100%)`
-                                                    };
-                                                    setFormStages(updated);
-                                                }}
-                                                className="opacity-0 w-0 h-0 p-0 m-0 border-none pointer"
-                                            />
-                                            <i className="pi pi-palette text-white text-xs opacity-80"></i>
-                                        </label>
-                                    </div>
+                                <i className="pi pi-bars text-400 cursor-move" title="드래그해서 순서 변경" style={{ fontSize: '1.1rem' }} />
+                                <span className="text-500 font-bold text-right" style={{ width: '18px' }}>{idx + 1}.</span>
+                                
+                                {/* Color Preview Indicator (Read-only) */}
+                                <div 
+                                    className="w-2rem h-2rem border-circle border-2 border-white shadow-1 flex-shrink-0"
+                                    style={{ background: stage.colorGradient || stage.colorHex }}
+                                    title={`현재 색상: ${stage.colorHex}`}
+                                />
 
-                                    <InputText 
-                                        value={stage.stageName} 
+                                <InputText 
+                                    value={stage.stageName} 
+                                    onChange={(e) => {
+                                        const updated = [...formStages];
+                                        updated[idx].stageName = e.target.value;
+                                        setFormStages(updated);
+                                    }} 
+                                    placeholder="공정 단계명 입력" 
+                                    className="flex-1 p-inputtext-sm font-bold"
+                                />
+
+                                {/* Complete Color Customization (Native Color Picker) */}
+                                <label 
+                                    className="p-button p-component p-button-rounded p-button-text p-button-secondary p-0 flex align-items-center justify-content-center cursor-pointer transition-colors hover:surface-200 flex-shrink-0"
+                                    style={{ width: '2rem', height: '2rem' }}
+                                    title="색상 직접 커스터마이징 (클릭하여 자유롭게 색상 선택)"
+                                >
+                                    <i className="pi pi-palette text-600" style={{ fontSize: '1.1rem' }}></i>
+                                    <input 
+                                        type="color" 
+                                        value={stage.colorHex} 
                                         onChange={(e) => {
+                                            const hex = e.target.value;
                                             const updated = [...formStages];
-                                            updated[idx].stageName = e.target.value;
+                                            updated[idx] = {
+                                                ...updated[idx],
+                                                colorHex: hex,
+                                                colorGradient: `linear-gradient(135deg, ${hex} 0%, #1e293b 100%)`
+                                            };
                                             setFormStages(updated);
-                                        }} 
-                                        placeholder="공정 단계명 입력" 
-                                        className="flex-1 p-inputtext-sm font-bold"
+                                        }}
+                                        className="opacity-0 w-0 h-0 p-0 m-0 border-none absolute"
                                     />
+                                </label>
 
-                                    <Button 
-                                        icon="pi pi-palette" 
-                                        className="p-button-rounded p-button-text p-button-secondary p-0" 
-                                        style={{ width: '2rem', height: '2rem' }}
-                                        onClick={() => setActiveColorIdx(activeColorIdx === idx ? null : idx)}
-                                        tooltip="팔레트 선택"
-                                        tooltipOptions={{ position: 'top' }}
-                                    />
-
-                                    <Button 
-                                        icon="pi pi-times" 
-                                        className="p-button-rounded p-button-danger p-button-text p-0" 
-                                        style={{ width: '2rem', height: '2rem' }}
-                                        onClick={() => {
-                                            const newStages = formStages.filter((_, i) => i !== idx);
-                                            setFormStages(newStages);
-                                        }} 
-                                        tooltip="삭제"
-                                        tooltipOptions={{ position: 'top' }}
-                                    />
-                                </div>
-
-                                {/* Preset Swatches Panel if palette clicked */}
-                                {activeColorIdx === idx && (
-                                    <div className="flex flex-wrap gap-2 p-2 surface-100 border-round mt-1">
-                                        <span className="text-xs text-600 w-full mb-1 font-bold">유니크 그라데이션 프리셋 선택:</span>
-                                        {COLOR_PRESETS.map((preset, pIdx) => (
-                                            <button
-                                                key={pIdx}
-                                                type="button"
-                                                onClick={() => {
-                                                    const updated = [...formStages];
-                                                    updated[idx] = {
-                                                        ...updated[idx],
-                                                        colorHex: preset.hex,
-                                                        colorGradient: preset.gradient
-                                                    };
-                                                    setFormStages(updated);
-                                                    setActiveColorIdx(null);
-                                                }}
-                                                className="w-2rem h-2rem border-circle border-1 border-white shadow-2 border-none cursor-pointer transform hover:scale-110 transition-transform"
-                                                style={{ background: preset.gradient }}
-                                                title={preset.name}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
+                                <Button 
+                                    type="button"
+                                    icon="pi pi-times" 
+                                    className="p-button-rounded p-button-danger p-button-text p-0 flex-shrink-0" 
+                                    style={{ width: '2rem', height: '2rem' }}
+                                    onClick={() => {
+                                        const newStages = formStages.filter((_, i) => i !== idx);
+                                        setFormStages(newStages);
+                                    }} 
+                                    tooltip="삭제"
+                                    tooltipOptions={{ position: 'top' }}
+                                />
                             </div>
                         ))}
 

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.annotation.PostConstruct;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,17 +49,11 @@ public class ProcessTemplateService {
 
     public List<ProcessTemplate> getAllTemplates() {
         Long currentUserId = securityUtils.getCurrentUserId();
-        boolean isDemo = securityUtils.isDemoSession();
+        if (currentUserId == null) return Collections.emptyList();
 
         List<ProcessTemplate> list = processTemplateRepository.findAll().stream()
                 .filter(t -> t.getTemplateName() != null && !t.getTemplateName().trim().isEmpty())
-                .filter(t -> {
-                    if (isDemo) {
-                        return t.getUserId() == null || t.getUserId().equals(currentUserId);
-                    } else {
-                        return t.getUserId() != null && t.getUserId().equals(currentUserId);
-                    }
-                })
+                .filter(t -> t.getUserId() != null && t.getUserId().equals(currentUserId))
                 .toList();
 
         for (ProcessTemplate t : list) {

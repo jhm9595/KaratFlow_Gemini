@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_BASE_URL } from '../config/apiConfig';
 
 export function useOrderPrint(getAuthHeaders: () => Record<string, string>) {
     const [printOrder, setPrintOrder] = useState<any>(null);
@@ -9,7 +10,7 @@ export function useOrderPrint(getAuthHeaders: () => Record<string, string>) {
         let mergedOrder = { ...order };
 
         try {
-            const detailRes = await fetch(`http://localhost:8888/api/orders/${order.id}/details`, { headers: getAuthHeaders() });
+            const detailRes = await fetch(`${API_BASE_URL}/api/orders/${order.id}/details`, { headers: getAuthHeaders() });
             if (detailRes.ok) {
                 const detailData = await detailRes.json();
                 mergedOrder = { ...mergedOrder, ...detailData };
@@ -20,7 +21,7 @@ export function useOrderPrint(getAuthHeaders: () => Record<string, string>) {
 
         if (mode === 'invoice') {
             try {
-                const res = await fetch(`http://localhost:8888/api/orders/${order.id}/invoice`, { headers: getAuthHeaders() });
+                const res = await fetch(`${API_BASE_URL}/api/orders/${order.id}/invoice`, { headers: getAuthHeaders() });
                 if (res.ok) {
                     const invoiceData = await res.json();
                     mergedOrder.invoice = invoiceData;

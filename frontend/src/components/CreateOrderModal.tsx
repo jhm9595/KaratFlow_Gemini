@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
@@ -29,6 +29,18 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     onOpenProcessManager
 }) => {
     const hasTemplates = templates && templates.length > 0;
+
+    useEffect(() => {
+        if (visible && hasTemplates && templates && templates.length > 0) {
+            const validTemplate = templates.find(t => t.id === createOrderForm.processTemplateId);
+            if (!validTemplate) {
+                const defaultTpl = templates.find(t => t.isDefault) || templates[0];
+                if (defaultTpl) {
+                    setCreateOrderForm((prev: any) => ({ ...prev, processTemplateId: defaultTpl.id }));
+                }
+            }
+        }
+    }, [visible, templates, hasTemplates]);
 
     return (
         <Dialog 
@@ -231,7 +243,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
                 </div>
 
                 <div className="field col-12">
-                    <label className="font-bold">소비자가 (₩)</label>
+                    <label className="font-bold">가격 (₩)</label>
                     <InputNumber 
                         value={createOrderForm.finalConsumerPrice} 
                         onValueChange={(e) => setCreateOrderForm((prev: any) => ({ ...prev, finalConsumerPrice: e.value || 0 }))} 

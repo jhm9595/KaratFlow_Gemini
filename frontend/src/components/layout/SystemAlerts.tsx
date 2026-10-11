@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Message } from 'primereact/message';
+import { API_BASE_URL } from '../../config/apiConfig';
 
 const SystemAlerts: React.FC = () => {
     const [alerts, setAlerts] = useState<any[]>([]);
@@ -8,7 +9,7 @@ const SystemAlerts: React.FC = () => {
         const fetchAlerts = async () => {
             try {
                 const token = localStorage.getItem('jwt_token');
-                const response = await fetch('http://localhost:8888/api/system/health/alerts', {
+                const response = await fetch(`${API_BASE_URL}/api/system/health/alerts`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (response.ok) {

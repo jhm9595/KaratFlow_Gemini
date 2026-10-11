@@ -10,7 +10,7 @@ import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
 import { Dialog } from 'primereact/dialog';
 import { formatImageUrl } from '../utils/image';
-
+import { API_BASE_URL } from '../config/apiConfig';
 
 export const ProductAdmin = () => {
     const navigate = useNavigate();
@@ -27,7 +27,7 @@ export const ProductAdmin = () => {
     };
 
     const loadData = () => {
-        fetch('http://localhost:8888/api/products', { headers: getAuthHeaders() })
+        fetch(`${API_BASE_URL}/api/products`, { headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => {
                 // Convert flat list to tree
@@ -50,7 +50,7 @@ export const ProductAdmin = () => {
             })
             .catch(console.error);
         
-        fetch('http://localhost:8888/api/products/candidates', { headers: getAuthHeaders() })
+        fetch(`${API_BASE_URL}/api/products/candidates`, { headers: getAuthHeaders() })
             .then(res => res.json())
             .then(data => setCandidates(data))
             .catch(console.error);
@@ -67,7 +67,7 @@ export const ProductAdmin = () => {
         const formData = new FormData();
         formData.append('file', file);
         try {
-            const res = await fetch('http://localhost:8888/api/uploads', {
+            const res = await fetch(`${API_BASE_URL}/api/uploads`, {
                 method: 'POST',
                 body: formData
             });
@@ -80,7 +80,7 @@ export const ProductAdmin = () => {
     };
 
     const submitCreateProduct = () => {
-        fetch('http://localhost:8888/api/products', {
+        fetch(`${API_BASE_URL}/api/products`, {
             method: 'POST',
             headers: {
                 ...getAuthHeaders(),
@@ -105,7 +105,7 @@ export const ProductAdmin = () => {
             name: candidate.unmappedProductName,
             baseLaborFee: 10000
         };
-        fetch(`http://localhost:8888/api/products/candidates/${candidate.id}/confirm`, {
+        fetch(`${API_BASE_URL}/api/products/candidates/${candidate.id}/confirm`, {
             method: 'POST',
             headers: {
                 ...getAuthHeaders(),

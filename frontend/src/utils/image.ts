@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../config/apiConfig';
+
 /**
  * Formats a raw image URL string into a fully qualified URL for rendering in img src.
  */
@@ -9,16 +11,16 @@ export const formatImageUrl = (url?: string | null): string => {
         return trimmed;
     }
     if (trimmed.startsWith('/api/')) {
-        return `http://localhost:8888${trimmed}`;
+        return `${API_BASE_URL}${trimmed}`;
     }
     if (trimmed.startsWith('/uploads/')) {
-        return `http://localhost:8888/api${trimmed}`;
+        return `${API_BASE_URL}/api${trimmed}`;
     }
     if (trimmed.startsWith('uploads/')) {
-        return `http://localhost:8888/api/${trimmed}`;
+        return `${API_BASE_URL}/api/${trimmed}`;
     }
     const filename = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
-    return `http://localhost:8888/api/uploads/${filename}`;
+    return `${API_BASE_URL}/api/uploads/${filename}`;
 };
 
 /**

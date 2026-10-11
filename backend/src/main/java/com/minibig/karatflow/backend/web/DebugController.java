@@ -24,6 +24,8 @@ public class DebugController {
     private final DailyPetroleumPriceRepository petroleumRepo;
     private final DailyKospiPriceRepository kospiRepo;
     private final JwtTokenProvider jwtTokenProvider;
+    private final com.minibig.karatflow.backend.repository.UserRepository userRepo;
+    private final com.minibig.karatflow.backend.repository.ProcessTemplateRepository templateRepo;
 
     @GetMapping("/api/debug/clear-all")
     public String clearAll() {
@@ -147,13 +149,39 @@ public class DebugController {
         return "Petroleum data reset with authentic daily price trends!";
     }
 
+
     @GetMapping("/api/debug/token")
-    public String getToken() {
+    public String getToken(@org.springframework.web.bind.annotation.RequestParam(value = "user", defaultValue = "demo_account") String username) {
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-            "testuser@example.com", 
+            username, 
             null, 
             Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
         );
         return jwtTokenProvider.generateToken(auth);
+    }
+
+    @GetMapping("/api/debug/users")
+    public Object listUsers() {
+        return userRepo.findAll();
+    }
+
+    @GetMapping("/api/debug/templates")
+    public Object listTemplates() {
+        return templateRepo.findAll();
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    @GetMapping("/api/debug/db-summary")
+    public Object dbSummary() {
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        map.put("users", jdbcTemplate.queryForList("SELECT id, oauth_provider_id, username, email FROM users"));
+        map.put("templates", jdbcTemplate.queryForList("SELECT template_id, user_id, template_name, template_code, is_default FROM process_templates"));
+        map.put("template_steps", jdbcTemplate.queryForList("SELECT step_id, template_id, step_order, stage_name, color_hex FROM process_template_steps ORDER BY template_id, step_order"));
+        map.put("orders", jdbcTemplate.queryForList("SELECT order_id, order_no, user_id, customer_name, customer_phone, status, order_date FROM orders"));
+        map.put("order_items", jdbcTemplate.queryForList("SELECT order_item_id, order_id, unmapped_product_name, quantity FROM order_items"));
+        map.put("work_orders", jdbcTemplate.queryForList("SELECT work_order_id, work_order_no, order_item_id, template_id, current_stage, is_hold FROM work_orders"));
+        return map;
     }
 }

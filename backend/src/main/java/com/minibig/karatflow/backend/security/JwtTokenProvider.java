@@ -19,13 +19,17 @@ public class JwtTokenProvider {
     private final long EXPIRATION_TIME = 86400000L; // 24 hours
 
     public String generateToken(Authentication authentication) {
-        String authorities = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(","));
+        return generateToken(authentication.getName(), authentication.getAuthorities());
+    }
+
+    public String generateToken(String subject, java.util.Collection<? extends GrantedAuthority> authorities) {
+        String authStr = authorities != null 
+                ? authorities.stream().map(GrantedAuthority::getAuthority).collect(Collectors.joining(","))
+                : "ROLE_USER";
 
         return Jwts.builder()
-                .setSubject(authentication.getName())
-                .claim("auth", authorities)
+                .setSubject(subject)
+                .claim("auth", authStr)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(key)

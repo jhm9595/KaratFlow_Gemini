@@ -47,25 +47,29 @@ export const getEventBorderColor = (msg: string) => {
     return '#3B82F6';
 };
 
-export const getEventStageInfo = (msg: string, pipelineSteps?: any[]) => {
-    if (!msg) return { stageName: '알림', colorHex: '#3B82F6', colorGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', bgColor: '#eff6ff' };
+export const getEventStageInfo = (msg: string, pipelineSteps?: any[], stageName?: string) => {
+    if (!msg && !stageName) return { stageName: '알림', colorHex: '#3B82F6', colorGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', bgColor: '#eff6ff' };
     
     let matchedStep = (pipelineSteps && pipelineSteps.length > 0) 
-        ? pipelineSteps.find((step: any) => step.stageName && msg.includes(step.stageName)) 
+        ? pipelineSteps.find((step: any) => 
+            (stageName && step.stageName && step.stageName.toLowerCase() === stageName.toLowerCase()) ||
+            (step.stageName && msg && msg.includes(step.stageName))
+          ) 
         : null;
 
     if (!matchedStep) {
-        if (msg.includes('접수') || msg.includes('신규')) {
+        const textToMatch = stageName || msg || '';
+        if (textToMatch.includes('접수') || textToMatch.includes('신규')) {
             matchedStep = { stageName: '접수', colorHex: '#38BDF8', colorGradient: 'linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%)', bgColor: '#f0f9ff' };
-        } else if (msg.includes('CAD')) {
+        } else if (textToMatch.includes('CAD')) {
             matchedStep = { stageName: 'CAD', colorHex: '#C084FC', colorGradient: 'linear-gradient(135deg, #e879f9 0%, #c084fc 100%)', bgColor: '#fdf4ff' };
-        } else if (msg.includes('주물')) {
+        } else if (textToMatch.includes('주물')) {
             matchedStep = { stageName: '주물', colorHex: '#F59E0B', colorGradient: 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)', bgColor: '#fffbeb' };
-        } else if (msg.includes('세공')) {
+        } else if (textToMatch.includes('세공')) {
             matchedStep = { stageName: '세공', colorHex: '#EF4444', colorGradient: 'linear-gradient(135deg, #fca5a5 0%, #ef4444 100%)', bgColor: '#fef2f2' };
-        } else if (msg.includes('완료') || msg.includes('완성')) {
+        } else if (textToMatch.includes('완료') || textToMatch.includes('완성')) {
             matchedStep = { stageName: '완료', colorHex: '#22C55E', colorGradient: 'linear-gradient(135deg, #86efac 0%, #22c55e 100%)', bgColor: '#f0fdf4' };
-        } else if (msg.includes('보류') || msg.includes('HOLD')) {
+        } else if (textToMatch.includes('보류') || textToMatch.includes('HOLD')) {
             matchedStep = { stageName: '보류', colorHex: '#EAB308', colorGradient: 'linear-gradient(135deg, #fde047 0%, #eab308 100%)', bgColor: '#fefce8' };
         }
     }

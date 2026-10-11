@@ -16,6 +16,7 @@ public class OrderDetailDTO {
     private String customerPhone;
     private String orderType;
     private String orderDate;
+    private String createdAt;
     private String brand;
     private String designCode;
     private String productName;

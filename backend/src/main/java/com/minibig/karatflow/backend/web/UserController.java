@@ -2,6 +2,7 @@ package com.minibig.karatflow.backend.web;
 
 import com.minibig.karatflow.backend.domain.User;
 import com.minibig.karatflow.backend.repository.UserRepository;
+import com.minibig.karatflow.backend.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,7 @@ import java.util.Optional;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final SecurityUtils securityUtils;
 
     @GetMapping("/me")
     public ResponseEntity<?> getMyProfile(@RequestParam(value = "oauthProviderId", required = false) String oauthProviderId) {
@@ -26,19 +28,11 @@ public class UserController {
         }
         
         if (userOpt.isEmpty()) {
-            // Return first user or default profile
-            userOpt = userRepository.findAll().stream().findFirst();
+            userOpt = securityUtils.getCurrentUser();
         }
 
         if (userOpt.isEmpty()) {
-            Map<String, Object> fallback = new HashMap<>();
-            fallback.put("id", 1L);
-            fallback.put("username", "KaratFlow 회원");
-            fallback.put("email", "user@karatflow.com");
-            fallback.put("oauthProviderId", "kakao_demo");
-            fallback.put("googleLinked", false);
-            fallback.put("kakaoLinked", true);
-            return ResponseEntity.ok(fallback);
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized", "message", "로그인이 필요합니다."));
         }
 
         User user = userOpt.get();

@@ -1,11 +1,12 @@
 import React from 'react';
 import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
+import { API_BASE_URL } from '../config/apiConfig';
 
 export const Login: React.FC = () => {
 
   const handleKakaoLogin = () => {
-    const kakaoAuthUrl = 'http://localhost:8888/oauth2/authorization/kakao';
+    const kakaoAuthUrl = `${API_BASE_URL}/oauth2/authorization/kakao`;
     try {
       if (window.top && window.top !== window) {
         window.top.location.href = kakaoAuthUrl;
@@ -18,7 +19,7 @@ export const Login: React.FC = () => {
   };
 
   const handleGoogleLogin = () => {
-    const googleAuthUrl = 'http://localhost:8888/oauth2/authorization/google';
+    const googleAuthUrl = `${API_BASE_URL}/oauth2/authorization/google`;
     try {
       if (window.top && window.top !== window) {
         window.top.location.href = googleAuthUrl;
@@ -32,7 +33,7 @@ export const Login: React.FC = () => {
 
   const handleDemoLogin = async () => {
     try {
-      const res = await fetch('http://localhost:8888/api/debug/token');
+      const res = await fetch(`${API_BASE_URL}/api/debug/token`);
       if (res.ok) {
         const token = await res.text();
         localStorage.setItem('jwtToken', token);

@@ -12,7 +12,7 @@ spring:
             client-secret: ${KAKAO_CLIENT_SECRET:YOUR_KAKAO_CLIENT_SECRET}
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
-            redirect-uri: "http://localhost:8888/login/oauth2/code/{registrationId}"
+            redirect-uri: ${KAKAO_REDIRECT_URI:"{baseUrl}/login/oauth2/code/{registrationId}"}
             client-name: Kakao
         provider:
           kakao:
@@ -27,7 +27,7 @@ spring:
     driver-class-name: org.h2.Driver
   h2:
     console:
-      enabled: false
+      enabled: true
       path: /h2-console
   sql:
     init:
@@ -61,4 +61,10 @@ logging:
 krx:
   api:
     key: ${KRX_API_KEY:ADC20ED6167F4FB3878CCD2008E4E53733BA8876}
+
+app:
+  frontend-url: ${APP_FRONTEND_URL:http://localhost:5555}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5555,http://127.0.0.1:5555}
+
 
