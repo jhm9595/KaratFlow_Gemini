@@ -99,11 +99,7 @@ export const ProcessManager: React.FC<ProcessManagerProps> = ({ visible, onHide 
         setFormName('');
         setFormDesc('');
         setFormStages([
-            { stageName: '접수', colorHex: COLOR_PRESETS[0].hex, colorGradient: COLOR_PRESETS[0].gradient },
-            { stageName: 'CAD', colorHex: COLOR_PRESETS[1].hex, colorGradient: COLOR_PRESETS[1].gradient },
-            { stageName: '주물', colorHex: COLOR_PRESETS[2].hex, colorGradient: COLOR_PRESETS[2].gradient },
-            { stageName: '세공', colorHex: COLOR_PRESETS[3].hex, colorGradient: COLOR_PRESETS[3].gradient },
-            { stageName: '완료', colorHex: COLOR_PRESETS[4].hex, colorGradient: COLOR_PRESETS[4].gradient }
+            { stageName: '', colorHex: COLOR_PRESETS[0].hex, colorGradient: COLOR_PRESETS[0].gradient }
         ]);
         setFormVisible(true);
     };
@@ -267,11 +263,11 @@ export const ProcessManager: React.FC<ProcessManagerProps> = ({ visible, onHide 
                 <div className="p-fluid mt-2">
                     <div className="field mb-3">
                         <label className="font-bold">템플릿 이름</label>
-                        <InputText value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="예: 표준 5단계 공정" />
+                        <InputText value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="예: 우리공방 공정, 맞춤 제작 공정" />
                     </div>
                     <div className="field mb-3">
                         <label className="font-bold">간단한 설명</label>
-                        <InputText value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="예: 귀금속 맞춤 제작 전용 공정" />
+                        <InputText value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="예: 작업장 특성에 맞춘 공정 순서" />
                     </div>
                     <div className="field mb-3">
                         <label className="font-bold mb-2 block">공정 단계 및 유니크 색상 커스텀</label>
@@ -339,7 +335,7 @@ export const ProcessManager: React.FC<ProcessManagerProps> = ({ visible, onHide 
                                             updated[idx].stageName = e.target.value;
                                             setFormStages(updated);
                                         }} 
-                                        placeholder="공정명 (예: CAD)" 
+                                        placeholder="공정 단계명 입력" 
                                         className="flex-1 p-inputtext-sm font-bold"
                                     />
 

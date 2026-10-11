@@ -118,7 +118,7 @@ export const CustomerAdminPage: React.FC = () => {
                             <div className="col-12 md:col-6">
                                 <div className="p-4 surface-50 border-1 border-200 border-round-xl">
                                     <div className="font-bold text-lg text-primary mb-2">📋 실시간 주문 공정 확인 링크</div>
-                                    <p className="text-600 text-sm mb-3">소매점이 자신의 주문 공정(접수➔CAD➔주물➔세공) 진행 상황을 톡으로 열람하는 링크입니다.</p>
+                                    <p className="text-600 text-sm mb-3">소매점이 자신의 주문 공정 진행 상황을 알림톡으로 실시간 열람하는 링크입니다.</p>
                                     <Button label="주문 확인 링크 복사" icon="pi pi-copy" className="p-button-outlined p-button-primary p-button-sm w-full" onClick={() => copyShareLink('order', '샤인주얼리')} />
                                 </div>
                             </div>
