@@ -23,6 +23,20 @@ export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipe
         ? activeTemplate.steps
         : (pipelineSteps && pipelineSteps.length > 0 ? pipelineSteps : []);
 
+    const getStageCount = (stage: string) => {
+        return orders.filter(o => {
+            if (activeTemplate && o.templateId && o.templateId !== activeTemplate.id) {
+                return false;
+            }
+            const s = o.stage || '';
+            const isDone = (st: string) => st === '완성' || st === '완료' || st === 'COMPLETED' || st === 'DONE';
+            if ((isDone(s) || o.status === 'COMPLETED') && isDone(stage)) {
+                return true;
+            }
+            return s === stage;
+        }).length;
+    };
+
     if (stepsToRender.length === 0) {
         return (
             <div className="surface-0 p-4 border-round shadow-1">
@@ -50,10 +64,12 @@ export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipe
 
     return (
         <div className="surface-0 p-3 border-round shadow-1">
+            {/* Header: Title, Template Dropdown & Process Manager Cog Button */}
             <div className="flex justify-content-between align-items-center mb-3">
                 <h4 className="m-0 text-600 font-medium flex align-items-center gap-2">
                     <i className="pi pi-sitemap text-primary"></i> 실시간 공정 현황 (Pipeline)
                 </h4>
+
                 <div className="flex align-items-center gap-2">
                     {validTemplates.length > 0 && (
                         <div className="flex align-items-center gap-2" style={{ minWidth: '220px' }}>
@@ -78,46 +94,46 @@ export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipe
                 </div>
             </div>
 
-            <div className="flex justify-content-between align-items-center px-4 relative">
-                {/* Connecting Line */}
-                <div className="absolute w-full z-0" style={{ height: '4px', backgroundColor: '#e5e7eb', top: '30px', left: '0' }}></div>
-                
-                {stepsToRender.map((stepObj: any) => {
-                    const stage = stepObj.stageName || stepObj.stageCode;
-                    const count = orders.filter(o => {
-                        // Match if order uses this template (or no template set), and is at this stage
-                        if (activeTemplate && o.templateId && o.templateId !== activeTemplate.id) {
-                            return false;
-                        }
+            {/* Pipeline Stages: Arrow Flow Connectors (안 2) */}
+            <div className="w-full flex justify-content-center align-items-center py-2 overflow-x-auto">
+                <div className="flex align-items-center gap-4">
+                    {stepsToRender.map((stepObj: any, idx: number) => {
+                        const stage = stepObj.stageName || stepObj.stageCode;
+                        const count = getStageCount(stage);
+                        const bg = stepObj.colorGradient || stepObj.colorHex || 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
+                        const isLast = idx === stepsToRender.length - 1;
 
-                        const s = o.stage || '';
-                        const isDone = (st: string) => st === '완성' || st === '완료' || st === 'COMPLETED' || st === 'DONE';
-                        if ((isDone(s) || o.status === 'COMPLETED') && isDone(stage)) {
-                            return true;
-                        }
-                        return s === stage;
-                    }).length;
-
-                    const bg = stepObj.colorGradient || stepObj.colorHex || 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
-
-                    return (
-                        <div key={stage} className="flex flex-column align-items-center z-1 relative bg-white" style={{ borderRadius: '50%' }}>
-                            <div 
-                                className="flex align-items-center justify-content-center border-circle mb-2 transition-transform transform hover:scale-110" 
-                                style={{ 
-                                    width: '60px', 
-                                    height: '60px', 
-                                    background: bg,
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
-                                    border: '2px solid #ffffff'
-                                }}
-                            >
-                                <span className="text-2xl font-bold text-white drop-shadow">{count}</span>
-                            </div>
-                            <span className="text-800 font-bold bg-white px-2 border-round text-xs shadow-1" style={{ color: stepObj.colorHex || '#333' }}>{stage}</span>
-                        </div>
-                    );
-                })}
+                        return (
+                            <React.Fragment key={stage}>
+                                <div className="flex flex-column align-items-center">
+                                    <div 
+                                        className="flex align-items-center justify-content-center border-circle mb-2 transition-transform transform hover:scale-105" 
+                                        style={{ 
+                                            width: '58px', 
+                                            height: '58px', 
+                                            background: bg,
+                                            boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
+                                            border: '2.5px solid #ffffff'
+                                        }}
+                                    >
+                                        <span className="text-xl font-bold text-white drop-shadow">{count}</span>
+                                    </div>
+                                    <span 
+                                        className="text-800 font-bold text-xs px-2.5 py-0.5 border-round shadow-1 bg-white" 
+                                        style={{ color: stepObj.colorHex || '#333' }}
+                                    >
+                                        {stage}
+                                    </span>
+                                </div>
+                                {!isLast && (
+                                    <div className="flex align-items-center justify-content-center px-1 mb-3 text-400">
+                                        <i className="pi pi-chevron-right font-bold text-xl text-primary" style={{ opacity: 0.75 }} />
+                                    </div>
+                                )}
+                            </React.Fragment>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );
