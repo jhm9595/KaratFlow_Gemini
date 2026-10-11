@@ -173,3 +173,27 @@
         transform: scale(1.02);
     }
 }
+
+/* Pipeline Template Dropdown alignment & vertical centering */
+.pipeline-template-dropdown {
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+.pipeline-template-dropdown .p-dropdown-label {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    line-height: normal !important;
+    height: 100% !important;
+}
+
+.pipeline-template-dropdown .p-dropdown-trigger {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+}

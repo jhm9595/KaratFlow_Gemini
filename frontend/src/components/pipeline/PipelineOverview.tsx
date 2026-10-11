@@ -62,7 +62,7 @@ export const PipelineOverview: React.FC<PipelineOverviewProps> = ({ orders, pipe
                                 value={activeTemplate?.id} 
                                 options={validTemplates.map(t => ({ label: `${t.templateName}${t.isDefault ? ' (기본)' : ''}`, value: t.id }))} 
                                 onChange={(e) => setSelectedTemplateId(e.value)} 
-                                className="p-inputtext-sm font-bold text-xs" 
+                                className="p-inputtext-sm font-bold text-xs pipeline-template-dropdown" 
                                 style={{ height: '32px' }} 
                             />
                         </div>
