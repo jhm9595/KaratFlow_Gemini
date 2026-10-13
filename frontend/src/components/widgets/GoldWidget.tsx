@@ -82,7 +82,12 @@ const GoldWidget: React.FC<GoldWidgetProps> = ({
                     <div className="flex align-items-center justify-content-center border-circle" style={{ width: '28px', height: '28px', backgroundColor: '#fef3c7', color: '#d97706' }}>
                         <i className="pi pi-dollar text-sm font-bold" />
                     </div>
-                    <h4 className="m-0 text-800 font-bold text-base flex align-items-center gap-1">오늘의 금 시세 <span className="text-xs text-500 font-normal ml-1">(3.75g 기준)</span></h4>
+                    <h4 className="m-0 text-800 font-bold text-base flex align-items-center gap-1">
+                        금 시세 
+                        <span className="text-xs text-500 font-normal ml-1">
+                            (3.75g 기준{today?.priceDate ? ` · ${today.priceDate.slice(5).replace('-', '/')} 종가` : ' · 최근 종가'})
+                        </span>
+                    </h4>
                 </div>
                 
                 <div className="flex align-items-center gap-1.5">

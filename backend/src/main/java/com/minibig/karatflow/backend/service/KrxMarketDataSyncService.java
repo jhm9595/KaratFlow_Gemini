@@ -34,6 +34,7 @@ public class KrxMarketDataSyncService {
     private final DailyPetroleumPriceRepository dailyPetroleumPriceRepository;
     private final DailyKospiPriceRepository dailyKospiPriceRepository;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    private final org.springframework.transaction.PlatformTransactionManager transactionManager;
     private final RestTemplate restTemplate = new RestTemplate();
     private final java.util.concurrent.atomic.AtomicBoolean isSyncing = new java.util.concurrent.atomic.AtomicBoolean(false);
 
@@ -58,10 +59,12 @@ public class KrxMarketDataSyncService {
         java.util.concurrent.CompletableFuture.runAsync(() -> {
             try {
                 LocalDate today = LocalDate.now();
-                log.info("KRX Sync: Catch-up sync running for recent days up to {}...", today);
-                syncGold(today);
-                syncOil(today);
-                syncKospi(today);
+                LocalDate targetEndDate = today.minusDays(1);
+                log.info("KRX Sync: Catch-up sync running for confirmed closing prices up to yesterday ({})", targetEndDate);
+                syncGold(targetEndDate);
+                syncOil(targetEndDate);
+                syncKospi(targetEndDate);
+                cleanupUnconfirmedPrices(today);
                 log.info("KRX Sync: Catch-up sync finished successfully.");
             } catch (Exception e) {
                 log.error("KRX Sync error: {}", e.getMessage(), e);
@@ -71,17 +74,31 @@ public class KrxMarketDataSyncService {
         });
     }
 
-    private void syncGold(LocalDate today) {
-        // 1. Always verify recent 7 days (today included) from KRX to update official closing prices
-        LocalDate recentStart = today.minusDays(7);
-        syncGoldRange(recentStart, today);
+    private void cleanupUnconfirmedPrices(LocalDate today) {
+        try {
+            new org.springframework.transaction.support.TransactionTemplate(transactionManager).execute(status -> {
+                dailyMetalPriceRepository.deleteByPriceDateGreaterThanEqual(today);
+                dailyPetroleumPriceRepository.deleteByDateGreaterThanEqual(today);
+                dailyKospiPriceRepository.deleteByDateGreaterThanEqual(today);
+                return null;
+            });
+            log.info("KRX Sync: Successfully cleaned up unconfirmed future prices on/after {}", today);
+        } catch (Exception e) {
+            log.warn("Failed to cleanup unconfirmed prices on/after {}: {}", today, e.getMessage());
+        }
+    }
+
+    private void syncGold(LocalDate targetEndDate) {
+        // 1. Always verify recent 7 days up to targetEndDate (yesterday)
+        LocalDate recentStart = targetEndDate.minusDays(7);
+        syncGoldRange(recentStart, targetEndDate);
 
         // 2. Backfill older historical data if needed
         Optional<DailyMetalPrice> oldestOpt = dailyMetalPriceRepository.findFirstByMetalTypeOrderByPriceDateAsc("GOLD_24K");
-        LocalDate targetStart = today.minusDays(1095);
+        LocalDate targetStart = targetEndDate.minusDays(1095);
         if (!oldestOpt.isPresent() || oldestOpt.get().getPriceDate().isAfter(targetStart)) {
             LocalDate backfillStart = targetStart;
-            LocalDate backfillEnd = oldestOpt.isPresent() ? oldestOpt.get().getPriceDate().minusDays(1) : today.minusDays(8);
+            LocalDate backfillEnd = oldestOpt.isPresent() ? oldestOpt.get().getPriceDate().minusDays(1) : targetEndDate.minusDays(8);
             if (!backfillStart.isAfter(backfillEnd)) {
                 syncGoldRange(backfillStart, backfillEnd);
             }
@@ -163,15 +180,15 @@ public class KrxMarketDataSyncService {
         }
     }
 
-    private void syncOil(LocalDate today) {
-        LocalDate recentStart = today.minusDays(7);
-        syncOilRange(recentStart, today);
+    private void syncOil(LocalDate targetEndDate) {
+        LocalDate recentStart = targetEndDate.minusDays(7);
+        syncOilRange(recentStart, targetEndDate);
 
         Optional<DailyPetroleumPrice> oldestOpt = dailyPetroleumPriceRepository.findFirstByOrderByDateAsc();
-        LocalDate targetStart = today.minusDays(1095);
+        LocalDate targetStart = targetEndDate.minusDays(1095);
         if (!oldestOpt.isPresent() || oldestOpt.get().getDate().isAfter(targetStart)) {
             LocalDate backfillStart = targetStart;
-            LocalDate backfillEnd = oldestOpt.isPresent() ? oldestOpt.get().getDate().minusDays(1) : today.minusDays(8);
+            LocalDate backfillEnd = oldestOpt.isPresent() ? oldestOpt.get().getDate().minusDays(1) : targetEndDate.minusDays(8);
             if (!backfillStart.isAfter(backfillEnd)) {
                 syncOilRange(backfillStart, backfillEnd);
             }
@@ -252,15 +269,15 @@ public class KrxMarketDataSyncService {
         }
     }
 
-    private void syncKospi(LocalDate today) {
-        LocalDate recentStart = today.minusDays(7);
-        syncKospiRange(recentStart, today);
+    private void syncKospi(LocalDate targetEndDate) {
+        LocalDate recentStart = targetEndDate.minusDays(7);
+        syncKospiRange(recentStart, targetEndDate);
 
         Optional<DailyKospiPrice> oldestOpt = dailyKospiPriceRepository.findFirstByOrderByDateAsc();
-        LocalDate targetStart = today.minusDays(1095);
+        LocalDate targetStart = targetEndDate.minusDays(1095);
         if (!oldestOpt.isPresent() || oldestOpt.get().getDate().isAfter(targetStart)) {
             LocalDate backfillStart = targetStart;
-            LocalDate backfillEnd = oldestOpt.isPresent() ? oldestOpt.get().getDate().minusDays(1) : today.minusDays(8);
+            LocalDate backfillEnd = oldestOpt.isPresent() ? oldestOpt.get().getDate().minusDays(1) : targetEndDate.minusDays(8);
             if (!backfillStart.isAfter(backfillEnd)) {
                 syncKospiRange(backfillStart, backfillEnd);
             }

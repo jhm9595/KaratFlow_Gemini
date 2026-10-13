@@ -50,7 +50,7 @@ export const PetroleumKospiChart: React.FC = () => {
                     </div>
                     <h4 className="m-0 text-800 font-bold text-base">
                         {activeTab === 'petroleum' ? '석유 시세' : '코스피 지수'}
-                        <span className="text-xs text-500 font-normal ml-1">(KRX)</span>
+                        <span className="text-xs text-500 font-normal ml-1">(KRX 종가 기준)</span>
                     </h4>
                 </div>
 
