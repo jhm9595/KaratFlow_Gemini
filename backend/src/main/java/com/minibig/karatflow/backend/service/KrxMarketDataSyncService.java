@@ -58,20 +58,11 @@ public class KrxMarketDataSyncService {
         java.util.concurrent.CompletableFuture.runAsync(() -> {
             try {
                 LocalDate today = LocalDate.now();
-                long goldCount = dailyMetalPriceRepository.count();
-                boolean hasGoldToday = dailyMetalPriceRepository.findByPriceDateAndMetalType(today, "GOLD_24K").isPresent();
-                boolean hasOilToday = dailyPetroleumPriceRepository.findByDate(today).isPresent();
-                boolean hasKospiToday = dailyKospiPriceRepository.findByDate(today).isPresent();
-
-                if (hasGoldToday && hasOilToday && hasKospiToday && goldCount >= 700) {
-                    log.info("KRX Sync: All market data up to date for {} (Count: {}). Skipping API calls.", today, goldCount);
-                    return;
-                }
-
-                log.info("KRX Sync: Catch-up sync running in background (Today present: {}, Gold Count: {}).", hasGoldToday, goldCount);
+                log.info("KRX Sync: Catch-up sync running for recent days up to {}...", today);
                 syncGold(today);
                 syncOil(today);
                 syncKospi(today);
+                log.info("KRX Sync: Catch-up sync finished successfully.");
             } catch (Exception e) {
                 log.error("KRX Sync error: {}", e.getMessage(), e);
             } finally {
@@ -81,20 +72,16 @@ public class KrxMarketDataSyncService {
     }
 
     private void syncGold(LocalDate today) {
-        Optional<DailyMetalPrice> latestOpt = dailyMetalPriceRepository.findFirstByMetalTypeOrderByPriceDateDesc("GOLD_24K");
-        Optional<DailyMetalPrice> oldestOpt = dailyMetalPriceRepository.findFirstByMetalTypeOrderByPriceDateAsc("GOLD_24K");
-
-        // 1. Sync from latest existing date up to today FIRST (takes ~3 seconds for missing recent days)
-        LocalDate latestStart = latestOpt.isPresent() ? latestOpt.get().getPriceDate().plusDays(1) : today.minusDays(30);
-        if (!latestStart.isAfter(today)) {
-            syncGoldRange(latestStart, today);
-        }
+        // 1. Always verify recent 7 days (today included) from KRX to update official closing prices
+        LocalDate recentStart = today.minusDays(7);
+        syncGoldRange(recentStart, today);
 
         // 2. Backfill older historical data if needed
+        Optional<DailyMetalPrice> oldestOpt = dailyMetalPriceRepository.findFirstByMetalTypeOrderByPriceDateAsc("GOLD_24K");
         LocalDate targetStart = today.minusDays(1095);
         if (!oldestOpt.isPresent() || oldestOpt.get().getPriceDate().isAfter(targetStart)) {
             LocalDate backfillStart = targetStart;
-            LocalDate backfillEnd = oldestOpt.isPresent() ? oldestOpt.get().getPriceDate().minusDays(1) : today;
+            LocalDate backfillEnd = oldestOpt.isPresent() ? oldestOpt.get().getPriceDate().minusDays(1) : today.minusDays(8);
             if (!backfillStart.isAfter(backfillEnd)) {
                 syncGoldRange(backfillStart, backfillEnd);
             }
@@ -103,15 +90,18 @@ public class KrxMarketDataSyncService {
 
     private void syncGoldRange(LocalDate startDate, LocalDate endDate) {
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            if (dailyMetalPriceRepository.findByPriceDateAndMetalType(date, "GOLD_24K").isPresent()) {
+            boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
+            Optional<DailyMetalPrice> existingOpt = dailyMetalPriceRepository.findByPriceDateAndMetalType(date, "GOLD_24K");
+
+            // Skip if older than recent 7 days and already has verified trading volume
+            if (date.isBefore(endDate.minusDays(6)) && existingOpt.isPresent() && existingOpt.get().getTradingVolume() != null && existingOpt.get().getTradingVolume() > 0) {
                 continue;
             }
 
             boolean saved = false;
-            boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
 
             if (!isWeekend && krxApiKey != null && !krxApiKey.trim().isEmpty()) {
-                try { Thread.sleep(200); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(150); } catch (InterruptedException ignored) {}
 
                 String basDd = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
                 try {
@@ -126,22 +116,26 @@ public class KrxMarketDataSyncService {
                         List<Map<String, Object>> list = (List<Map<String, Object>>) body.get("OutBlock_1");
                         if (list != null && !list.isEmpty()) {
                             for (Map<String, Object> item : list) {
-                                if ("04020000".equals(String.valueOf(item.get("ISU_CD"))) || "금99.99_1kg".equals(String.valueOf(item.get("ISU_NM")))) {
+                                String isuCd = String.valueOf(item.get("ISU_CD"));
+                                String isuNm = String.valueOf(item.get("ISU_NM")).replaceAll("\\s+", "");
+                                if ("04020000".equals(isuCd) || isuNm.contains("금99.99")) {
                                     double clpr = parseNumeric(item.get("TDD_CLSPRC"), 0.0);
                                     double vol = parseNumeric(item.get("ACC_TRDVOL"), 0.0);
                                     double val = parseNumeric(item.get("ACC_TRDVAL"), 0.0);
 
-                                    DailyMetalPrice newPrice = new DailyMetalPrice();
-                                    newPrice.setPriceDate(date);
-                                    newPrice.setMetalType("GOLD_24K");
-                                    newPrice.setPricePerGram(clpr);
-                                    newPrice.setPricePer375g((double) Math.round(clpr * 3.75));
-                                    newPrice.setTradingVolume(vol);
-                                    newPrice.setTradingValue(val);
-                                    dailyMetalPriceRepository.save(newPrice);
-                                    saved = true;
-                                    log.info("KRX Gold: Saved raw g-price {} won/g for {}", clpr, date);
-                                    break;
+                                    if (clpr > 0) {
+                                        DailyMetalPrice price = existingOpt.orElseGet(DailyMetalPrice::new);
+                                        price.setPriceDate(date);
+                                        price.setMetalType("GOLD_24K");
+                                        price.setPricePerGram(clpr);
+                                        price.setPricePer375g((double) Math.round(clpr * 3.75));
+                                        price.setTradingVolume(vol);
+                                        price.setTradingValue(val);
+                                        dailyMetalPriceRepository.save(price);
+                                        saved = true;
+                                        log.info("KRX Gold: Saved/Updated raw g-price {} won/g for {}", clpr, date);
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -152,17 +146,17 @@ public class KrxMarketDataSyncService {
             }
 
             if (!saved) {
-                Optional<DailyMetalPrice> prevOpt = dailyMetalPriceRepository.findFirstByMetalTypeOrderByPriceDateDesc("GOLD_24K");
+                Optional<DailyMetalPrice> prevOpt = dailyMetalPriceRepository.findFirstByMetalTypeAndPriceDateLessThanOrderByPriceDateDesc("GOLD_24K", date);
                 if (prevOpt.isPresent()) {
                     DailyMetalPrice prev = prevOpt.get();
-                    DailyMetalPrice cfPrice = new DailyMetalPrice();
-                    cfPrice.setPriceDate(date);
-                    cfPrice.setMetalType("GOLD_24K");
-                    cfPrice.setPricePerGram(prev.getEffectiveGramPrice());
-                    cfPrice.setPricePer375g(prev.getEffective375gPrice());
-                    cfPrice.setTradingVolume(prev.getTradingVolume());
-                    cfPrice.setTradingValue(prev.getTradingValue());
-                    dailyMetalPriceRepository.save(cfPrice);
+                    DailyMetalPrice price = existingOpt.orElseGet(DailyMetalPrice::new);
+                    price.setPriceDate(date);
+                    price.setMetalType("GOLD_24K");
+                    price.setPricePerGram(prev.getEffectiveGramPrice());
+                    price.setPricePer375g(prev.getEffective375gPrice());
+                    price.setTradingVolume(0.0);
+                    price.setTradingValue(0.0);
+                    dailyMetalPriceRepository.save(price);
                     log.info("KRX Gold (Carry-Forward): Saved g-price {} for {}", prev.getEffectiveGramPrice(), date);
                 }
             }
@@ -170,18 +164,14 @@ public class KrxMarketDataSyncService {
     }
 
     private void syncOil(LocalDate today) {
-        Optional<DailyPetroleumPrice> latestOpt = dailyPetroleumPriceRepository.findFirstByOrderByDateDesc();
+        LocalDate recentStart = today.minusDays(7);
+        syncOilRange(recentStart, today);
+
         Optional<DailyPetroleumPrice> oldestOpt = dailyPetroleumPriceRepository.findFirstByOrderByDateAsc();
-
-        LocalDate latestStart = latestOpt.isPresent() ? latestOpt.get().getDate().plusDays(1) : today.minusDays(30);
-        if (!latestStart.isAfter(today)) {
-            syncOilRange(latestStart, today);
-        }
-
         LocalDate targetStart = today.minusDays(1095);
         if (!oldestOpt.isPresent() || oldestOpt.get().getDate().isAfter(targetStart)) {
             LocalDate backfillStart = targetStart;
-            LocalDate backfillEnd = oldestOpt.isPresent() ? oldestOpt.get().getDate().minusDays(1) : today;
+            LocalDate backfillEnd = oldestOpt.isPresent() ? oldestOpt.get().getDate().minusDays(1) : today.minusDays(8);
             if (!backfillStart.isAfter(backfillEnd)) {
                 syncOilRange(backfillStart, backfillEnd);
             }
@@ -190,15 +180,17 @@ public class KrxMarketDataSyncService {
 
     private void syncOilRange(LocalDate startDate, LocalDate endDate) {
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            if (dailyPetroleumPriceRepository.findByDate(date).isPresent()) {
+            boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
+            Optional<DailyPetroleumPrice> existingOpt = dailyPetroleumPriceRepository.findByDate(date);
+
+            if (date.isBefore(endDate.minusDays(6)) && existingOpt.isPresent() && existingOpt.get().getGasolinePrice() != null && existingOpt.get().getGasolinePrice() > 0) {
                 continue;
             }
 
             boolean saved = false;
-            boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
 
             if (!isWeekend && krxApiKey != null && !krxApiKey.trim().isEmpty()) {
-                try { Thread.sleep(200); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(150); } catch (InterruptedException ignored) {}
 
                 String basDd = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
                 try {
@@ -228,12 +220,12 @@ public class KrxMarketDataSyncService {
                             }
 
                             if (gasoline > 0 || diesel > 0 || kerosene > 0) {
-                                DailyPetroleumPrice newPrice = new DailyPetroleumPrice();
-                                newPrice.setDate(date);
-                                newPrice.setGasolinePrice(gasoline);
-                                newPrice.setDieselPrice(diesel);
-                                newPrice.setKerosenePrice(kerosene);
-                                dailyPetroleumPriceRepository.save(newPrice);
+                                DailyPetroleumPrice price = existingOpt.orElseGet(DailyPetroleumPrice::new);
+                                price.setDate(date);
+                                price.setGasolinePrice(gasoline);
+                                price.setDieselPrice(diesel);
+                                price.setKerosenePrice(kerosene);
+                                dailyPetroleumPriceRepository.save(price);
                                 saved = true;
                                 log.info("KRX Oil: Saved Gas:{} Diesel:{} for {}", gasoline, diesel, date);
                             }
@@ -245,15 +237,15 @@ public class KrxMarketDataSyncService {
             }
 
             if (!saved) {
-                Optional<DailyPetroleumPrice> prevOpt = dailyPetroleumPriceRepository.findFirstByOrderByDateDesc();
+                Optional<DailyPetroleumPrice> prevOpt = dailyPetroleumPriceRepository.findFirstByDateLessThanOrderByDateDesc(date);
                 if (prevOpt.isPresent()) {
                     DailyPetroleumPrice prev = prevOpt.get();
-                    DailyPetroleumPrice cfPrice = new DailyPetroleumPrice();
-                    cfPrice.setDate(date);
-                    cfPrice.setGasolinePrice(prev.getGasolinePrice());
-                    cfPrice.setDieselPrice(prev.getDieselPrice());
-                    cfPrice.setKerosenePrice(prev.getKerosenePrice());
-                    dailyPetroleumPriceRepository.save(cfPrice);
+                    DailyPetroleumPrice price = existingOpt.orElseGet(DailyPetroleumPrice::new);
+                    price.setDate(date);
+                    price.setGasolinePrice(prev.getGasolinePrice());
+                    price.setDieselPrice(prev.getDieselPrice());
+                    price.setKerosenePrice(prev.getKerosenePrice());
+                    dailyPetroleumPriceRepository.save(price);
                     log.info("KRX Oil (Carry-Forward): Saved oil price for {}", date);
                 }
             }
@@ -261,18 +253,14 @@ public class KrxMarketDataSyncService {
     }
 
     private void syncKospi(LocalDate today) {
-        Optional<DailyKospiPrice> latestOpt = dailyKospiPriceRepository.findFirstByOrderByDateDesc();
+        LocalDate recentStart = today.minusDays(7);
+        syncKospiRange(recentStart, today);
+
         Optional<DailyKospiPrice> oldestOpt = dailyKospiPriceRepository.findFirstByOrderByDateAsc();
-
-        LocalDate latestStart = latestOpt.isPresent() ? latestOpt.get().getDate().plusDays(1) : today.minusDays(30);
-        if (!latestStart.isAfter(today)) {
-            syncKospiRange(latestStart, today);
-        }
-
         LocalDate targetStart = today.minusDays(1095);
         if (!oldestOpt.isPresent() || oldestOpt.get().getDate().isAfter(targetStart)) {
             LocalDate backfillStart = targetStart;
-            LocalDate backfillEnd = oldestOpt.isPresent() ? oldestOpt.get().getDate().minusDays(1) : today;
+            LocalDate backfillEnd = oldestOpt.isPresent() ? oldestOpt.get().getDate().minusDays(1) : today.minusDays(8);
             if (!backfillStart.isAfter(backfillEnd)) {
                 syncKospiRange(backfillStart, backfillEnd);
             }
@@ -281,15 +269,17 @@ public class KrxMarketDataSyncService {
 
     private void syncKospiRange(LocalDate startDate, LocalDate endDate) {
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            if (dailyKospiPriceRepository.findByDate(date).isPresent()) {
+            boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
+            Optional<DailyKospiPrice> existingOpt = dailyKospiPriceRepository.findByDate(date);
+
+            if (date.isBefore(endDate.minusDays(6)) && existingOpt.isPresent() && existingOpt.get().getKospiIndex() != null && existingOpt.get().getKospiIndex() > 0) {
                 continue;
             }
 
             boolean saved = false;
-            boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
 
             if (!isWeekend && krxApiKey != null && !krxApiKey.trim().isEmpty()) {
-                try { Thread.sleep(200); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(150); } catch (InterruptedException ignored) {}
 
                 String basDd = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
                 try {
@@ -326,12 +316,12 @@ public class KrxMarketDataSyncService {
                             }
 
                             if (kospi > 0) {
-                                DailyKospiPrice newPrice = new DailyKospiPrice();
-                                newPrice.setDate(date);
-                                newPrice.setKospiIndex(kospi);
-                                newPrice.setKospi200Index(kospi200);
-                                newPrice.setTradingValue(val);
-                                dailyKospiPriceRepository.save(newPrice);
+                                DailyKospiPrice price = existingOpt.orElseGet(DailyKospiPrice::new);
+                                price.setDate(date);
+                                price.setKospiIndex(kospi);
+                                price.setKospi200Index(kospi200);
+                                price.setTradingValue(val);
+                                dailyKospiPriceRepository.save(price);
                                 saved = true;
                                 log.info("KRX KOSPI: Saved KOSPI:{} KOSPI200:{} for {}", kospi, kospi200, date);
                             }
@@ -343,15 +333,15 @@ public class KrxMarketDataSyncService {
             }
 
             if (!saved) {
-                Optional<DailyKospiPrice> prevOpt = dailyKospiPriceRepository.findFirstByOrderByDateDesc();
+                Optional<DailyKospiPrice> prevOpt = dailyKospiPriceRepository.findFirstByDateLessThanOrderByDateDesc(date);
                 if (prevOpt.isPresent()) {
                     DailyKospiPrice prev = prevOpt.get();
-                    DailyKospiPrice cfPrice = new DailyKospiPrice();
-                    cfPrice.setDate(date);
-                    cfPrice.setKospiIndex(prev.getKospiIndex());
-                    cfPrice.setKospi200Index(prev.getKospi200Index());
-                    cfPrice.setTradingValue(prev.getTradingValue());
-                    dailyKospiPriceRepository.save(cfPrice);
+                    DailyKospiPrice price = existingOpt.orElseGet(DailyKospiPrice::new);
+                    price.setDate(date);
+                    price.setKospiIndex(prev.getKospiIndex());
+                    price.setKospi200Index(prev.getKospi200Index());
+                    price.setTradingValue(0L);
+                    dailyKospiPriceRepository.save(price);
                     log.info("KRX KOSPI (Carry-Forward): Saved KOSPI {} for {}", prev.getKospiIndex(), date);
                 }
             }

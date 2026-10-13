@@ -9,6 +9,7 @@ public interface DailyMetalPriceRepository extends JpaRepository<DailyMetalPrice
     Optional<DailyMetalPrice> findByPriceDateAndMetalType(LocalDate date, String metalType);
     Optional<DailyMetalPrice> findFirstByMetalTypeOrderByPriceDateDesc(String metalType);
     Optional<DailyMetalPrice> findFirstByMetalTypeOrderByPriceDateAsc(String metalType);
+    Optional<DailyMetalPrice> findFirstByMetalTypeAndPriceDateLessThanOrderByPriceDateDesc(String metalType, LocalDate priceDate);
     java.util.List<DailyMetalPrice> findTop7ByMetalTypeOrderByPriceDateDesc(String metalType);
     java.util.List<DailyMetalPrice> findTop90ByMetalTypeOrderByPriceDateDesc(String metalType);
     java.util.List<DailyMetalPrice> findAllByMetalTypeOrderByPriceDateAsc(String metalType);

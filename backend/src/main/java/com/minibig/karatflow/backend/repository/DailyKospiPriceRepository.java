@@ -10,6 +10,7 @@ public interface DailyKospiPriceRepository extends JpaRepository<DailyKospiPrice
     Optional<DailyKospiPrice> findByDate(LocalDate date);
     Optional<DailyKospiPrice> findFirstByOrderByDateDesc();
     Optional<DailyKospiPrice> findFirstByOrderByDateAsc();
+    Optional<DailyKospiPrice> findFirstByDateLessThanOrderByDateDesc(LocalDate date);
     List<DailyKospiPrice> findAllByOrderByDateAsc();
     List<DailyKospiPrice> findTop7ByOrderByDateDesc();
 }

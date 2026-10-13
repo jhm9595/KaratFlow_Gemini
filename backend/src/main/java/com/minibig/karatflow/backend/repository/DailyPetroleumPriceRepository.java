@@ -10,6 +10,7 @@ public interface DailyPetroleumPriceRepository extends JpaRepository<DailyPetrol
     Optional<DailyPetroleumPrice> findByDate(LocalDate date);
     Optional<DailyPetroleumPrice> findFirstByOrderByDateDesc();
     Optional<DailyPetroleumPrice> findFirstByOrderByDateAsc();
+    Optional<DailyPetroleumPrice> findFirstByDateLessThanOrderByDateDesc(LocalDate date);
     List<DailyPetroleumPrice> findAllByOrderByDateAsc();
     List<DailyPetroleumPrice> findTop7ByOrderByDateDesc();
 }
