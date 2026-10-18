@@ -97,4 +97,38 @@ public class DatabaseCleanupConfig {
             }
         };
     }
+
+    @Bean
+    public CommandLineRunner migrateOrderStatuses(JdbcTemplate jdbcTemplate) {
+        return args -> {
+            log.info("Starting OrderStatus normalization migration...");
+            try {
+                // 1. COMPLETED 일괄 정규화
+                int completedUpdated = jdbcTemplate.update(
+                        "UPDATE orders SET status = 'COMPLETED' " +
+                        "WHERE UPPER(TRIM(status)) IN ('완료', '완성', 'DONE', 'COMPLETED')"
+                );
+                log.info("Migrated {} orders to COMPLETED status", completedUpdated);
+
+                // 2. CANCELLED 일괄 정규화
+                int cancelledUpdated = jdbcTemplate.update(
+                        "UPDATE orders SET status = 'CANCELLED' " +
+                        "WHERE UPPER(TRIM(status)) IN ('취소', 'CANCEL', 'CANCELLED')"
+                );
+                log.info("Migrated {} orders to CANCELLED status", cancelledUpdated);
+
+                // 3. 그 외 NULL 또는 비표준 값은 PROCESSING으로 정규화
+                int processingUpdated = jdbcTemplate.update(
+                        "UPDATE orders SET status = 'PROCESSING' " +
+                        "WHERE status IS NULL OR UPPER(TRIM(status)) NOT IN ('COMPLETED', 'CANCELLED')"
+                );
+                log.info("Migrated {} orders to PROCESSING status", processingUpdated);
+
+                log.info("OrderStatus normalization migration completed successfully.");
+            } catch (Exception e) {
+                log.error("Failed during OrderStatus normalization migration: {}", e.getMessage(), e);
+            }
+        };
+    }
 }
+

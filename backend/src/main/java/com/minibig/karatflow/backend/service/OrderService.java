@@ -89,51 +89,55 @@ public class OrderService {
                     if (tpl == null) tpl = defaultTpl;
                     List<ProcessTemplateStep> steps = (tpl != null && tpl.getSteps() != null) ? tpl.getSteps() : Collections.emptyList();
 
-                    String status = (String) firstRow.get("STATUS");
+                    String rawStatus = (String) firstRow.get("STATUS");
+                    String status = OrderStatus.normalize(rawStatus);
                     boolean isHold = orderRows.stream().anyMatch(r -> Boolean.TRUE.equals(r.get("ISHOLD")));
 
-                    // Determine effective stage of the order across all its work orders
-                    String stage;
-                    if (OrderStatus.isCancelled(status)) {
-                        stage = "취소";
-                    } else if (OrderStatus.isCompleted(status)) {
-                        stage = "완료";
-                    } else {
-                        boolean allCompleted = !steps.isEmpty() && orderRows.stream().allMatch(r -> {
-                            String s = (String) r.get("STAGE");
-                            if (s == null) return false;
-                            String lastStageName = steps.get(steps.size() - 1).getStageName();
-                            return s.trim().equalsIgnoreCase(lastStageName.trim()) || OrderStatus.isCompleted(s);
-                        });
-                        if (allCompleted) {
-                            stage = "완료";
-                        } else {
-                            // Find the bottleneck stage (earliest uncompleted step in the template sequence)
-                            int minStepIdx = Integer.MAX_VALUE;
-                            String minStageName = null;
-                            for (Map<String, Object> r : orderRows) {
-                                String rStage = (String) r.get("STAGE");
-                                int stepIdx = -1;
-                                for (int i = 0; i < steps.size(); i++) {
-                                    ProcessTemplateStep step = steps.get(i);
-                                    if (step.getStageName() != null && step.getStageName().equalsIgnoreCase(rStage)) {
-                                        stepIdx = i;
-                                        break;
-                                    }
-                                }
-                                if (stepIdx >= 0 && stepIdx < minStepIdx) {
-                                    minStepIdx = stepIdx;
-                                    minStageName = steps.get(stepIdx).getStageName();
-                                }
-                            }
-                            if (minStageName != null) {
-                                stage = minStageName;
-                            } else if (!steps.isEmpty()) {
-                                stage = steps.get(0).getStageName();
-                            } else {
-                                stage = (String) firstRow.get("STAGE");
+                    // Determine effective physical stage of the order across all its work orders
+                    String lastStageName = !steps.isEmpty() ? steps.get(steps.size() - 1).getStageName() : "완료";
+                    boolean allCompleted = !steps.isEmpty() && orderRows.stream().allMatch(r -> {
+                        String s = (String) r.get("STAGE");
+                        if (s == null) return false;
+                        return s.trim().equalsIgnoreCase(lastStageName.trim()) || OrderStatus.isCompleted(s);
+                    });
+
+                    // If all work orders completed and not cancelled, ensure order status is COMPLETED
+                    if (allCompleted && !status.equals(OrderStatus.CANCELLED.name())) {
+                        status = OrderStatus.COMPLETED.name();
+                    }
+
+                    // Find the bottleneck stage (earliest uncompleted step in the template sequence)
+                    int minStepIdx = Integer.MAX_VALUE;
+                    String minStageName = null;
+                    for (Map<String, Object> r : orderRows) {
+                        String rStage = (String) r.get("STAGE");
+                        int stepIdx = -1;
+                        for (int i = 0; i < steps.size(); i++) {
+                            ProcessTemplateStep step = steps.get(i);
+                            if (step.getStageName() != null && step.getStageName().equalsIgnoreCase(rStage)) {
+                                stepIdx = i;
+                                break;
                             }
                         }
+                        if (stepIdx >= 0 && stepIdx < minStepIdx) {
+                            minStepIdx = stepIdx;
+                            minStageName = steps.get(stepIdx).getStageName();
+                        }
+                    }
+
+                    // Physical stage resolution:
+                    // - When completed: reflects the last step of the template (e.g. "출고")
+                    // - When processing or cancelled: reflects actual bottleneck physical stage
+                    String stage;
+                    if (status.equals(OrderStatus.COMPLETED.name())) {
+                        stage = lastStageName;
+                    } else if (minStageName != null) {
+                        stage = minStageName;
+                    } else if (!steps.isEmpty()) {
+                        stage = steps.get(0).getStageName();
+                    } else {
+                        stage = (String) firstRow.get("STAGE");
+                        if (stage == null || stage.isBlank()) stage = "접수";
                     }
 
                     // Total quantity: count of work orders or maximum of orderItem quantity

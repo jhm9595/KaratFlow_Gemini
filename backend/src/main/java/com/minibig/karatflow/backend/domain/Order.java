@@ -72,4 +72,19 @@ public class Order extends BaseEntity {
 
     @Column(name = "user_id")
     private Long userId;
+
+    public void setStatus(OrderStatus status) {
+        this.status = status != null ? status.name() : OrderStatus.PROCESSING.name();
+    }
+
+    public void setStatus(String status) {
+        this.status = OrderStatus.normalize(status);
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void ensureValidStatus() {
+        this.status = OrderStatus.normalize(this.status);
+    }
 }
+

@@ -48,20 +48,6 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
         keyword: ''
     });
 
-    // Helper: find the last stage name for an order's template
-    const getLastStageNameForOrder = (order: any): string | undefined => {
-        if (order.templateSteps && order.templateSteps.length > 0) {
-            return order.templateSteps[order.templateSteps.length - 1].stageName;
-        }
-        const tpl = (templates || []).find(t => t.id === order.templateId || t.templateName === order.templateName);
-        if (tpl && tpl.steps && tpl.steps.length > 0) {
-            return tpl.steps[tpl.steps.length - 1].stageName;
-        }
-        if (pipelineSteps && pipelineSteps.length > 0) {
-            return pipelineSteps[pipelineSteps.length - 1].stageName;
-        }
-        return undefined;
-    };
 
     // 1. Template dropdown options
     const templateOptions = useMemo(() => {
@@ -176,8 +162,6 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
     // Filter orders according to appliedFilters
     const filteredOrders = useMemo(() => {
         return orders.filter(o => {
-            const lastStageName = getLastStageNameForOrder(o);
-
             // 1. Template Filter
             if (appliedFilters.template !== ORDER_STATUS.ALL) {
                 const matchesId = o.templateId === appliedFilters.template;
@@ -190,31 +174,16 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
 
             // 2. Order Status Filter (Lifecycle: PROCESSING / COMPLETED / CANCELLED)
             if (appliedFilters.status !== ORDER_STATUS.ALL) {
-                if (appliedFilters.status === ORDER_STATUS.CANCELLED) {
-                    if (!isOrderCancelled(o)) return false;
-                } else if (appliedFilters.status === ORDER_STATUS.COMPLETED) {
-                    if (!isOrderCompleted(o, lastStageName)) return false;
-                } else if (appliedFilters.status === ORDER_STATUS.PROCESSING) {
-                    if (!isOrderProcessing(o, lastStageName)) return false;
-                }
+                if (appliedFilters.status === ORDER_STATUS.CANCELLED && !isOrderCancelled(o)) return false;
+                if (appliedFilters.status === ORDER_STATUS.COMPLETED && !isOrderCompleted(o)) return false;
+                if (appliedFilters.status === ORDER_STATUS.PROCESSING && !isOrderProcessing(o)) return false;
             }
 
-            // 3. Stage Filter (Pure process stage)
+            // 3. Stage Filter (Pure physical process stage)
             if (appliedFilters.stage !== ORDER_STATUS.ALL) {
-                // If filtering by stage and status is not CANCELLED, ignore cancelled orders
-                if (isOrderCancelled(o) && appliedFilters.status !== ORDER_STATUS.CANCELLED) {
-                    return false;
-                }
-
                 const selectedStage = appliedFilters.stage.trim().toLowerCase();
                 const orderStage = (o.stage || '').trim().toLowerCase();
-                const isSelectedStageLastStep = Boolean(lastStageName && lastStageName.trim().toLowerCase() === selectedStage);
-
-                // Matches if exact stage matches OR if selected stage is the template's last step and order is completed
-                const matchesExact = orderStage === selectedStage;
-                const matchesLastStepCompleted = isSelectedStageLastStep && isOrderCompleted(o, lastStageName);
-
-                if (!matchesExact && !matchesLastStepCompleted) {
+                if (orderStage !== selectedStage) {
                     return false;
                 }
             }
@@ -233,12 +202,13 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
 
             return true;
         });
-    }, [orders, appliedFilters, templates, pipelineSteps]);
+    }, [orders, appliedFilters, templates]);
 
     const totalCount = filteredOrders.length;
-    const processingCount = filteredOrders.filter(o => isOrderProcessing(o, getLastStageNameForOrder(o))).length;
-    const completedCount = filteredOrders.filter(o => isOrderCompleted(o, getLastStageNameForOrder(o))).length;
+    const processingCount = filteredOrders.filter(o => isOrderProcessing(o)).length;
+    const completedCount = filteredOrders.filter(o => isOrderCompleted(o)).length;
     const cancelledCount = filteredOrders.filter(o => isOrderCancelled(o)).length;
+
 
     return (
         <div className="p-4 surface-ground min-h-screen">

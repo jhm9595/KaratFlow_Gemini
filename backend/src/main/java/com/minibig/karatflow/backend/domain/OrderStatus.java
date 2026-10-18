@@ -30,4 +30,17 @@ public enum OrderStatus {
     public static boolean isTerminal(String status) {
         return isCompleted(status) || isCancelled(status);
     }
+
+    public static OrderStatus fromString(String status) {
+        if (status == null) return PROCESSING;
+        String clean = status.trim();
+        if (isCompleted(clean)) return COMPLETED;
+        if (isCancelled(clean)) return CANCELLED;
+        return PROCESSING;
+    }
+
+    public static String normalize(String status) {
+        return fromString(status).name();
+    }
 }
+
