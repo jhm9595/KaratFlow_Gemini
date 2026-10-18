@@ -1,4 +1,5 @@
 import React from 'react';
+import { isOrderCancelled, isOrderCompleted } from '../../utils/orderStatus';
 
 interface PipelineStatusBadgeProps {
     rowData: any;
@@ -9,9 +10,7 @@ interface PipelineStatusBadgeProps {
 export const PipelineStatusBadge: React.FC<PipelineStatusBadgeProps> = ({ rowData, pipelineSteps, pipelineStages }) => {
     if (!rowData) return null;
 
-    const isCancelled = rowData.status === 'CANCELLED' || rowData.status === '취소' || 
-                        rowData.stage === 'CANCELLED' || rowData.stage === '취소';
-    if (isCancelled) {
+    if (isOrderCancelled(rowData)) {
         return (
             <span 
                 className="px-3 py-1 text-white font-bold border-round text-xs shadow-1 inline-block" 
@@ -40,12 +39,12 @@ export const PipelineStatusBadge: React.FC<PipelineStatusBadgeProps> = ({ rowDat
     }
     if (!rawStage) rawStage = '대기';
 
-    const isCompleted = rowData.status === 'COMPLETED' || rowData.status === 'DONE' || 
-                        rawStage === 'COMPLETED' || rawStage === 'DONE' || rawStage === '완료';
+    const lastStepName = stepsToUse.length > 0 ? stepsToUse[stepsToUse.length - 1].stageName : undefined;
+    const isCompleted = isOrderCompleted(rowData, lastStepName);
 
     if (isCompleted && stepsToUse.length > 0) {
         const lastStage = stepsToUse[stepsToUse.length - 1].stageName || '완료';
-        rawStage = (rawStage && rawStage !== 'COMPLETED' && rawStage !== 'DONE') ? rawStage : lastStage;
+        rawStage = (rawStage && rawStage !== 'COMPLETED' && rawStage !== 'DONE' && rawStage !== '완료') ? rawStage : lastStage;
     }
 
     let matchedStep = stepsToUse.find((step: any) => step.stageName === rawStage);

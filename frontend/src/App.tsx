@@ -22,6 +22,7 @@ import { UserAccountPage } from './pages/UserAccountPage';
 import { compressImage } from './utils/imageCompressor';
 import { useModal } from './hooks/useModal';
 import { API_BASE_URL, getWsBrokerUrl } from './config/apiConfig';
+import { isOrderCancelled } from './utils/orderStatus';
 
 
 function App() {
@@ -36,7 +37,7 @@ function App() {
     const [orders, setOrders] = useState<any[]>([]);
 
     const dashboardOrders = useMemo(() => {
-        return orders.filter(o => o.status !== 'CANCELLED' && o.stage !== '취소');
+        return orders.filter(o => !isOrderCancelled(o));
     }, [orders]);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [filteredProducts, setFilteredProducts] = useState<any[]>([]);

@@ -7,6 +7,12 @@ import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { PipelineStatusBadge } from '../components/pipeline/PipelineStatusBadge';
 import { formatImageUrl } from '../utils/image';
+import { 
+    ORDER_STATUS, 
+    isOrderCancelled, 
+    isOrderCompleted, 
+    isOrderProcessing 
+} from '../utils/orderStatus';
 
 interface OrderAdminPageProps {
     orders: any[];
@@ -24,25 +30,43 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
     pipelineStages 
 }) => {
     // Form Input States
-    const [templateFilter, setTemplateFilter] = useState<string | number>('ALL');
-    const [stageFilter, setStageFilter] = useState<string>('ALL');
+    const [templateFilter, setTemplateFilter] = useState<string | number>(ORDER_STATUS.ALL);
+    const [stageFilter, setStageFilter] = useState<string>(ORDER_STATUS.ALL);
+    const [statusFilter, setStatusFilter] = useState<string>(ORDER_STATUS.ALL);
     const [searchKeyword, setSearchKeyword] = useState<string>('');
 
     // Applied Filter States (triggered by "조회" or Enter)
     const [appliedFilters, setAppliedFilters] = useState<{
         template: string | number;
         stage: string;
+        status: string;
         keyword: string;
     }>({
-        template: 'ALL',
-        stage: 'ALL',
+        template: ORDER_STATUS.ALL,
+        stage: ORDER_STATUS.ALL,
+        status: ORDER_STATUS.ALL,
         keyword: ''
     });
+
+    // Helper: find the last stage name for an order's template
+    const getLastStageNameForOrder = (order: any): string | undefined => {
+        if (order.templateSteps && order.templateSteps.length > 0) {
+            return order.templateSteps[order.templateSteps.length - 1].stageName;
+        }
+        const tpl = (templates || []).find(t => t.id === order.templateId || t.templateName === order.templateName);
+        if (tpl && tpl.steps && tpl.steps.length > 0) {
+            return tpl.steps[tpl.steps.length - 1].stageName;
+        }
+        if (pipelineSteps && pipelineSteps.length > 0) {
+            return pipelineSteps[pipelineSteps.length - 1].stageName;
+        }
+        return undefined;
+    };
 
     // 1. Template dropdown options
     const templateOptions = useMemo(() => {
         const opts = [
-            { label: '전체 (모든 템플릿)', value: 'ALL' }
+            { label: '전체 (모든 템플릿)', value: ORDER_STATUS.ALL }
         ];
         if (templates && templates.length > 0) {
             templates.forEach(t => {
@@ -61,17 +85,20 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
         return opts;
     }, [templates, orders]);
 
-    // 2. Stage options based on selected template (+ 취소)
+    // 2. Stage options based on selected template (Pure process stages only)
     const stageOptions = useMemo(() => {
         let availableStages: string[] = [];
 
-        if (templateFilter === 'ALL') {
+        if (templateFilter === ORDER_STATUS.ALL) {
             // All templates union of stages + pipelineStages
             const fromTemplates = (templates || []).flatMap(t => (t.steps || []).map((s: any) => s.stageName)).filter(Boolean);
             const fromPipeline = (pipelineStages && pipelineStages.length > 0)
                 ? pipelineStages
                 : (pipelineSteps && pipelineSteps.length > 0 ? pipelineSteps.map((s: any) => s.stageName) : []);
-            const fromOrders = orders.map(o => o.stage).filter(s => Boolean(s) && s !== '취소' && s !== 'CANCELLED');
+            const fromOrders = orders
+                .filter(o => !isOrderCancelled(o))
+                .map(o => o.stage)
+                .filter(s => Boolean(s) && !isOrderCancelled({ status: s, stage: s }) && !isOrderCompleted({ status: s, stage: s }));
             availableStages = Array.from(new Set([...fromTemplates, ...fromPipeline, ...fromOrders]));
         } else {
             // Specific template stages
@@ -87,32 +114,37 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
             }
         }
 
-        const opts = [
-            { label: '전체 (모든 공정)', value: 'ALL' },
+        return [
+            { label: '전체 (모든 공정)', value: ORDER_STATUS.ALL },
             ...availableStages.map((stage: string) => ({
                 label: stage,
                 value: stage
-            })),
-            { label: '취소', value: '취소' }
+            }))
         ];
-
-        return opts;
     }, [templateFilter, templates, pipelineStages, pipelineSteps, orders]);
+
+    // 3. Status dropdown options (Separated lifecycle status)
+    const statusOptions = useMemo(() => [
+        { label: '전체 (모든 상태)', value: ORDER_STATUS.ALL },
+        { label: '진행중 (접수/생산)', value: ORDER_STATUS.PROCESSING },
+        { label: '완료', value: ORDER_STATUS.COMPLETED },
+        { label: '취소', value: ORDER_STATUS.CANCELLED }
+    ], []);
 
     // Handle template dropdown change
     const handleTemplateChange = (val: string | number) => {
         setTemplateFilter(val);
         // Reset stage if current stage is not valid in new template
-        if (stageFilter !== 'ALL' && stageFilter !== '취소') {
+        if (stageFilter !== ORDER_STATUS.ALL) {
             let validStages: string[] = [];
-            if (val === 'ALL') {
+            if (val === ORDER_STATUS.ALL) {
                 validStages = (templates || []).flatMap(t => (t.steps || []).map((s: any) => s.stageName)).filter(Boolean);
             } else {
                 const cur = (templates || []).find(t => t.id === val);
                 validStages = (cur?.steps || []).map((s: any) => s.stageName || s.stageCode).filter(Boolean);
             }
             if (!validStages.includes(stageFilter)) {
-                setStageFilter('ALL');
+                setStageFilter(ORDER_STATUS.ALL);
             }
         }
     };
@@ -122,18 +154,21 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
         setAppliedFilters({
             template: templateFilter,
             stage: stageFilter,
+            status: statusFilter,
             keyword: searchKeyword
         });
     };
 
     // Handle "초기화" (Reset)
     const handleReset = () => {
-        setTemplateFilter('ALL');
-        setStageFilter('ALL');
+        setTemplateFilter(ORDER_STATUS.ALL);
+        setStageFilter(ORDER_STATUS.ALL);
+        setStatusFilter(ORDER_STATUS.ALL);
         setSearchKeyword('');
         setAppliedFilters({
-            template: 'ALL',
-            stage: 'ALL',
+            template: ORDER_STATUS.ALL,
+            stage: ORDER_STATUS.ALL,
+            status: ORDER_STATUS.ALL,
             keyword: ''
         });
     };
@@ -141,8 +176,10 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
     // Filter orders according to appliedFilters
     const filteredOrders = useMemo(() => {
         return orders.filter(o => {
+            const lastStageName = getLastStageNameForOrder(o);
+
             // 1. Template Filter
-            if (appliedFilters.template !== 'ALL') {
+            if (appliedFilters.template !== ORDER_STATUS.ALL) {
                 const matchesId = o.templateId === appliedFilters.template;
                 const curTpl = (templates || []).find(t => t.id === appliedFilters.template);
                 const matchesName = curTpl && o.templateName === curTpl.templateName;
@@ -151,20 +188,38 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
                 }
             }
 
-            // 2. Stage Filter
-            if (appliedFilters.stage !== 'ALL') {
-                const isOrderCancelled = o.status === 'CANCELLED' || o.status === '취소' || o.stage === 'CANCELLED' || o.stage === '취소';
-                if (appliedFilters.stage === '취소') {
-                    if (!isOrderCancelled) return false;
-                } else {
-                    if (isOrderCancelled) return false;
-                    if (!o.stage || o.stage.trim().toLowerCase() !== appliedFilters.stage.trim().toLowerCase()) {
-                        return false;
-                    }
+            // 2. Order Status Filter (Lifecycle: PROCESSING / COMPLETED / CANCELLED)
+            if (appliedFilters.status !== ORDER_STATUS.ALL) {
+                if (appliedFilters.status === ORDER_STATUS.CANCELLED) {
+                    if (!isOrderCancelled(o)) return false;
+                } else if (appliedFilters.status === ORDER_STATUS.COMPLETED) {
+                    if (!isOrderCompleted(o, lastStageName)) return false;
+                } else if (appliedFilters.status === ORDER_STATUS.PROCESSING) {
+                    if (!isOrderProcessing(o, lastStageName)) return false;
                 }
             }
 
-            // 3. Search Keyword
+            // 3. Stage Filter (Pure process stage)
+            if (appliedFilters.stage !== ORDER_STATUS.ALL) {
+                // If filtering by stage and status is not CANCELLED, ignore cancelled orders
+                if (isOrderCancelled(o) && appliedFilters.status !== ORDER_STATUS.CANCELLED) {
+                    return false;
+                }
+
+                const selectedStage = appliedFilters.stage.trim().toLowerCase();
+                const orderStage = (o.stage || '').trim().toLowerCase();
+                const isSelectedStageLastStep = Boolean(lastStageName && lastStageName.trim().toLowerCase() === selectedStage);
+
+                // Matches if exact stage matches OR if selected stage is the template's last step and order is completed
+                const matchesExact = orderStage === selectedStage;
+                const matchesLastStepCompleted = isSelectedStageLastStep && isOrderCompleted(o, lastStageName);
+
+                if (!matchesExact && !matchesLastStepCompleted) {
+                    return false;
+                }
+            }
+
+            // 4. Search Keyword
             if (appliedFilters.keyword) {
                 const kw = appliedFilters.keyword.toLowerCase().trim();
                 const matchesNo = (o.orderNo || '').toLowerCase().includes(kw) || (`#${o.id}`.includes(kw));
@@ -178,10 +233,12 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
 
             return true;
         });
-    }, [orders, appliedFilters, templates]);
+    }, [orders, appliedFilters, templates, pipelineSteps]);
 
     const totalCount = filteredOrders.length;
-    const cancelledCount = filteredOrders.filter(o => o.status === 'CANCELLED' || o.status === '취소' || o.stage === '취소').length;
+    const processingCount = filteredOrders.filter(o => isOrderProcessing(o, getLastStageNameForOrder(o))).length;
+    const completedCount = filteredOrders.filter(o => isOrderCompleted(o, getLastStageNameForOrder(o))).length;
+    const cancelledCount = filteredOrders.filter(o => isOrderCancelled(o)).length;
 
     return (
         <div className="p-4 surface-ground min-h-screen">
@@ -204,32 +261,46 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
             {/* Filter Panel (라벨 : 선택값 구성) */}
             <div className="surface-0 border-1 border-300 border-round-xl p-3 mb-3 shadow-1">
                 <div className="flex flex-wrap align-items-center justify-content-between gap-3">
-                    <div className="flex flex-wrap align-items-center gap-4">
+                    <div className="flex flex-wrap align-items-center gap-3">
                         {/* 템플릿 유형 */}
                         <div className="flex align-items-center gap-2">
                             <span className="text-700 font-semibold text-sm whitespace-nowrap">
-                                템플릿 유형 :
+                                템플릿 :
                             </span>
                             <Dropdown 
                                 value={templateFilter} 
                                 options={templateOptions} 
                                 onChange={(e) => handleTemplateChange(e.value)} 
-                                className="p-inputtext-sm w-12rem"
+                                className="p-inputtext-sm w-11rem"
                                 placeholder="템플릿 선택"
                             />
                         </div>
 
-                        {/* 공정 상태 */}
+                        {/* 공정 단계 */}
                         <div className="flex align-items-center gap-2">
                             <span className="text-700 font-semibold text-sm whitespace-nowrap">
-                                공정 상태 :
+                                공정 단계 :
                             </span>
                             <Dropdown 
                                 value={stageFilter} 
                                 options={stageOptions} 
                                 onChange={(e) => setStageFilter(e.value)} 
-                                className="p-inputtext-sm w-11rem"
-                                placeholder="공정상태 선택"
+                                className="p-inputtext-sm w-10rem"
+                                placeholder="공정단계 선택"
+                            />
+                        </div>
+
+                        {/* 주문 상태 (진행중 / 완료 / 취소) */}
+                        <div className="flex align-items-center gap-2">
+                            <span className="text-700 font-semibold text-sm whitespace-nowrap">
+                                주문 상태 :
+                            </span>
+                            <Dropdown 
+                                value={statusFilter} 
+                                options={statusOptions} 
+                                onChange={(e) => setStatusFilter(e.value)} 
+                                className="p-inputtext-sm w-10rem"
+                                placeholder="주문상태 선택"
                             />
                         </div>
 
@@ -238,7 +309,7 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
                             <span className="text-700 font-semibold text-sm whitespace-nowrap">
                                 검색어 :
                             </span>
-                            <div className="p-inputgroup w-15rem">
+                            <div className="p-inputgroup w-14rem">
                                 <span className="p-inputgroup-addon bg-surface-50 border-300 py-1 px-2">
                                     <i className="pi pi-search text-500 text-xs" />
                                 </span>
@@ -277,15 +348,23 @@ export const OrderAdminPage: React.FC<OrderAdminPageProps> = ({
 
             {/* Results Table Card */}
             <Card className="border-round-xl shadow-1">
-                <div className="flex align-items-center justify-content-between mb-2">
-                    <span className="text-600 text-sm font-medium">
-                        총 <strong className="text-900 font-bold">{totalCount}</strong>건의 주문
+                <div className="flex flex-wrap align-items-center justify-content-between mb-2 gap-2">
+                    <div className="flex flex-wrap align-items-center gap-2">
+                        <span className="text-700 text-sm font-semibold">
+                            총 <strong className="text-900 font-bold">{totalCount}</strong>건
+                        </span>
+                        <span className="text-xs text-blue-700 font-semibold bg-blue-50 px-2 py-1 border-round border-1 border-blue-200">
+                            진행중 <strong>{processingCount}</strong>건
+                        </span>
+                        <span className="text-xs text-green-700 font-semibold bg-green-50 px-2 py-1 border-round border-1 border-green-200">
+                            완료 <strong>{completedCount}</strong>건
+                        </span>
                         {cancelledCount > 0 && (
-                            <span className="text-500 ml-2 font-normal">
-                                (취소건 <strong className="text-red-500 font-bold">{cancelledCount}</strong>건 포함)
+                            <span className="text-xs text-red-700 font-semibold bg-red-50 px-2 py-1 border-round border-1 border-red-200">
+                                취소 <strong>{cancelledCount}</strong>건
                             </span>
                         )}
-                    </span>
+                    </div>
                 </div>
 
                 <DataTable 
