@@ -1,9 +1,10 @@
-# ==========================================
+﻿# ==========================================
 # KaratFlow 통합 실행 스크립트 (start.ps1)
 # ==========================================
 
-$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 chcp 65001 | Out-Null
 
 Write-Host "==========================================" -ForegroundColor Cyan
@@ -43,7 +44,7 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", $cmdFrontend -Wind
 
 Write-Host "`n========================================================" -ForegroundColor Green
 Write-Host " 🚀 모든 서버 구동 명령이 완료되었습니다!" -ForegroundColor Green
-Write-Host " - 백엔드 로그와 프론트엔드 로그는 새로 뜬 두 개의 파란(검은) 창에서 확인 가능합니다."
+Write-Host " - 백엔드 로그와 프론트엔드 로그는 새로 뜬 두 개의 창에서 확인 가능합니다."
 Write-Host " - 화면 접속: http://localhost:5555" -ForegroundColor Cyan
-Write-Host " - 새 창들은 우측 상단의 'X'를 눌러 끄면 서버가 종료됩니다."
+Write-Host " - 새 창들은 우측 상단의 X 버튼을 눌러 끄면 서버가 종료됩니다."
 Write-Host "========================================================" -ForegroundColor Green
