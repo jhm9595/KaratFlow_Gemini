@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom';
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import PrintView from './components/print/PrintView';
@@ -24,6 +24,25 @@ import { useModal } from './hooks/useModal';
 import { API_BASE_URL, getWsBrokerUrl } from './config/apiConfig';
 import { isOrderCancelled } from './utils/orderStatus';
 
+const MENU_PATH_MAP: Record<string, string> = {
+    'dashboard': '/',
+    'customer': '/customer',
+    'orders': '/orders',
+    'analytics': '/analytics',
+    'kakao-guide': '/kakao-guide',
+    'account': '/account'
+};
+
+const getMenuFromPathname = (pathname: string): string => {
+    const cleanPath = pathname.replace(/\/+$/, '') || '/';
+    if (cleanPath === '/' || cleanPath === '/dashboard') return 'dashboard';
+    if (cleanPath === '/orders') return 'orders';
+    if (cleanPath === '/customer' || cleanPath === '/customers') return 'customer';
+    if (cleanPath === '/analytics') return 'analytics';
+    if (cleanPath === '/kakao-guide') return 'kakao-guide';
+    if (cleanPath === '/account') return 'account';
+    return 'dashboard';
+};
 
 function App() {
     const { openModal, closeModal } = useModal();
@@ -32,8 +51,27 @@ function App() {
     const [feedViewMode, setFeedViewMode] = useState<'list' | 'card'>('list');
     const toast = useRef<any>(null);
     const [sidebarVisible, setSidebarVisible] = useState(false);
-    const [activeMenu, setActiveMenu] = useState('dashboard');
     const navigate = useNavigate();
+    const location = useLocation();
+    const [activeMenu, setActiveMenu] = useState<string>(() => getMenuFromPathname(location.pathname));
+
+    // 브라우저 뒤로가기/앞으로가기 또는 URL 직접 변경 시 activeMenu 동기화
+    useEffect(() => {
+        const currentMenu = getMenuFromPathname(location.pathname);
+        if (currentMenu !== activeMenu) {
+            setActiveMenu(currentMenu);
+        }
+    }, [location.pathname, activeMenu]);
+
+    // 메뉴 선택 시 activeMenu 변경 및 브라우저 URL 이동
+    const handleSelectMenu = useCallback((menuKey: string) => {
+        setActiveMenu(menuKey);
+        const targetPath = MENU_PATH_MAP[menuKey] || '/';
+        if (location.pathname !== targetPath) {
+            navigate(targetPath);
+        }
+    }, [location.pathname, navigate]);
+
     const [orders, setOrders] = useState<any[]>([]);
 
     const dashboardOrders = useMemo(() => {
@@ -559,7 +597,7 @@ function App() {
                 visible={sidebarVisible} 
                 onHide={() => setSidebarVisible(false)} 
                 activeMenu={activeMenu} 
-                onSelectMenu={(menuKey) => setActiveMenu(menuKey)} 
+                onSelectMenu={handleSelectMenu} 
             />
 
             <div className="flex flex-column h-screen surface-ground no-print">
@@ -574,7 +612,7 @@ function App() {
                             tooltipOptions={{ position: 'bottom' }} 
                         />
                         <img src="/logo.png" alt="KaratFlow Logo" style={{ width: '32px', height: '32px' }} />
-                        <h2 className="m-0 text-xl font-bold text-900 tracking-tight cursor-pointer" onClick={() => setActiveMenu('dashboard')}>
+                        <h2 className="m-0 text-xl font-bold text-900 tracking-tight cursor-pointer" onClick={() => handleSelectMenu('dashboard')}>
                             KaratFlow
                         </h2>
                     </div>
@@ -596,13 +634,13 @@ function App() {
                         
                         <div className="flex align-items-center gap-2 border-left-1 border-300 pl-3 ml-1">
                             <div 
-                                onClick={() => setActiveMenu('account')} 
+                                onClick={() => handleSelectMenu('account')} 
                                 className="w-2rem h-2rem border-circle bg-primary flex align-items-center justify-content-center text-white font-bold text-sm cursor-pointer shadow-1"
                                 title="계정 및 소셜 연동 관리"
                             >
                                 <i className="pi pi-user"></i>
                             </div>
-                            <span className="text-700 font-bold text-sm cursor-pointer" onClick={() => setActiveMenu('account')}>로그인됨</span>
+                            <span className="text-700 font-bold text-sm cursor-pointer" onClick={() => handleSelectMenu('account')}>로그인됨</span>
                             <Button icon="pi pi-sign-out" className="p-button-rounded p-button-text p-button-danger ml-2" aria-label="Logout" tooltip="로그아웃" tooltipOptions={{position: 'bottom'}} onClick={() => { localStorage.removeItem('jwtToken'); window.location.href = '/login'; }} />
                         </div>
                     </div>
